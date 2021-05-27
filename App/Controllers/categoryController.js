@@ -30,7 +30,7 @@ module.exports.all = (req,res) =>{
     Category.find().populate('type')
         .then(async function(categories){
             if(query){
-                const count = await Category.countDocuments()
+                const count = await Category.estimatedDocumentCount()
                 return Promise.resolve({categories,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
             }
             else{

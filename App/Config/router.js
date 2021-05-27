@@ -54,7 +54,7 @@ router.post('/admin/user/:id/work',admin.authAdminToken,users.addWork)
 router.get('/admin/users/:id/orders',admin.authAdminToken,orders.userAll)
 router.get('/admin/orders',admin.authAdminToken,orders.all)
 router.get('/admin/orders/:id',admin.authAdminToken,orders.details)
-router.get('/admin/orders/:id/hosts',admin.authAdminToken,users.hosts)
+router.get('/admin/orders/:id/suppliers',admin.authAdminToken,users.suppliers)
 router.post('/admin/orders/verify/:id',admin.authAdminToken,orders.verifyOrder)
 router.post('/admin/orders/payment/:id',admin.authAdminSign,orders.paymentConfirm)
 router.get('/admin/workOrders/:id',admin.authAdminToken,users.workOrders)/* not used */

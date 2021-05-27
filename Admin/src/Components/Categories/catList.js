@@ -5,6 +5,7 @@ const categoriesList = props => (
    <List {...props} >
        <Datagrid>
            <TextField source="title" />
+           <TextField source="hscode" />
            <TextField source="type.title" label="Type"/>
            <EditButton/>
        </Datagrid>

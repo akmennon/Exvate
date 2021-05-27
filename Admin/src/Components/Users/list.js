@@ -18,7 +18,7 @@ const usersList = props => (
            <TextField source="name" />
            <TextField source="email.email" label="Email"/>
            <MobileField source="mobile" label="Mobile"/>
-           <BooleanField source="host" label="host" />
+           <BooleanField source="supplier" label="Supplier" />
            <TextField source="userType" label="Type" />
            <EditButton/>
        </Datagrid>

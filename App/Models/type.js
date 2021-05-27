@@ -16,6 +16,12 @@ const typeSchema = new Schema({
         type:Date,
         default:Date.now
     },
+    hscode:{
+        type:String,
+        required:true,
+        minlength:2,
+        maxlength:2
+    },
     modified:[{
         modifiedBy:{
             type:Schema.Types.ObjectId,
@@ -30,10 +36,10 @@ const typeSchema = new Schema({
 
 /* Creates a new type */
 
-typeSchema.statics.createType = function(user,title){
+typeSchema.statics.createType = function(user,title,hscode){
     const Type = this
 
-    const type = new Type({title,createdBy:user._id})
+    const type = new Type({title,hscode,createdBy:user._id})
     if(!user.isAdmin){
         return Promise.reject('Invalid attempt')
     }
@@ -49,10 +55,10 @@ typeSchema.statics.createType = function(user,title){
 
 /* function to edit type */
 
-typeSchema.statics.editType = function(id,title,user){
+typeSchema.statics.editType = function(id,title,hscode,user){
     const Type = this
 
-    return Type.findByIdAndUpdate(id,{ $set: {title:title}, $addToSet:{modified:{modifiedBy:user}} },{new:true, runValidators:true})
+    return Type.findByIdAndUpdate(id,{ $set: {title:title,hscode:hscode}, $addToSet:{modified:{modifiedBy:user}} },{new:true, runValidators:true})
                 .then(function(type){
                     return type.save()
                 })

@@ -25,6 +25,7 @@ const CategoriesCreate = (props) => (
     <Create {...props}>
         <SimpleForm>
             <TextInput source="title" />
+            <TextInput source="hscode" />
             <FormDataConsumer>
                 {
                     (formProps)=>{

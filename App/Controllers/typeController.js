@@ -6,7 +6,7 @@ module.exports.create = (req,res) =>{
     const user = req.user
     const body = req.body
     
-    Type.createType(user,body.title)
+    Type.createType(user,body.title,body.hscode)
         .then(function(type){
             res.json(type)
         })
@@ -30,7 +30,7 @@ module.exports.all = (req,res) =>{
     Type.find()
         .then(async function(types){
             if(query){
-                const count = await Type.countDocuments()
+                const count = await Type.estimatedDocumentCount()
                 return Promise.resolve({types,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
             }
             else{
@@ -65,7 +65,7 @@ module.exports.edit = (req,res) =>{
     const body = req.body
     const id = req.params.id
 
-    Type.editType(id,body.title,user._id)
+    Type.editType(id,body.title,body.hscode,user._id)
         .then(function(type){
             res.json(type)
         })

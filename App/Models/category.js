@@ -20,6 +20,12 @@ const categorySchema = new Schema({
         required:true,
         ref:'User'
     },
+    hscode:{
+        type:String,
+        required:true,
+        minlength:4,
+        maxlength:4
+    },
     createdAt:{
         type:Date,
         default:Date.now
@@ -43,7 +49,7 @@ categorySchema.statics.createCat = function(user,body){
         return Promise.reject('Not an Admin')
     }
 
-    let values = pick(body,['title','type'])
+    let values = pick(body,['title','type','hscode'])
     values = {...values,'createdBy':user._id}
 
     const category = new Category(values)
@@ -62,7 +68,7 @@ categorySchema.statics.createCat = function(user,body){
 categorySchema.statics.editCat = function(id,body,user){
     const Category = this
 
-    return Category.findByIdAndUpdate(id,{$set:{title:body.title},$addToSet:{modified:{modifiedBy:user}}},{new:true, runValidators:true})
+    return Category.findByIdAndUpdate(id,{$set:{title:body.title,hscode:body.hscode,type:body.type},$addToSet:{modified:{modifiedBy:user}}},{new:true, runValidators:true})
                 .then(function(category){
                     return Promise.resolve(category)
                 })

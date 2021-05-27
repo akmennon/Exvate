@@ -58,14 +58,9 @@ const userSchema = new Schema({
         }
     }],
     forgotToken:{
-        token:{                 //Token to change the password
+        token:{                 //Token to change the password //PENDING forgot password expiration
             type:String
         }
-        /*createdAt:{
-            type:Date,
-            default:Date.now,   //PENDING forgot password expiration
-            expires:'1d'
-        }*/
     },
     address:[{
         building:{
@@ -105,6 +100,10 @@ const userSchema = new Schema({
         },
         token:{
             type:String
+        },
+        auth:{
+            type:Number,
+            default:1
         }
     },
     userType:{                              // To assign the user type
@@ -115,9 +114,9 @@ const userSchema = new Schema({
                 switch(value){
                     case 'User':
                         return true
-                    case 'Company':
+                    case 'Admin':
                         return true
-                    case 'Organiser':
+                    case 'Supplier':
                         return true
                     default:
                         return false
@@ -129,7 +128,7 @@ const userSchema = new Schema({
         },
         default:'User'
     },
-    host:{
+    supplier:{
         type:Boolean,
         default:false
     },
@@ -157,60 +156,15 @@ const userSchema = new Schema({
         workOrder:[{
             type:Schema.Types.ObjectId,
             ref:'Order'
-        }],
-        workHistory:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
         }]
     },
-    orders:{
-        confirmed:[{    //Didn't get price verification and not paid 
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }],
-        drafts:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }],
-        active:[{   // Price verified and paid ( only becomes active when paid )
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }],
-        history:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }],
-        deletedDraft:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }]
-    },
+    orders:[{
+        type:Schema.Types.ObjectId,
+        ref:'Order'
+    }],
     notifications:[{
-        notificationType:{
-            type:String,
-            validate:{
-                validator:function(value){
-                    switch(value){
-                        case 'Order':
-                            return true
-                        default:
-                            return false
-                    }
-                },
-                message:function(){
-                    return 'Invalid User type'
-                }
-            }
-        },
-        id:{
-            type:String
-        },
-        message:{
-            type:String
-        },
-        viewed:{
-            type:Boolean
-        }
+        type:Schema.Types.ObjectId,
+        ref:'Notification'
     }],
     perms:{                                  //To check if the user is verified by the verification team
         user:{
@@ -239,22 +193,12 @@ const userSchema = new Schema({
                 }
             }
         },
-        host:{
+        supplier:{
             verified:{
                 type:Schema.Types.ObjectId,
                 ref:'User'
             },
             multipleWorks:{
-                value:{
-                    type:Boolean,
-                    default:false
-                },
-                doneBy:{
-                    type:Schema.Types.ObjectId,
-                    ref:'User'
-                }
-            },
-            multiWork:{
                 value:{
                     type:Boolean,
                     default:false
@@ -277,7 +221,7 @@ const userSchema = new Schema({
                     type:Date
                 },
                 duration:{
-                    type:Number
+                    type:Date
                 }
             },
             banned:{
@@ -293,8 +237,8 @@ const userSchema = new Schema({
         }
     },
     adminCreated:{
-        type:Boolean,
-        default:false
+        type:Schema.Types.ObjectId,
+        ref:'User'
     }
 })
 
@@ -304,7 +248,7 @@ userSchema.pre('save',function(next){
     /* Used to hash the password of the user */
 
     if(user.isNew){                                         // checks if the document is new
-        bcryptjs.genSalt(10)
+        bcryptjs.genSalt(14)
             .then(function(salt){
                 bcryptjs.hash(user.password,salt)
                     .then(function(encryptedPassword){
@@ -317,7 +261,7 @@ userSchema.pre('save',function(next){
     /* To check for the forgot Token and to hash the password when the user updates password */
 
     else if(user.forgotToken.token&&user.isDirectModified('password')){ // checks if the password has been modified and if password reset token exists
-        bcryptjs.genSalt(10)
+        bcryptjs.genSalt(14)
             .then(function(salt){
                 bcryptjs.hash(user.password,salt)
                     .then(function(encryptedPassword){
@@ -340,15 +284,15 @@ userSchema.methods.registerMail = async function(){
     const user = this
 
     try{
+        const createdAt = new Date()
         let tokenData = {
-            createdAt:new Date(),
-            _id:user._id
+            createdAt:createdAt
         }
     
-        const token = jwt.sign(tokenData,'Sourceo@123#')
+        const token = jwt.sign(tokenData,'Secret123&') //PENDING - VULNERABILITY - use randombytes
     
         let mailData = {
-            from: '"Sourceo" <kajaymenon@hotmail.com>',
+            from: '"Sourceo" <ajaydragonballz@gmail.com>',
             to: user.email.email, // list of receivers
             subject: "Signup email confirmation",
             text: `Test - http://localhost:3000/user/confirmSign/${token}`, // Email confirmation link
@@ -364,7 +308,7 @@ userSchema.methods.registerMail = async function(){
         }
     
         /* uses existing token for the link (email resend) */
-        mailData.text = `Test - http://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
+        mailData.text = `Click the following link to verify http://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
     
         const info = await sendMail(mailData)
         return Promise.resolve(info)
@@ -446,14 +390,13 @@ userSchema.methods.generateForgotToken = function(){
     const user = this
     
     const tokenData = {
-        email:user.email,
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData, "Sourceo@123#")
+    const token = jwt.sign(tokenData, "Secret123&") //PENDING- VULNERABILITY
 
     let mailData = {
-        from: '"Sourceo" <kajaymenon@hotmail.com>',
+        from: '"Sourceo" <ajaydragonballz@gmail.com>',
         to: user.email.email, // list of receivers
         subject: "Change Password",
         text: `Test - http://localhost:3000/user/confirmForgot/${token}`, // Email confirmation link
@@ -465,7 +408,6 @@ userSchema.methods.generateForgotToken = function(){
 
     return user.save()
                 .then(function(){
-
                     /* send mail with confirmation link */
                     return sendMail(mailData)
                 })
@@ -482,11 +424,10 @@ userSchema.methods.generateForgotToken = function(){
 userSchema.methods.generateToken = function(){
     const user = this
     const tokenData = {
-        email:user.email,
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,'Sourceo@123#')
+    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use CSRPG
     user.tokens.push({token})
     return user.save()
             .then(function(){
@@ -571,7 +512,7 @@ userSchema.statics.adminLogin = function(email,password){
             .then(function(user){
                 /* checks if the user is an admin */
                 if(!user||!user.isAdmin.value){
-                    return Promise.reject('Invalid email, password or not an admin')
+                    return Promise.reject('Invalid login attempt')
                 }
 
                 return bcryptjs.compare(password,user.password)
@@ -580,7 +521,7 @@ userSchema.statics.adminLogin = function(email,password){
                             return Promise.resolve(user)
                         }
                         else{
-                            return Promise.reject('Invalid email, password or not an admin')
+                            return Promise.reject('Invalid login attempt')
                         }
                     })
                     .catch(function(err){
@@ -598,11 +539,10 @@ userSchema.methods.generateAdminToken = function(){
     const user = this
 
     let tokenData = {
-        id:user._id,
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,'Sourceo@123*')
+    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use random bytes password
     user.set('isAdmin.token',token)
 
     /* admin token is saved to isAdmin.token not tokens array */
@@ -638,7 +578,7 @@ userSchema.statics.saveOrder = async function(order,id){
 
     try{
         let user = await User.findById(id)
-        user.orders.confirmed = user.orders.confirmed.concat(order)
+        user.orders = user.orders.concat(order)
         user = await user.save()
         return Promise.resolve(user)
     }
@@ -666,7 +606,7 @@ userSchema.statics.updateWork = async function(id,body){
                 return element.workId == params.workId
             })
             user.work.workDetails.splice(workIndex,1)
-            const savedUser = await user.save()
+            await user.save()
             return Promise.resolve('Work deleted')
         }
 
@@ -678,15 +618,13 @@ userSchema.statics.updateWork = async function(id,body){
 
             user.work.workDetails[workIndex] = params
             await params.options.save()
-            const savedUser = await user.save()
+            await user.save()
             return Promise.resolve('Work updated')
         }
 
         /* checks permission to add multiwork */
         if(params.options.options.length>1){
-            if(!user.perms.host.multiWork.value){
-                return Promise.reject('User is not verified for a multiwork')
-            }
+            return Promise.reject('User is not verified for a multiwork')
         }
 
         /* could be wrong,check */
@@ -700,20 +638,20 @@ userSchema.statics.updateWork = async function(id,body){
         }
         else{
             /* checks permission if user can add multiple works */
-            if(user.work.workDetails.length>1){
+            if(user.work.workDetails.length>=1){
                 if(!user.perms.host.multipleWorks.value){
-                    return Promise.reject('User is not verified for multiple works')
+                    return Promise.reject('Contact support to add multiple inventories')
                 }
 
                 await params.options.save()
                 user.work.workDetails.push(params)
-                const savedUser = await user.save()
+                await user.save()
                 return Promise.resolve('Work added')
             }
             else{
                 await params.options.save()
                 user.work.workDetails.push(params)
-                const savedUser = await user.save()
+                await user.save()
                 return Promise.resolve('Work added')
             }
         }
@@ -729,12 +667,12 @@ userSchema.statics.workAll = async function (id,body){
     const User = this
 
     try{
-        const user = await User.findById(id)
+        const user = await User.findById(id).lean()
         switch(body.select){
             case 'WorkDetails':
                 return Promise.resolve(user.work.workDetails)
             case 'orders':
-                return Promise.resolve({order:user.work.workOrder,history:user.work.workHistory})
+                return Promise.resolve({order:user.work.workOrder})
             default:
                 return Promise.reject(`Option doesn't exist`)
         }
@@ -750,7 +688,7 @@ userSchema.statics.orders = async function(id){
     const User = this
 
     try{
-        const user = await User.findById(id).populate('orders.active').populate('orders.confirmed').populate('orders.history').populate('orders.drafts')
+        const user = await User.findById(id).populate('orders').lean()
         return Promise.resolve(user.orders)
     }
     catch(err){
@@ -772,17 +710,18 @@ userSchema.statics.forgotCheck = function(token){
         })
 }
 
-userSchema.statics.orderHosts = async function(orderId){
+/* Find suppliers based on the order inventory requirement */
+userSchema.statics.orderSuppliers = async function(orderId){
     const User = this
 
     try{
         let order = await Order.findById(orderId)
-        let hosts = await User.find({'work.workDetails.workId':order.workId,host:true})
-        let response = {order,hosts}
+        let suppliers = await User.find({'work.workDetails.workId':order.workId,supplier:true})
+        let response = {order,suppliers}
         return Promise.resolve(response)
     }
     catch(e){
-        return Promise.reject('Error fetching hosts')
+        return Promise.reject('Error fetching suppliers')
     }
 }
 

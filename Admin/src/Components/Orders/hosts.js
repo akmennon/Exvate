@@ -264,8 +264,9 @@ const conditionModal = ({ reset, setOpen, confirm, setParams, params, classes, p
 }
 
 const hosts = (data, classes, props, params, setParams, open, setOpen, order, confirm,cred, paymentDetails,setCred,setPaymentDetails) => {
-    if (data.hosts || data.hosts.length !== 0) {
+    if (data.suppliers || data.suppliers.length !== 0) {
         console.log(params)
+        console.log(data)
         const reset = () => {
             setParams(p => {
                 p.values.price = order.values.price
@@ -275,7 +276,7 @@ const hosts = (data, classes, props, params, setParams, open, setOpen, order, co
                 return { ...p }
             })
         }
-        const nextParams = { hostButton, params, setParams, setOpen, order: data.order, hosts: data.hosts, setPaymentDetails,...props }
+        const nextParams = { hostButton, params, setParams, setOpen, order: data.order, hosts: data.suppliers, setPaymentDetails,...props }
         return (
             <Card>
                 <Modal
@@ -338,7 +339,7 @@ function HostsList(props) {
 
     const { data, loading, error } = useQuery({
         type: 'getMany',
-        resource: `orders/${props.match.params.id}/hosts`,
+        resource: `orders/${props.match.params.id}/suppliers`,
         payload: { id: props.match.params.id }
     });
 

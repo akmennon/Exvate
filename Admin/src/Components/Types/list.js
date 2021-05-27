@@ -5,6 +5,7 @@ const typesList = props => (
    <List {...props} >
        <Datagrid>
            <TextField source="title" />
+           <TextField source="hscode" />
            <TextField source="_id" label="id"/>
            <EditButton/>
        </Datagrid>

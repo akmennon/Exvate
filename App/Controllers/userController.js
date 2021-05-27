@@ -279,10 +279,10 @@ module.exports.adminToken = (req,res) =>{
         })
 }
 
-module.exports.hosts = (req,res) =>{
+module.exports.suppliers = (req,res) =>{
     const orderId = req.params.id
 
-    User.orderHosts(orderId)
+    User.orderSuppliers(orderId)
         .then((response)=>{
             res.json(response)
         })

@@ -1,30 +1,19 @@
-const nodemailer = require('nodemailer')
+const sgMail = require('@sendgrid/mail')
 
 /* function to send mail with a given mail data */
 
 const sendMail = (mailData) =>{
-    let transporter = nodemailer.createTransport({
-    host: "smtp.office365.com",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-          user: 'kajaymenon@hotmail.com', // generated ethereal user
-          pass: process.argv[2] // generated ethereal password
-        },
-        tls:{
-            rejectUnauthorized:false
-        }
-      })
-    
-      // send mail with defined transport object
-    return transporter.sendMail(mailData)
-            .then((info)=>{
-                console.log("Message sent: %s", info.messageId);
-                return Promise.resolve(info)
-            })
-            .catch((err)=>{
-                return Promise.reject(err)
-            })
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+  return sgMail
+    .send(mailData)
+    .then(() => {
+      console.log('Email sent')
+      return Promise.resolve('Mail Sent')
+    })
+    .catch((error) => {
+      console.error(error)
+      Promise.reject(error)
+    })
 
 }
 

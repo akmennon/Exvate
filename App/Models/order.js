@@ -20,14 +20,6 @@ const orderSchema = new Schema({
         required:true,
         ref:'User'
     },
-    subOrders:[{ 
-        type:Schema.Types.ObjectId,
-        ref:'Order'
-    }],
-    subOrder:{
-        type:Boolean,
-        default:false
-    },
     values:{
         price:{
             type:Number
@@ -66,7 +58,7 @@ const orderSchema = new Schema({
             ref:'User'
         }]
     },
-    organizer:{
+    affiliate:{
         type:Schema.Types.ObjectId,
         ref:'User'
     },
@@ -447,69 +439,6 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue){
                     const savedOrder = await order.save()
                     return Promise.resolve(savedOrder)
                 }
-                else{
-        
-                    /* initial time and values saved, since multiple order values aren't given */
-                    orderFinal = orderValues.order
-                    orderFinal.values = {price:0,time:0}
-        
-                    /* values ard results are saved for each suborder */
-                    orderFinal.subOrders = orderValues.order.subOrders.map((order)=>{
-                        let orderOutput = output.find((element)=>{
-                            return element.workId == order.workId
-                        })
-                        let orderResult = tempValue.find((element)=>{
-                            return element.workId == order.workId
-                        })
-        
-                        /* values saved to suborder from output */
-                        Object.assign(order.values,orderOutput)
-        
-                        /* final result saved to suborder (each suborder is an order) */
-                        order.result = orderResult
-        
-                        /* All the price and time of each suborder is added to the main order */
-                        orderFinal.values.price = orderFinal.values.price + orderOutput.price
-                        orderFinal.values.time = orderFinal.values.time + orderOutput.time
-                        return order
-                    })
-        
-                    /* complete order result saved to order */
-                    orderFinal.result = tempValue
-                    
-                    /* suborders and their results are modelled and saved */
-                    const newSubOrder = []
-                    for(let i=0;i<orderFinal.subOrders.length;i++){
-
-                        /* suborder value given to differentiate if it is one */
-                        orderFinal.subOrders[i].subOrder = true
-                        orderFinal.subOrders[i].status = 'Pending'
-        
-                        /* suborder saved and pushed to main order */
-                        const order = new Order(orderFinal.subOrders[i])
-        
-                        /* suborder result modelled and saved */
-                        const result = new Result({result:orderFinal.subOrders[i].result,orderId:order._id})
-                        let savedResult = await result.save()
-                        order.result = savedResult
-        
-                        let subOrder = await order.save()
-                        newSubOrder.push(subOrder)
-                    }
-                    
-                    orderFinal.subOrders = newSubOrder
-                    orderFinal.status = 'Pending'
-                    const order = new Order(orderFinal)
-        
-                    /* main order result modelled and saved */
-                    const result = new Result({result:orderFinal.result,orderId:order._id})
-                    const savedResult = await result.save()
-                    order.result = savedResult
-                    
-                    /* main order modelled and saved */
-                    const savedOrder = await order.save()
-                    return Promise.resolve(savedOrder)
-                }
             }
             catch(e){
                 return Promise.reject(e)
@@ -559,11 +488,11 @@ orderSchema.statics.orderDetails = async function(id,user){
     const Order = this
 
     /* Checks if the order is present in the user */
-    if(user.orders.confirmed.includes(id)||user.orders.drafts.includes(id)||user.orders.active.includes(id)||user.orders.history.includes(id)||user.isAdmin.value){
+    if(user.orders.includes(id)||user.isAdmin.value){
         try{
             let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name'}).populate({path:'subOrders',populate:[{path:'workId',select:'title'},{path:'userId',select:'name'},{path:'result'}]})
             return Promise.resolve(mainOrder)
-        }   
+        }
         catch(e){
             console.log(e)
             return Promise.reject('Error in execution')

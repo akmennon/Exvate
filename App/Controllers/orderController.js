@@ -2,7 +2,6 @@ const Order = require('../Models/order')
 const User = require('../Models/user')
 const Result = require('../Models/work/resultSubdoc')
 const sendMail = require('../Resolvers/sendMail')
-const pick = require('lodash/pick')
 
 /* creates an order (actually used in sockets) */
 module.exports.create = async (req,res) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
@@ -105,7 +104,7 @@ module.exports.verifyOrder = (req,res) =>{
             if(user){//checks if the order is payable online or externally and sends the email accordingly
                 if(norder.values.price>90000){ //For external payments //create proper details for payment
                     const mailData = {
-                        from: '"Sourceo" <kajaymenon@hotmail.com>',
+                        from: '"Sourceo" <ajaydragonballz@gmail.com>',
                         to: user.email.email, // list of receivers
                         subject: "Order Verified",
                         text: `The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`
@@ -115,7 +114,7 @@ module.exports.verifyOrder = (req,res) =>{
                 }
                 else{   //For online payments
                     const mailData = {
-                        from: '"Sourceo" <kajaymenon@hotmail.com>',
+                        from: '"Sourceo" <ajaydragonballz@gmail.com>',
                         to: user.email.email,
                         subject: "Order Verified",
                         text: `The order prices have been updated and is ready for payment. Please use the website to make payment`
