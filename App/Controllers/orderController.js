@@ -52,7 +52,7 @@ module.exports.all = (req,res) =>{//Validation with switch
     const limit = query.range[1]+1-query.range[0]
     
     /* Suborders are removed and orders are filtered by its status */
-    Order.find(filter).populate('workId','title').populate('userId','name').skip(query.range[0]).limit(limit).sort({createdAt:-1})
+    Order.find(filter).populate('workId','title').populate('userId','email').skip(query.range[0]).limit(limit).sort({createdAt:-1})
         .then(async (orders)=>{
             const count = await Order.countDocuments(filter)//change
             return Promise.resolve({orders,count})
@@ -91,36 +91,33 @@ module.exports.verifyOrder = (req,res) =>{
 
     let norder = {}
 
-    Order.verifyOrder(id,body,user,User)
+    Order.verifyOrder(id,body,user,User)    /* PENDING NOTIFICATION */
         .then((order)=>{
             norder = order
+            console.log(order)
             res.json(order)
-            if(order.verified.value){
+            /*if(order.verified.value){
                 const message = 'An order has been verified and is ready for payment'
                 return User.notify('Order',order._id,message,order.userId)
+            }*/
+            if(norder.values.price>90000){ //For external payments //create proper details for payment
+                const mailData = {
+                    from: '"Sourceo" <ajaydragonballz@gmail.com>',
+                    to: norder.userId.email.email, // list of receivers
+                    subject: "Order Verified",
+                    text: `The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`
+                    /*html: "<b>Hello world?</b>"*/ // html body
+                }
+                return sendMail(mailData)
             }
-        })
-        .then((user)=>{
-            if(user){//checks if the order is payable online or externally and sends the email accordingly
-                if(norder.values.price>90000){ //For external payments //create proper details for payment
-                    const mailData = {
-                        from: '"Sourceo" <ajaydragonballz@gmail.com>',
-                        to: user.email.email, // list of receivers
-                        subject: "Order Verified",
-                        text: `The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`
-                        /*html: "<b>Hello world?</b>"*/ // html body
-                    }
-                    return sendMail(mailData)
+            else{   //For online payments
+                const mailData = {
+                    from: '"Sourceo" <ajaydragonballz@gmail.com>',
+                    to: norder.userId.email.email,
+                    subject: "Order Verified",
+                    text: `The order prices have been updated and is ready for payment. Please use the website to make payment`
                 }
-                else{   //For online payments
-                    const mailData = {
-                        from: '"Sourceo" <ajaydragonballz@gmail.com>',
-                        to: user.email.email,
-                        subject: "Order Verified",
-                        text: `The order prices have been updated and is ready for payment. Please use the website to make payment`
-                    }
-                    return sendMail(mailData)
-                }
+                return sendMail(mailData)
             }
         })
         .then((mail)=>{

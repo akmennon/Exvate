@@ -9,9 +9,9 @@ module.exports.create = (req,res) =>{
     const user = new User(bodyPick)
 
     /* confirmation email to verify user's email address */
-    user.registerMail()
+    user.save()
         .then(function(){
-            return user.save()
+            return user.registerMail()
         })
         .then(function(){
             res.json('Account created ')
@@ -26,17 +26,15 @@ module.exports.create = (req,res) =>{
 
 module.exports.login = (req,res) =>{
     const body = req.body
-    let users
+    let userData
     User.findByCredentials(body.email,body.password)
         .then(function(user){
-            users=user
+            userData=user
             return user.generateToken()     // generates a token for logging in
         })
         .then(function(token){
-            const user = pick(users,['userType','_id','name','host'])
-            user.email = users.email.email
             res.setHeader('x-auth',token) // sends token as a header
-            res.json(user)
+            res.json(pick(userData,['userType','_id','name','host','email.email']))
         })
         .catch(function(err){
             res.json(err)
@@ -46,9 +44,7 @@ module.exports.login = (req,res) =>{
 /* Show user account details (values gotten from middleware) */
 
 module.exports.account = (req,res) =>{
-    const user = req.user
-    let sendUser = pick(user,['userType','_id','name','host'])
-    sendUser.email=user.email.email
+    let sendUser = pick(req.user,['userType','_id','name','host','email.email'])
     res.json(sendUser)
 }
 
@@ -101,7 +97,7 @@ module.exports.resendRegisterMail = (req,res) =>{
         })
 }
 
-/* When the user follows the link in the conformation email */
+/* When the user follows the link in the confirmation email */
 
 module.exports.confirmSignupEmail = (req,res) =>{
     const token = req.params.token
@@ -128,14 +124,14 @@ module.exports.confirmChangePassword = (req,res) =>{
     const body = req.body
 
     User.confirmPassword(token,body.password)
-            .then(function(user){
-                let response = pick(user,['userType','_id','name'])
-                response.email = user.email.email
-                res.json(response)
-            })
-            .catch(function(err){
-                res.json(err)
-            })
+        .then(function(user){
+            let response = pick(user,['userType','_id','name'])
+            response.email = user.email.email
+            res.json(response) //check only a message is required
+        })
+        .catch(function(err){
+            res.json(err)
+        })
 }
 
 /* Admin login function */
@@ -228,6 +224,7 @@ module.exports.forgotCheck = (req,res) =>{
         })
 }
 
+/* UNRELIABLE - Change the Regex search to mongodb atlas search*/
 module.exports.all = (req,res) =>{
     const query = req.query
     query.filter = JSON.parse(query.filter)
@@ -292,7 +289,7 @@ module.exports.suppliers = (req,res) =>{
         })
 }
 
-module.exports.adminCreate = (req,res) =>{
+/*module.exports.adminCreate = (req,res) =>{    //Usage Temporarily not used
     const body = req.body
 
     User.adminCreate(body)
@@ -303,7 +300,7 @@ module.exports.adminCreate = (req,res) =>{
             console.log(err)
             res.json(err)
         })
-}
+}*/
 
 module.exports.details = (req,res) =>{
     const id = req.params.id

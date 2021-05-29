@@ -33,7 +33,7 @@ const UserShow = (props) => {
             <TextField source="email.email" label='Email' />
             <TextField source='mobile' label='Mobile' />
             <BooleanField source='email.confirmed.value' label='Email Verified' emptyText="false"/>
-            <TextField source='host' label='Host' />
+            <TextField source='supplier' label='Supplier' />
         </SimpleShowLayout>
     </Show>
 )};

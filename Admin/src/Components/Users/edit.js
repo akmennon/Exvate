@@ -13,21 +13,14 @@ import {
     required,
     email
 } from 'react-admin';
-import {useFormState} from 'react-final-form'
 
 const HostInput = props =>{
-    const { values } = useFormState()
-
-    if(values.userType==="Organizer"){
-        return null
-    }
-    else{
-        return(
-            <BooleanInput source="host" defaultValue={false} {...props}/>
-        )
-    }
+    return(
+        <BooleanInput source="supplier" defaultValue={false} {...props}/>
+    )
 }
 
+/* PENDING ARRAY WORK - perhaps*/
 const UserEdit = (props) => {
     return (
         <Edit {...props}>

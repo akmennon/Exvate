@@ -17,13 +17,11 @@ const orderList = props => (
    <List {...props} filters={<PostFilter />}>
        <Datagrid rowClick="show">
            <TextField source="workId.title" label="Work"/>
-           <TextField source="userId.name" label="User"/>
+           <TextField source="userId.email.email" label="User"/>
            <TextField source="status" />
            <TextField source="paymentStatus.value" label="Payment Status"/>
            <TextField source="paymentStatus.hostPayment" label="Host Payment"/>
            <TextField source="incoterm" label="ICO"/>
-           <TextField source="sample.sampleStatus" label="Sampling"/>
-           <BooleanField source="subOrder" label="Sub Order"/>
            <BooleanField source="verified.value" label="Verified"/>
            <FinishedField label="Finished"/>
        </Datagrid>

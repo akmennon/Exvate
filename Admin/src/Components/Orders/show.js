@@ -57,7 +57,7 @@ const PostShowActions = (props) => {
     const [type,setType] = useState('Confirm')
     const [cred,setCred] = useState({email:'',password:''})
     const [paymentDetails,setPaymentDetails] = useState({type:'Advance',deadline:''})
-    const [shippingDetails,setShippingDetails] = useState({shipmentType:'Cargo',consignmentId:'',incoterm:'',serviceProvider:'',statusLink:''})
+    const [shippingDetails,setShippingDetails] = useState({shipmentType:'Cargo',consignmentId:'',incoterm:'',serviceProvider:'',statusLink:'',port:'',CHA:''})
 
     const handleClick = (orderId='',type,email='',pass='',props={},payment) =>{
         switch(type){
@@ -130,51 +130,6 @@ const PostShowActions = (props) => {
             break;
             case 'failed':
                 axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'fail'})
-                .then((response)=>{
-                    console.log(response.data)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-            break;
-            case 'sampleComplete':
-                axios.post(`/orders/${orderId}/samples`,{email,password:pass,type:'Complete'})
-                .then((response)=>{
-                    console.log(response.data)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-            break;
-            case 'sampleCompleteAndShipped':
-                axios.post(`/orders/${orderId}/samples`,{email,password:pass,type:'CompleteAndShipped'})
-                .then((response)=>{
-                    console.log(response.data)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-            break;
-            case 'sampleFinished':
-                axios.post(`/orders/${orderId}/samples`,{email,password:pass,type:'Finished'})
-                .then((response)=>{
-                    console.log(response.data)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-            break;
-            case 'sampleFailed':
-                axios.post(`/orders/${orderId}/samples`,{email,password:pass,type:'Failed'})
-                .then((response)=>{
-                    console.log(response.data)
-                })
-                .catch((e)=>{
-                    console.log(e)
-                })
-            break;
-            case 'sampleReset':
-                axios.post(`/orders/${orderId}/samples`,{email,password:pass,type:'Reset'})
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -269,7 +224,7 @@ const PostShowActions = (props) => {
                                                         </div>
                                                     </div>
                                                     <div className={styles.paymentSelect}>
-                                                        <Typography>Incoterm :</Typography>
+                                                        <Typography>Port :</Typography>
                                                         <TextField1
                                                             value={shippingDetails.port}
                                                             className={styles.textField}
@@ -315,6 +270,17 @@ const PostShowActions = (props) => {
                                                 onChange={(e)=>{const val = e.target.value;setShippingDetails(p=>({...p,statusLink:val}))}}
                                             />
                                         </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>CHA :</Typography>
+                                            <TextField1
+                                                value={shippingDetails.CHA}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setShippingDetails(p=>({...p,CHA:val}))}}
+                                            />
+                                        </div>
                                     </Fragment>
                                 ):<span/>
                             }
@@ -345,71 +311,40 @@ const PostShowActions = (props) => {
                         (<div>
                             {
                                 props.record.status!=='Cancelled'&&props.record.status!=='Failed'?
-                                <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/verify/${props.record._id}`)}>{props.record.subOrders.length===0?'Hosts':'SubOrders'}</Button>:
+                                <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/hosts/${props.record._id}`)}>Hosts</Button>:
                                 props.record.paymentStatus.value==='Completed'?
                                 <Button color="primary" variant='outlined' onClick={() => {setType('refund');setOpen(true)}}>Confirm Refund</Button>:
                                 <span/>
                             }
                             {
-                                !props.record.subOrder&&props.record.paymentStatus.value==='Pending'&&props.record.status!=='Cancelled'&&props.record.status!=='Failed'?
+                                props.record.paymentStatus.value==='Pending'&&props.record.status!=='Cancelled'&&props.record.status!=='Failed'?
                                 <Fragment>
                                     <Button color="primary" variant='outlined' onClick={() => {setType('confirm');setOpen(true)}}>Confirm payment</Button>
                                     <Button color="primary" variant='outlined' onClick={() => {setType('cancel');setOpen(true)}}>Cancel</Button>
                                 </Fragment>:<span/>
                             }
                             {
-                                !props.record.subOrder&&props.record.paymentStatus.value==='Contract'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
+                                props.record.paymentStatus.value==='Contract'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('failed');setOpen(true)}}>Order Failed</Button>
                                 ):<span/>
                             }
                             {
-                                !props.record.subOrder&&props.record.paymentStatus.value==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Completed'&&props.record.status!=='Finished'?(
+                                props.record.paymentStatus.value==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Completed'&&props.record.status!=='Finished'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('cancel');setOpen(true)}}>Cancel</Button>
                                 ):<span/>
                             }
                             {
-                                props.record.subOrders.length===0&&props.record.sampleApproved&&(props.record.status==='Completed'||props.record.status==='Transit')?(
+                                props.record.status==='Completed'||props.record.status==='Transit'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('finish');setOpen(true)}}>Finished</Button>
                                 ):<span/>
                             }
                             {
-                                !props.record.subOrder&&props.record.status==='Finished'&&props.record.paymentStatus.value==='Contract'?(
+                                props.record.status==='Finished'&&props.record.paymentStatus.value==='Contract'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('contractFinished');setOpen(true)}}>Contract Payment Finished</Button>
                                 ):<span/>
                             }
                             {
-                                props.record.subOrders.length===0&&!props.record.sampleApproved?
-                                <Fragment>
-                                    {
-                                        props.record.sample.sampleStatus==='Active'?(
-                                            <Fragment>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleComplete');setOpen(true)}}>Sample Complete</Button>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleCompleteAndShipped');setOpen(true)}}>Sample shipped</Button>
-                                            </Fragment>
-                                        ):props.record.sample.sampleStatus==='Completed'?(
-                                            <Fragment>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleCompleteAndShipped');setOpen(true)}}>Sample shipped</Button>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleFinished');setOpen(true)}}>Sampling Finished</Button>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleFailed');setOpen(true)}}>Sampling Failed</Button>
-                                            </Fragment>
-                                        ):props.record.sample.sampleStatus==='Finished'?(
-                                            <Button color="primary" variant='outlined' onClick={() => {setType('sampleFailed');setOpen(true)}}>Sampling Failed</Button>
-                                        ):props.record.sample.sampleStatus==='Transit'?(
-                                            <Fragment>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleFinished');setOpen(true)}}>Sampling Finished</Button>
-                                                <Button color="primary" variant='outlined' onClick={() => {setType('sampleFailed');setOpen(true)}}>Sampling Failed</Button>
-                                            </Fragment>
-                                        ):<span/>
-                                    }
-                                    {
-                                        props.record.sample.sampleStatus==='Failed'?(
-                                            <Button color="primary" variant='outlined' onClick={() => {setType('sampleReset');setOpen(true)}}>Reset Sampling</Button>
-                                        ):<span/>
-                                    }
-                                </Fragment>:<span/>
-                            }
-                            {
-                                props.record.sampleApproved&&props.record.subOrders.length===0&&props.record.status!=='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
+                                (props.record.paymentStatus.value==='Contract'||props.record.paymentStatus.value==='Completed')&&props.record.status!=='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
                                     <Fragment>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('complete');setOpen(true)}}>Complete</Button>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('shipped');setOpen(true)}}>Shipped</Button>
@@ -417,14 +352,14 @@ const PostShowActions = (props) => {
                                 ):<span/>
                             }
                             {
-                                props.record.sampleApproved&&props.record.subOrders.length===0&&props.record.status==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
+                                props.record.status==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
                                     <Fragment>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('shipped');setOpen(true)}}>Shipped</Button>
                                     </Fragment>
                                 ):<span/>
                             }
                         </div>):
-                        <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/verify/${props.record._id}`)}>Verify</Button>
+                        <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/hosts/${props.record._id}`)}>Verify</Button>
                     }
                 </div>
                 <EditButton basePath={props.basePath} record={props.record} />
@@ -460,11 +395,10 @@ const OrderShow = (props) => {
                 })(record)
             }
             <TextField source='verified.value' label='Verified' />
-            <TextField source='subOrder' label='Sub Order' />
             <TextField source='status' label='Status' />
-            <TextField source='sample.sampleStatus' label='Sampling' />
             <TextField source='paymentStatus.value' label='Payment' />
             <TextField source='paymentStatus.hostPayment' label='Host payment'/>
+            <TextField source='paymentStatus.hostAmount' label='Host Amount'/>
             <TextField source='values.price' label='Price' />
             <TextField source='values.time' label='Time' />
             <ArrayField source="values.variables" label='Values'>

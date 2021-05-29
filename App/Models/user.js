@@ -308,7 +308,7 @@ userSchema.methods.registerMail = async function(){
         }
     
         /* uses existing token for the link (email resend) */
-        mailData.text = `Click the following link to verify http://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
+        mailData.text = `Click the following link to verify \n\nhttp://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
     
         const info = await sendMail(mailData)
         return Promise.resolve(info)
@@ -393,7 +393,7 @@ userSchema.methods.generateForgotToken = function(){
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData, "Secret123&") //PENDING- VULNERABILITY
+    const token = jwt.sign(tokenData, "Secret123&",{expiresIn:'3m'}) //PENDING- VULNERABILITY
 
     let mailData = {
         from: '"Sourceo" <ajaydragonballz@gmail.com>',
@@ -461,20 +461,23 @@ userSchema.statics.confirmEmail = function(token){
 
 /* To confirm the change in password from the email and also update the new password */
 
-userSchema.statics.confirmPassword = function(token,password){
+userSchema.statics.confirmPassword = async function(token,password){
     const User = this
 
-    return User.findOne({'forgotToken.token':token})
-                .then(function(user){
-                    user.set('password',password)
-                    return user.save()
-                })
-                .then(function(user){
-                    return Promise.resolve(user)
-                })
-                .catch(function(err){
-                    return Promise.reject(err)
-                })
+    try{
+        const user = User.findOne({'forgotToken.token':token})
+        if(!user){
+            return Promise.reject('Invalid password change attempt')
+        }
+        jwt.verify(token,"Secret123&")
+        user.set('password',password)
+        user.save()
+        return Promise.resolve(user)
+    }
+    catch(e){
+        console.log(err)
+        return Promise.reject(err)
+    }
 }
 
 /* Admin credential middleware check */
@@ -542,7 +545,7 @@ userSchema.methods.generateAdminToken = function(){
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use random bytes password
+    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use CSRPG - Expiration
     user.set('isAdmin.token',token)
 
     /* admin token is saved to isAdmin.token not tokens array */
@@ -560,7 +563,7 @@ userSchema.methods.generateAdminToken = function(){
 userSchema.statics.findByAdminToken = function(token){
     const User = this
 
-    return User.findOne({'isAdmin.token':token})
+    return User.findOne({'isAdmin.token':token}).lean()
                 .then(function(user){
                     if(!user){
                         return Promise.reject('Invalid request')
@@ -639,7 +642,7 @@ userSchema.statics.updateWork = async function(id,body){
         else{
             /* checks permission if user can add multiple works */
             if(user.work.workDetails.length>=1){
-                if(!user.perms.host.multipleWorks.value){
+                if(!user.perms.supplier.multipleWorks.value){
                     return Promise.reject('Contact support to add multiple inventories')
                 }
 
@@ -725,8 +728,8 @@ userSchema.statics.orderSuppliers = async function(orderId){
     }
 }
 
-/* Add email notification and provide password on creation */
-userSchema.statics.adminCreate = async function(body){
+/* Add email notification and provide password on creation -- CHECK USAGE*/
+/* userSchema.statics.adminCreate = async function(body){
     const User = this
 
     try{
@@ -752,7 +755,6 @@ userSchema.statics.adminCreate = async function(body){
             to: user.email.email, // list of receivers
             subject: "Account Created",
             text: `An account has been created for you by our team. Please use the credentials below to sign in.\n\n email:${email} \n password:${password}`
-            /*html: "<b>Hello world?</b>"*/ // html body
         }
 
         const user = new User(creds)
@@ -767,24 +769,24 @@ userSchema.statics.adminCreate = async function(body){
     catch(e){
         console.log(e)
     }
-}
+} */
 
 userSchema.statics.assignWork = async function(orderId,hostId,type){
     const User = this
 
     try{
-        const host = await User.findById(hostId)
+        const supplier = await User.findById(hostId)
         if(type=='assign'){
-            if(!host.work.workOrder.includes(orderId)){
-                host.work.workOrder.push(orderId)
-                await host.save()
+            if(!supplier.work.workOrder.includes(orderId)){
+                supplier.work.workOrder.push(orderId)
+                await supplier.save()
             }
-            return Promise.resolve(host)
+            return Promise.resolve(supplier)
         }
         else if(type=='remove'){
-            if(host.work.workOrder.includes(orderId)){
-                host.work.workOrder = host.work.workOrder.filter(ele=>String(ele)!=orderId)
-                await host.save()
+            if(supplier.work.workOrder.includes(orderId)){
+                supplier.work.workOrder = supplier.work.workOrder.filter(ele=>String(ele)!=orderId)
+                await supplier.save()
                 return Promise.resolve('work removed')
             }
             return Promise.reject('User is not assigned the order')
@@ -799,7 +801,7 @@ userSchema.statics.assignWork = async function(orderId,hostId,type){
     }
 }
 
-userSchema.statics.notify = async function(type,id,message,userId){
+/* userSchema.statics.notify = async function(type,id,message,userId){
     const User = this
 
     try{
@@ -818,19 +820,18 @@ userSchema.statics.notify = async function(type,id,message,userId){
         console.log(e)
         return Promise.reject('Error creating notification')
     }
-}
+} */
 
 userSchema.statics.hostCancel = async function(orderId,reqUser){
     const User = this
 
     try{
-        if(!reqUser.work.workOrder.includes(orderId)&&!reqUser.isAdmin.value){
+        const order = reqUser.work.workOrder.find(ele=>ele==orderId)
+        if(!order&&!reqUser.isAdmin.value){
             return Promise.reject('Unauthorised')
         }
-        const order = reqUser.work.workOrder.find(ele=>ele==orderId)
         reqUser.work.workOrder = reqUser.work.workOrder.filter(ele=>ele!=orderId)
         await Order.updateOne({_id:order},{'verified.value':false,'host.assigned':[],$addToSet:{'host.removed':reqUser._id}})
-        await Order.updateOne({'subOrders':order},{'verified.value':false})
         await reqUser.save()
         Promise.resolve(reqUser)
     }
@@ -841,11 +842,13 @@ userSchema.statics.hostCancel = async function(orderId,reqUser){
 }
 
 userSchema.statics.userEdit = async function(user,body,id){
-    const User = this//use pick here
+    const User = this
+
+    const userBody = pick(body,['name','email.email','mobile','address','userType','supplier'])
 
     try{
         if(user.isAdmin.value||user._id==id){
-            const user = await User.findByIdAndUpdate(id,{...body})
+            const user = await User.findByIdAndUpdate(id,{...userBody})
             console.log(user)
             return Promise.reject('Successfully updated')
         }

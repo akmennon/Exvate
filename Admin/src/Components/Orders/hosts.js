@@ -271,7 +271,7 @@ const hosts = (data, classes, props, params, setParams, open, setOpen, order, co
             setParams(p => {
                 p.values.price = order.values.price
                 p.values.time = order.values.time
-                p.values.hostAmount = 0
+                p.values.hostAmount = order.paymentStatus.hostAmount
                 p.values.validTill = 7
                 return { ...p }
             })
@@ -360,7 +360,7 @@ function HostsList(props) {
                     }
                     return ele
                 })
-                setParams(p => ({ ...p, values: { ...p.values, price: response.data.values.price, time: response.data.values.time, variables: response.data.values.variables } }))//Validity Days check from server
+                setParams(p => ({ ...p, values: { ...p.values, price: response.data.values.price, time: response.data.values.time, variables: response.data.values.variables, hostAmount:response.data.paymentStatus.hostAmount||0 } }))//Validity Days check from server
             })
             .catch((err) => {
                 console.log(err)
