@@ -18,7 +18,6 @@ const typeSchema = new Schema({
     },
     hscode:{
         type:String,
-        required:true,
         minlength:2,
         maxlength:2
     },

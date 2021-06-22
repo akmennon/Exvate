@@ -9,7 +9,7 @@ module.exports.create = async (req,res) =>{//use pick, Pending - different input
     
     Result.findById(body.resultId)//use ({workId:body.workId,orderId:{$exists:false}}) after updating database
         .then((result)=>{
-            return Order.createOrder(body.orderData,result.result)
+            return Order.createOrder(body.orderData,result.result) //UNRELIABLE - Use pick here
         })
         .then((order)=>{
             return User.saveOrder(order,req.user._id)

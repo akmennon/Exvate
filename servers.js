@@ -20,6 +20,12 @@ App.use(cors({exposedHeaders: ['x-auth','full'],credentials: true, origin: true}
 
 App.use('/',router)
 
+App.use((err,req,res,next)=>{
+    const {statusCode,errMessage} = err
+    console.log(err)
+    res.status(statusCode).send(errMessage)
+})
+
 const expressServer = App.listen(port,()=>{
     console.log('Listening on port', port)
 })

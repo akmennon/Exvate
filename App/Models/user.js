@@ -7,6 +7,7 @@ const sendMail = require('../Resolvers/sendMail')
 const generator = require('generate-password')
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
+const keys = require('../Config/keys')
 
 const Schema = mongoose.Schema
 
@@ -58,8 +59,12 @@ const userSchema = new Schema({
         }
     }],
     forgotToken:{
-        token:{                 //Token to change the password //PENDING forgot password expiration
+        token:{                 //Token to change the password
             type:String
+        },
+        expiresAt:{
+            type:Date,
+            default:Date.now
         }
     },
     address:[{
@@ -289,7 +294,7 @@ userSchema.methods.registerMail = async function(){
             createdAt:createdAt
         }
     
-        const token = jwt.sign(tokenData,'Secret123&') //PENDING - VULNERABILITY - use randombytes
+        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
     
         let mailData = {
             from: '"Sourceo" <ajaydragonballz@gmail.com>',
@@ -386,37 +391,50 @@ userSchema.statics.findByToken = function(token){
 
 /* Creates token to change the Password and sends the email with link */
 
-userSchema.methods.generateForgotToken = function(){
+userSchema.methods.generateForgotToken = async function(){
     const user = this
     
-    const tokenData = {
-        createdAt:new Date()
+    try{
+        const createdAt = new Date()
+
+        const tokenData = {createdAt}
+
+        if(user.forgotToken.token&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
+            let mailData = {
+                from: '"Sourceo" <ajaydragonballz@gmail.com>',
+                to: user.email.email, // list of receivers
+                subject: "Change Password",
+                text: `Test - http://localhost:3000/user/confirmForgot/${user.forgotToken.token}`, // Email confirmation link
+                /*html: "<b>Hello world?</b>"*/ // html body
+            }
+
+            await sendMail(mailData)
+            return Promise.resolve('Mail sent')
+        }
+
+        const token = jwt.sign(tokenData, keys.jwtSecret,{expiresIn:'1h'})
+
+        let mailData = {
+            from: '"Sourceo" <ajaydragonballz@gmail.com>',
+            to: user.email.email, // list of receivers
+            subject: "Change Password",
+            text: `Test - http://localhost:3000/user/confirmForgot/${token}`, // Email confirmation link
+            /*html: "<b>Hello world?</b>"*/ // html body
+        }
+
+        /* forgot token saved to user */
+        user.forgotToken.token = token
+        createdAt.setHours(createdAt.getHours() + 1)
+        user.forgotToken.expiresAt = createdAt
+
+        await user.save()
+        await sendMail(mailData)
+        return Promise.resolve('Mail sent')
+    
     }
-
-    const token = jwt.sign(tokenData, "Secret123&",{expiresIn:'3m'}) //PENDING- VULNERABILITY
-
-    let mailData = {
-        from: '"Sourceo" <ajaydragonballz@gmail.com>',
-        to: user.email.email, // list of receivers
-        subject: "Change Password",
-        text: `Test - http://localhost:3000/user/confirmForgot/${token}`, // Email confirmation link
-        /*html: "<b>Hello world?</b>"*/ // html body
+    catch(e){
+        return Promise.reject('error')
     }
-
-    /* forgot token saved to user */
-    user.forgotToken.token = token
-
-    return user.save()
-                .then(function(){
-                    /* send mail with confirmation link */
-                    return sendMail(mailData)
-                })
-                .then(function(info){
-                    return Promise.resolve('Mail sent')
-                })
-                .catch(function(err){
-                    return Promise.reject(err)
-                })
 }
 
 /* Creates a login token for the User */
@@ -427,7 +445,7 @@ userSchema.methods.generateToken = function(){
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use CSRPG
+    const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
     user.tokens.push({token})
     return user.save()
             .then(function(){
@@ -465,18 +483,20 @@ userSchema.statics.confirmPassword = async function(token,password){
     const User = this
 
     try{
-        const user = User.findOne({'forgotToken.token':token})
+        const user = await User.findOne({'forgotToken.token':token})
         if(!user){
             return Promise.reject('Invalid password change attempt')
         }
-        jwt.verify(token,"Secret123&")
-        user.set('password',password)
-        user.save()
+        if(new Date(user.forgotToken.expiresAt).getTime()<Date.now()){
+            return Promise.reject({message:'Token expired',statusCode:401})
+        }
+        jwt.verify(token,keys.jwtSecret)
+        await user.set('password',password)
+        await user.save()
         return Promise.resolve(user)
     }
     catch(e){
-        console.log(err)
-        return Promise.reject(err)
+        return Promise.reject(e)
     }
 }
 
@@ -545,7 +565,7 @@ userSchema.methods.generateAdminToken = function(){
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,'Secret@123&') //PENDING - VULNERABILITY - use CSRPG - Expiration
+    const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG - Expiration
     user.set('isAdmin.token',token)
 
     /* admin token is saved to isAdmin.token not tokens array */
@@ -701,16 +721,21 @@ userSchema.statics.orders = async function(id){
 }
 
 /* checks that a user with forgotToken is present */
-userSchema.statics.forgotCheck = function(token){
+userSchema.statics.forgotCheck = async function(token){
     const User = this
 
-    return User.findOne({'forgotToken.token':token})
-        .then((user)=>{
-            return Promise.resolve(user)
-        })
-        .catch((err)=>{
-            return Promise.reject(err)
-        })
+    try{
+        const user = await User.findOne({'forgotToken.token':token},"_id forgotToken").lean()
+        if(user&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
+            return Promise.resolve({value:true})
+        }
+        else{
+            return Promise.reject({message:'Unauthorized or expired token',statusCode:401})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 /* Find suppliers based on the order inventory requirement */
@@ -718,13 +743,15 @@ userSchema.statics.orderSuppliers = async function(orderId){
     const User = this
 
     try{
-        let order = await Order.findById(orderId)
-        let suppliers = await User.find({'work.workDetails.workId':order.workId,supplier:true})
-        let response = {order,suppliers}
-        return Promise.resolve(response)
+        let order = await Order.findById(orderId) //UNRELIABLE -  use projection
+        let suppliers = await User.find({'work.workDetails.workId':order.workId,supplier:true}) //UNRELIABLE -  use projection
+        if(order&&suppliers){
+            return Promise.resolve({order,suppliers})
+        }
+        return Promise.reject({message:'Error fetching suppliers',statusCode:404})
     }
     catch(e){
-        return Promise.reject('Error fetching suppliers')
+        return Promise.reject({message:'Error fetching suppliers',statusCode:500})
     }
 }
 

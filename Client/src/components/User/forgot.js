@@ -7,7 +7,8 @@ class Forgot extends React.Component{
     constructor(props){
         super(props)
         this.state={
-            email:''
+            email:'',
+            success:false
         }
         this.handleClick=this.handleClick.bind(this)
         this.handleSubmit=this.handleSubmit.bind(this)
@@ -23,9 +24,12 @@ class Forgot extends React.Component{
         e.preventDefault()
         axios.post('/user/forgotPassword',{
             email:this.state.email
+        },{
+            timeout:5000
         })
         .then((response)=>{
             console.log(response.data)
+            this.setState((p)=>{return{...p,success:true}})
         })
         .catch((err)=>{
             console.log(err)
@@ -33,17 +37,31 @@ class Forgot extends React.Component{
     }
 
     render(){
-        return(
-            <div>
-                <form onSubmit={this.handleSubmit} >
-
-                    <label htmlFor='email'>Email</label>
-                    <input type='text' name='email' id='email' placeholder='Email' onChange={this.handleClick}/>
-
-                    <button type='submit'>Submit</button>
-                </form>
-            </div>
-        )
+        if(!this.state.success){
+            return(
+                <div>
+                    <form onSubmit={this.handleSubmit} >
+    
+                        <label htmlFor='email'>Email</label>
+                        <input type='text' name='email' id='email' placeholder='Email' onChange={this.handleClick}/>
+    
+                        <button type='submit'>Submit</button>
+                    </form>
+                </div>
+            )
+        }
+        else{
+            return(
+                <div>
+                    <h3>A confirmation email has been sent to your email account</h3>
+                    {
+                        setTimeout((props)=>{
+                            props.history.replace('/user/login')
+                        },5000,this.props)
+                    }
+                </div>
+            )
+        }
     }
 }
 

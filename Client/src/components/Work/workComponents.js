@@ -4,9 +4,6 @@ import RangeSlider from './rangeSlider'
 import {connect} from 'react-redux'
 import {subOrderInitial,resultInitial} from './workFns'
 import {startsetOrder} from '../../action/orderAction'
-import Select from '@material-ui/core/Select'
-import MenuItem from '@material-ui/core/MenuItem'
-import Typography from '@material-ui/core/Typography'
 
 /* 
 
@@ -85,20 +82,7 @@ class WorkComponents extends React.Component{
                     return element
                 })
 
-                /* if its a multiwork subworks are saved as a array in order and sent */
-                if(subOrders.length>1){
-                    let order = {
-                        workId:this.props.work._id,
-                        userId:this.props.user._id,
-                        subOrders:subOrders
-                    }
-                    return {order:order,result:ele.result}
-                }
-
-                /* if not, the first array element is the order (single work) */
-                else{
-                    return {order:subOrders[0],result:ele.result}
-                }
+                return {order:subOrders[0],result:ele.result}
             })
 
             const redirect = () =>{
@@ -202,14 +186,6 @@ class WorkComponents extends React.Component{
 
     }
 
-    changeIncoterm(orderNumber,workIndex,val){
-        console.log(this.state)
-        this.setState((prevState)=>{
-            prevState.multiOrder[orderNumber].subOrders[workIndex].incoterm = val
-            return prevState
-        })
-    }
-
     /* closes the socket on unmount */
     componentWillUnmount(){
         this.props.socket.close()
@@ -232,26 +208,8 @@ class WorkComponents extends React.Component{
                                                 return this.makeElements(param,paramIndex,work.workId,workIndex,orderNumber)
                                             })
                                         }
-                                        {
-                                            this.props.work.options.shipmentRequired?(
-                                                <div style={{display:'flex',flexDirection:'row',alignItems:'center',margin:10}}>
-                                                    <Typography style={{marginRight:10}}>Type :</Typography>
-                                                    <Select
-                                                    value={this.state.multiOrder[orderNumber]&&this.state.multiOrder[orderNumber].subOrders[workIndex].incoterm?this.state.multiOrder[orderNumber].subOrders[workIndex].incoterm:'Exworks'}
-                                                    onChange={(e)=>{const val = e.target.value;this.changeIncoterm(orderNumber,workIndex,val)}}
-                                                    label="Payment"
-                                                    >
-                                                        <MenuItem value={"Exworks"}>Exworks</MenuItem>
-                                                        <MenuItem value={"FCA"}>FCA</MenuItem>
-                                                        <MenuItem value={"FOB"}>FOB</MenuItem>
-                                                        <MenuItem value={"CFR"}>CFR</MenuItem>
-                                                        <MenuItem value={"CIF"}>CIF</MenuItem>
-                                                    </Select>
-                                                </div>
-                                            ):<span/>
-                                        }
                                     </div>
-                                ) 
+                                )
                             }
                             else{
                                 return <HiddenComponent key={work._id} work={work} workIndex={workIndex} addValue={this.addValue} orderNumber={orderNumber}/>

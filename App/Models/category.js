@@ -22,7 +22,6 @@ const categorySchema = new Schema({
     },
     hscode:{
         type:String,
-        required:true,
         minlength:4,
         maxlength:4
     },

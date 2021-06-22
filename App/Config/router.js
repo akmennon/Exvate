@@ -46,7 +46,7 @@ router.get('/admin/works',admin.authAdminToken,works.all)
 router.get('/admin/searchWorks',admin.authAdminToken,works.searchAll)
 router.get('/admin/works/:id',admin.authAdminToken,works.detail)
 router.put('/admin/works/:id',admin.authAdminToken,works.workEdit)
-/* router.post('/admin/users',admin.authAdminToken,users.adminCreate) */
+/* router.post('/admin/users',admin.authAdminToken,users.adminCreate) Temporarily not used */
 router.get('/admin/users',admin.authAdminToken,users.all)
 router.get('/admin/users/:id',admin.authAdminToken,users.details)
 router.put('/admin/users/:id',admin.authAdminToken,users.userEdit)

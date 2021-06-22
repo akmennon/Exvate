@@ -7,8 +7,7 @@ export const subOrderInitial = (values,userId,params) =>{
     variables[values.index] = {
         title:params.title,
         value:values.value,
-        unit:params.unit,
-        incoterm:'Exworks'
+        unit:params.unit
     }
 
     /* workId and userId saved for the order strucutre since its required for every order */

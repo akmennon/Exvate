@@ -12,7 +12,7 @@ const sendMail = (mailData) =>{
     })
     .catch((error) => {
       console.error(error)
-      Promise.reject(error)
+      return Promise.reject(error)
     })
 
 }

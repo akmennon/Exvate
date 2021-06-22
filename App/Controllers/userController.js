@@ -1,5 +1,6 @@
 const User = require('../Models/user')
 const pick = require('lodash/pick')
+const errorHandler = require('../Resolvers/errorHandler')
 
 /* User signup function */
 
@@ -64,7 +65,7 @@ module.exports.logout = (req,res) =>{
 
 /* Forgot password reset function */
 
-module.exports.forgotPassword = (req,res) =>{
+module.exports.forgotPassword = (req,res,next) =>{
     const body = req.body
     console.log(body)
 
@@ -76,7 +77,7 @@ module.exports.forgotPassword = (req,res) =>{
             res.json(result)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -119,7 +120,7 @@ module.exports.confirmSignupEmail = (req,res) =>{
 
 /* Lets the user update the password when the verification link is followed */
 
-module.exports.confirmChangePassword = (req,res) =>{
+module.exports.confirmChangePassword = (req,res,next) =>{
     const token = req.params.token
     const body = req.body
 
@@ -130,7 +131,7 @@ module.exports.confirmChangePassword = (req,res) =>{
             res.json(response) //check only a message is required
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -191,7 +192,7 @@ module.exports.workAll = (req,res) =>{
         })
 }
 
-module.exports.orders = (req,res) =>{
+module.exports.orders = (req,res) =>{ // UNRELIABLE - Check if needed/not
     const body = req.body
     console.log(body)
 
@@ -205,22 +206,16 @@ module.exports.orders = (req,res) =>{
         })
 }
 
-/* validates that a user is trying to change password */
-module.exports.forgotCheck = (req,res) =>{
+/* validates the user who is trying to change password */
+module.exports.forgotCheck = (req,res,next) =>{
     const token = req.header('forgotToken')
 
     User.forgotCheck(token)
-        .then((user)=>{
-            if(user){
-                res.json({value:true})
-            }
-            else{
-                res.json({value:false})
-            }
+        .then((value)=>{
+            res.json(value)
         })
         .catch((err)=>{
-            console.log(err)
-            res.json('error finding user')
+            errorHandler(err,next)
         })
 }
 
@@ -263,6 +258,7 @@ module.exports.all = (req,res) =>{
     }
 }
 
+/* ADMIN - Finds the admin by his token - For react admin to verify*/
 module.exports.adminToken = (req,res) =>{
     const token = req.header('x-admin')
 
@@ -271,11 +267,11 @@ module.exports.adminToken = (req,res) =>{
             res.status(200).send({})
         })
         .catch((err)=>{
-            console.log(err)
-            res.status(401).send(err)
+            errorHandler(err,next)
         })
 }
 
+/* ADMIN - Finds all the suppliers for the type of work */
 module.exports.suppliers = (req,res) =>{
     const orderId = req.params.id
 
@@ -284,8 +280,7 @@ module.exports.suppliers = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            console.log(err)
-            res.json('Request error')
+            errorHandler(err,next)
         })
 }
 
@@ -302,19 +297,23 @@ module.exports.suppliers = (req,res) =>{
         })
 }*/
 
+/* ADMIN - Finds the details of the user including his work */
 module.exports.details = (req,res) =>{
     const id = req.params.id
 
-    User.findById(id).populate('work.workDetails.options')
+    User.findById(id).populate('work.workDetails.options') //UNRELIABLE - use projection
         .then((user)=>{
-            res.json(user)
+            if(user){
+                res.json(user)
+            }
+            res.status(404).send('Not found')
         })
         .catch((err)=>{
-            console.log(err)
-            res.json('Error fetching details')
+            errorHandler(err,next)
         })
 }
 
+/* ADMIN - UNRELIABLE - CONFIRM USAGE */
 module.exports.workOrders = (req,res) =>{
     const id = req.params.id
 
@@ -322,13 +321,12 @@ module.exports.workOrders = (req,res) =>{
         res.status(401).send('Unauthorized')
     }
     else{
-        User.findById(id).populate({path:'work.workOrder',populate:{path:'workId',select:'title'}})
+        User.findById(id).populate({path:'work.workOrder',populate:{path:'workId',select:'title'}}) //UNRELIABLE - use projection
             .then((user)=>{
                 res.json(user.work.workOrder)
             })
             .catch((e)=>{
-                console.log(e)
-                res.json('error fetching orders')
+                errorHandler(err,next)
             })
     }
 }
