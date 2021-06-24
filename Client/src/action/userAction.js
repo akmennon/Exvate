@@ -15,13 +15,13 @@ export const startSetUser = (loginData,redirect) =>{    //login action
                 if(response.data.hasOwnProperty('errors')){
                     console.log(response.data.errors)
                 }
-                else if(!response.data._id){
+                else if(!response.data.payload._id){
                     console.log(response.data)
                 }
                 else{
                     localStorage.setItem('x-auth',response.headers['x-auth'])
                     console.log(response.data)
-                    dispatch(setUser(response.data))
+                    dispatch(setUser(response.data.payload))
                     redirect()
                 }
             })
@@ -64,7 +64,7 @@ export const startRemoveUser = (token,redirect) =>{ //logout action
         })
         .then((response)=>{
             if(response.data.hasOwnProperty('errors')){
-                console.log('error -',response.data.errors)
+                console.log('error -',response.data.message)
             }
             else{
                 localStorage.removeItem('x-auth')

@@ -4,7 +4,7 @@ const errorHandler = require('../Resolvers/errorHandler')
 
 /* User signup function */
 
-module.exports.create = (req,res) =>{
+module.exports.create = (req,res,next) =>{
     const body = req.body
     const bodyPick = pick(body,['name','password','address','email'])
     const user = new User(bodyPick)
@@ -14,18 +14,17 @@ module.exports.create = (req,res) =>{
         .then(function(){
             return user.registerMail()
         })
-        .then(function(){
-            res.json('Account created ')
-            console.log('successful message')
+        .then(function(status){
+            res.json(status)
         })
         .catch(function(err){
-            console.log(err)
+            errorHandler(err,next)
         })
 }
 
 /* User Login function */ 
 
-module.exports.login = (req,res) =>{
+module.exports.login = (req,res,next) =>{
     const body = req.body
     let userData
     User.findByCredentials(body.email,body.password)
@@ -35,10 +34,10 @@ module.exports.login = (req,res) =>{
         })
         .then(function(token){
             res.setHeader('x-auth',token) // sends token as a header
-            res.json(pick(userData,['userType','_id','name','host','email.email']))
+            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','host','email.email'])})
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -56,10 +55,24 @@ module.exports.logout = (req,res) =>{
     /* removes the login token */
     User.findByIdAndUpdate(req.user._id,{$pull:{tokens:{token:req.token}}}) 
         .then(function(){
-            res.json('Successfully logged out')
+            res.json({status:true,message:'Successfully logged out'})
         })
         .catch(function(err){
             res.json(err)
+        })
+}
+
+/* User logout all */
+
+module.exports.logoutAll = (req,res,next) =>{
+
+    /* removes the login token */
+    User.findByIdAndUpdate(req.user._id,{$set:{tokens:[]}}) 
+        .then(function(){
+            res.json('Successfully logged out of all systems')
+        })
+        .catch(function(err){
+            errorHandler(err,next)
         })
 }
 
@@ -83,24 +96,27 @@ module.exports.forgotPassword = (req,res,next) =>{
 
 /* function to resend the email verfication email */
 
-module.exports.resendRegisterMail = (req,res) =>{
+module.exports.resendRegisterMail = (req,res,next) =>{
     const body = req.body
 
     User.findByEmail(body.email)
         .then(function(user){
+            if(user.email.confirmed.value){
+                return Promise.reject({status:false,message:'The account is already verified',statusCode:401})
+            }
             return user.registerMail() // sends the confirmation email
         })
-        .then(function(info){
-            res.json('Email has been sent to the address')
+        .then(function(response){
+            res.json({status:true,message:'The registration email has been sent to the address'})
         })
-        .catch(function(err){
-            res.json(err)
+        .catch((err)=>{
+            errorHandler(err,next)
         })
 }
 
 /* When the user follows the link in the confirmation email */
 
-module.exports.confirmSignupEmail = (req,res) =>{
+module.exports.confirmSignupEmail = (req,res,next) =>{
     const token = req.params.token
 
     User.confirmEmail(token)

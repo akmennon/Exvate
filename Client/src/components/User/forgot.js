@@ -8,7 +8,8 @@ class Forgot extends React.Component{
         super(props)
         this.state={
             email:'',
-            success:false
+            success:false,
+            message:''
         }
         this.handleClick=this.handleClick.bind(this)
         this.handleSubmit=this.handleSubmit.bind(this)
@@ -29,11 +30,17 @@ class Forgot extends React.Component{
         })
         .then((response)=>{
             console.log(response.data)
-            this.setState((p)=>{return{...p,success:true}})
+            this.setState((p)=>{return{...p,success:response.data.status,message:response.data.message}})
         })
         .catch((err)=>{
             console.log(err)
         })
+    }
+
+    redirect(){
+        setTimeout((props)=>{
+            props.history.replace('/user/login')
+        },5000,this.props)
     }
 
     render(){
@@ -53,11 +60,9 @@ class Forgot extends React.Component{
         else{
             return(
                 <div>
-                    <h3>A confirmation email has been sent to your email account</h3>
+                    <h3>{this.state.message}</h3>
                     {
-                        setTimeout((props)=>{
-                            props.history.replace('/user/login')
-                        },5000,this.props)
+                        this.redirect()
                     }
                 </div>
             )

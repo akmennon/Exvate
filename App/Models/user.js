@@ -107,8 +107,7 @@ const userSchema = new Schema({
             type:String
         },
         auth:{
-            type:Number,
-            default:1
+            type:Number
         }
     },
     userType:{                              // To assign the user type
@@ -122,6 +121,8 @@ const userSchema = new Schema({
                     case 'Admin':
                         return true
                     case 'Supplier':
+                        return true
+                    case 'Affiliate':
                         return true
                     default:
                         return false
@@ -237,6 +238,12 @@ const userSchema = new Schema({
                 doneBy:{
                     type:Schema.Types.ObjectId,
                     ref:'User'
+                },
+                createdAt:{
+                    type:Date
+                },
+                duration:{
+                    type:Date
                 }
             }
         }
@@ -308,19 +315,18 @@ userSchema.methods.registerMail = async function(){
         if(!user.email.confirmed.token){
             user.set('email.confirmed.token', token)
             await user.save()
-            const info = await sendMail(mailData)
-            return Promise.resolve(info)
+            await sendMail(mailData)
+            return Promise.resolve({status:true,message:'Successfully sent mail'})
         }
     
         /* uses existing token for the link (email resend) */
         mailData.text = `Click the following link to verify \n\nhttp://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
     
-        const info = await sendMail(mailData)
-        return Promise.resolve(info)
+        await sendMail(mailData)
+        return Promise.resolve({status:true,message:'Successfully sent mail'})
     }
-    catch(e){
-        console.log(e)
-        return Promise.reject('Error sending message')
+    catch(err){
+        return Promise.reject(err)
     }
 }
 
@@ -334,12 +340,12 @@ userSchema.statics.findByCredentials = function(email,password){
 
             /* checks if user is present and if email is confirmed */
             if(!user){
-                return Promise.reject('Invalid email or password')
+                return Promise.reject({message:'Invalid email or password',statusCode:401})
             }else if(!user.email.confirmed.value){
                 if(user.adminCreated){
                     user.email.confirmed.value = true
                 }else{
-                    return Promise.reject('Please confirm email')
+                    return Promise.reject({message:'Please confirm email',statusCode:401})
                 }
             }
 
@@ -349,7 +355,7 @@ userSchema.statics.findByCredentials = function(email,password){
                         return Promise.resolve(user)
                     }
                     else{
-                        return Promise.reject('Invalid email or password')
+                        return Promise.reject({message:'Invalid email or password',statusCode:401})
                     }
                 })
                 .catch(function(err){
@@ -382,6 +388,9 @@ userSchema.statics.findByToken = function(token){
 
     return User.findOne({'tokens.token':token})
             .then(function(user){
+                if(user){
+
+                }
                 return Promise.resolve(user)
             })
             .catch(function(err){
@@ -409,7 +418,7 @@ userSchema.methods.generateForgotToken = async function(){
             }
 
             await sendMail(mailData)
-            return Promise.resolve('Mail sent')
+            return Promise.resolve({status:true,message:'Link to change password has been resent to your email address'})
         }
 
         const token = jwt.sign(tokenData, keys.jwtSecret,{expiresIn:'1h'})
@@ -429,7 +438,7 @@ userSchema.methods.generateForgotToken = async function(){
 
         await user.save()
         await sendMail(mailData)
-        return Promise.resolve('Mail sent')
+        return Promise.resolve({status:true,message:'The link to change password has been resent to your email address'})
     
     }
     catch(e){
@@ -446,6 +455,9 @@ userSchema.methods.generateToken = function(){
     }
 
     const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
+    if(user.tokens.length==10){
+        user.tokens.length.shift()
+    }
     user.tokens.push({token})
     return user.save()
             .then(function(){
@@ -456,6 +468,7 @@ userSchema.methods.generateToken = function(){
             })
 }
 
+/* LAST - Added response structure, In progress mongodb find true check */
 /* confirms the email when the link from the verification email is followed */
 
 userSchema.statics.confirmEmail = function(token){
@@ -464,7 +477,7 @@ userSchema.statics.confirmEmail = function(token){
     return User.findOne({'email.confirmed.token':token})
                 .then(function(user){
                     if(!user){
-                        return Promise.reject('user not found')
+                        return Promise.reject({status:false,message:'User not found',statusCode:404})
                     }
                     user.email.confirmed.value = true
                     return user.save()

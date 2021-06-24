@@ -1,5 +1,6 @@
 
 const errorHandler = (err,next) =>{
+    console.log(err)
     const error = new Error(err)
     if(err.statusCode){
         error.statusCode = err.statusCode
