@@ -1,4 +1,5 @@
 const User = require('../Models/user')
+const errorHandler = require('../Resolvers/errorHandler')
 
 /* Admin middleware which checks if the user is an admin and also authenticates */
 
@@ -23,7 +24,7 @@ const User = require('../Models/user')
                     }
                 })
                 .catch(function(err){
-                    res.status(401).send(err)
+                    errorHandler(err,next)
                 })
         }
     }
@@ -44,6 +45,6 @@ const User = require('../Models/user')
                 }
             })
             .catch(function(err){
-                res.status(401).send(err)
+                errorHandler(err,next)
             })
     }

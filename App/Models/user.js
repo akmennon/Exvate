@@ -8,6 +8,7 @@ const generator = require('generate-password')
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
+const { updateOne, deleteOne } = require('./work/optionSubdoc')
 
 const Schema = mongoose.Schema
 
@@ -209,6 +210,10 @@ const userSchema = new Schema({
                     type:Boolean,
                     default:false
                 },
+                number:{
+                    type:Number,
+                    default:1
+                },
                 doneBy:{
                     type:Schema.Types.ObjectId,
                     ref:'User'
@@ -304,7 +309,7 @@ userSchema.methods.registerMail = async function(){
         const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
     
         let mailData = {
-            from: '"Sourceo" <ajaydragonballz@gmail.com>',
+            from: '"Exvate" <ajaydragonballz@gmail.com>',
             to: user.email.email, // list of receivers
             subject: "Signup email confirmation",
             text: `Test - http://localhost:3000/user/confirmSign/${token}`, // Email confirmation link
@@ -410,7 +415,7 @@ userSchema.methods.generateForgotToken = async function(){
 
         if(user.forgotToken.token&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
             let mailData = {
-                from: '"Sourceo" <ajaydragonballz@gmail.com>',
+                from: '"Exvate" <ajaydragonballz@gmail.com>',
                 to: user.email.email, // list of receivers
                 subject: "Change Password",
                 text: `Test - http://localhost:3000/user/confirmForgot/${user.forgotToken.token}`, // Email confirmation link
@@ -424,7 +429,7 @@ userSchema.methods.generateForgotToken = async function(){
         const token = jwt.sign(tokenData, keys.jwtSecret,{expiresIn:'1h'})
 
         let mailData = {
-            from: '"Sourceo" <ajaydragonballz@gmail.com>',
+            from: '"Exvate" <ajaydragonballz@gmail.com>',
             to: user.email.email, // list of receivers
             subject: "Change Password",
             text: `Test - http://localhost:3000/user/confirmForgot/${token}`, // Email confirmation link
@@ -468,7 +473,6 @@ userSchema.methods.generateToken = function(){
             })
 }
 
-/* LAST - Added response structure, In progress mongodb find true check */
 /* confirms the email when the link from the verification email is followed */
 
 userSchema.statics.confirmEmail = function(token){
@@ -479,11 +483,14 @@ userSchema.statics.confirmEmail = function(token){
                     if(!user){
                         return Promise.reject({status:false,message:'User not found',statusCode:404})
                     }
+                    if(user.email.confirmed.value){
+                        return Promise.reject({status:false,message:'User already verified',statusCode:401})
+                    }
                     user.email.confirmed.value = true
                     return user.save()
                 })
                 .then(function(user){
-                    return Promise.resolve(user)
+                    return Promise.resolve({status:true,message:'Email confirmed successfully'})
                 })
                 .catch(function(err){
                     return Promise.reject(err)
@@ -498,10 +505,10 @@ userSchema.statics.confirmPassword = async function(token,password){
     try{
         const user = await User.findOne({'forgotToken.token':token})
         if(!user){
-            return Promise.reject('Invalid password change attempt')
+            return Promise.reject({status:false,message:'Invalid password change attempt',statusCode:401})
         }
         if(new Date(user.forgotToken.expiresAt).getTime()<Date.now()){
-            return Promise.reject({message:'Token expired',statusCode:401})
+            return Promise.reject({status:false,message:'Token expired',statusCode:401})
         }
         jwt.verify(token,keys.jwtSecret)
         await user.set('password',password)
@@ -515,80 +522,70 @@ userSchema.statics.confirmPassword = async function(token,password){
 
 /* Admin credential middleware check */
 
-userSchema.statics.adminSignAction = function(email,password){
+userSchema.statics.adminSignAction = async function(email,password){
     const User = this
 
-    return User.findOne({'email.email':email})
-        .then(function(user){
-            if(!user){
-                return Promise.reject('Invalid email or password')
-            }
-
-            return bcryptjs.compare(password,user.password)
-                .then(function(result){
-                    if(result){
-                        return Promise.resolve(user)
-                    }
-                    else{
-                        return Promise.reject('Invalid email or password')
-                    }
-                })
-                .catch(function(err){
-                    return Promise.reject(err)
-                })
-        })
+    try{
+        const user = await User.findOne({'email.email':email})
+        if(!user){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+        const result = await bcryptjs.compare(password,user.password)
+        if(result){
+            return Promise.resolve(user)
+        }
+        else{
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 /* Admin login function */
 
-userSchema.statics.adminLogin = function(email,password){
+userSchema.statics.adminLogin = async function(email,password){
     const User = this
 
-    return User.findOne({'email.email':email})
-            .then(function(user){
-                /* checks if the user is an admin */
-                if(!user||!user.isAdmin.value){
-                    return Promise.reject('Invalid login attempt')
-                }
-
-                return bcryptjs.compare(password,user.password)
-                    .then(function(result){
-                        if(result){
-                            return Promise.resolve(user)
-                        }
-                        else{
-                            return Promise.reject('Invalid login attempt')
-                        }
-                    })
-                    .catch(function(err){
-                        return Promise.reject(err)
-                    })
-            })
-            .catch(function(err){
-                return Promise.reject(err)
-            })
+    try{
+        const user = await User.findOne({'email.email':email})
+        if(!user||!user.isAdmin.value){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+        const result = await bcryptjs.compare(password,user.password)
+        if(result){
+            return Promise.resolve(user)
+        }
+        else{
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+    }
+    catch(err){
+        return Promise.reject(err)
+    }
 }
 
 /* Admin login token generation */
 
-userSchema.methods.generateAdminToken = function(){
+userSchema.methods.generateAdminToken = async function(){
     const user = this
 
-    let tokenData = {
-        createdAt:new Date()
+    try{
+        let tokenData = {
+            createdAt:new Date()
+        }
+    
+        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG - Expiration
+
+        /* admin token is saved to isAdmin.token not tokens array */
+        await user.set('isAdmin.token',token)
+        await user.save()
+        return Promise.resolve(user.isAdmin.token)
     }
-
-    const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG - Expiration
-    user.set('isAdmin.token',token)
-
-    /* admin token is saved to isAdmin.token not tokens array */
-    return user.save()
-            .then(function(user){
-                return Promise.resolve(user.isAdmin.token)
-            })
-            .catch(function(err){
-                return Promise.reject(err)
-            })
+    catch(err){
+        return Promise.reject(err)
+    }
 }
 
 /* Admin token middleware check */
@@ -599,7 +596,7 @@ userSchema.statics.findByAdminToken = function(token){
     return User.findOne({'isAdmin.token':token}).lean()
                 .then(function(user){
                     if(!user){
-                        return Promise.reject('Invalid request')
+                        return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
                     }
                     return Promise.resolve(user)
                 })
@@ -608,6 +605,7 @@ userSchema.statics.findByAdminToken = function(token){
                 })
 }
 
+/* UNEDITED - Not from user controller - remove this after this is edited */
 /* Helps change the order status and move it to respt. arrays in user */
 userSchema.statics.saveOrder = async function(order,id){
     const User = this
@@ -624,6 +622,7 @@ userSchema.statics.saveOrder = async function(order,id){
     }
 }
 
+/* Test Pending - Multiple work - default to be set to 3 and ability to be changed - Change validation to accomodate it */
 /* Adds,deletes or updates work for the host*/
 userSchema.statics.updateWork = async function(id,body){
     const User = this
@@ -633,17 +632,21 @@ userSchema.statics.updateWork = async function(id,body){
     
     try{
         const user = await User.findById(id)
-        const option = new Option(params.options)
-        params.options = option
 
         /* deletes the work */
         if(body.select == 'delete'){
             const workIndex = user.work.workDetails.findIndex((element)=>{
                 return element.workId == params.workId
             })
+            await Option.deleteOne({'_id':user.work.workDetails[workIndex].options})
             user.work.workDetails.splice(workIndex,1)
             await user.save()
-            return Promise.resolve('Work deleted')
+            return Promise.resolve({status:true,message:'Work deleted'})
+        }
+
+        /* checks permission to add multiwork */
+        if(params.options.options.length>1){
+            return Promise.reject({status:false,message:'Not a proper request',statusCode:400})
         }
 
         /* updates the work */
@@ -653,14 +656,8 @@ userSchema.statics.updateWork = async function(id,body){
             })
 
             user.work.workDetails[workIndex] = params
-            await params.options.save()
-            await user.save()
-            return Promise.resolve('Work updated')
-        }
-
-        /* checks permission to add multiwork */
-        if(params.options.options.length>1){
-            return Promise.reject('User is not verified for a multiwork')
+            await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{$set:{'options':params.options}})
+            return Promise.resolve({status:true,message:'Work Updated'})
         }
 
         /* could be wrong,check */
@@ -670,31 +667,32 @@ userSchema.statics.updateWork = async function(id,body){
 
         /* if added, checks if work already exists */
         if(workIndex!=-1){
-            return Promise.reject('Work already exists')
+            return Promise.reject({status:false,message:'Work already exists',statusCode:403})
         }
         else{
+            const option = new Option(params.options)
+            params.options = option
             /* checks permission if user can add multiple works */
-            if(user.work.workDetails.length>=1){
-                if(!user.perms.supplier.multipleWorks.value){
-                    return Promise.reject('Contact support to add multiple inventories')
+            if(user.work.workDetails.length>1){
+                if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
+                    return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
                 }
 
                 await params.options.save()
                 user.work.workDetails.push(params)
                 await user.save()
-                return Promise.resolve('Work added')
+                return Promise.resolve({status:true,message:'Work Added'})
             }
             else{
                 await params.options.save()
                 user.work.workDetails.push(params)
                 await user.save()
-                return Promise.resolve('Work added')
+                return Promise.resolve({status:true,message:'Work Added'})
             }
         }
     }
     catch(err){
-        console.log(err)
-        Promise.reject('Error in updating work')
+        Promise.reject(err)
     }
 }
 
@@ -791,7 +789,7 @@ userSchema.statics.orderSuppliers = async function(orderId){
         }
 
         const mailData = {
-            from: '"Sourceo" <kajaymenon@hotmail.com>',
+            from: '"Exvate" <kajaymenon@hotmail.com>',
             to: user.email.email, // list of receivers
             subject: "Account Created",
             text: `An account has been created for you by our team. Please use the credentials below to sign in.\n\n email:${email} \n password:${password}`

@@ -7,7 +7,9 @@ class confirmSign extends React.Component{
     constructor(props){
         super(props)
         this.state={
-            call:''
+            call:'',
+            loading:true,
+            data:{}
         }
     }
 
@@ -15,29 +17,51 @@ class confirmSign extends React.Component{
         axios.get(`/user/confirmSign/${this.props.match.params.token}`)
             .then((response)=>{
                 console.log(response)
-                if(response.data.value){
-                    this.setState({call:true})
+                if(response.data.status){
+                    this.setState({call:true,loading:false,data:response.data})
                     setTimeout(()=>{
                         this.props.history.push('/user/login')
                     },3000)
                 }
                 else{
-                    this.setState({call:false})
+                    this.setState({call:false,loading:false,data:response.data})
                 }
             })
             .catch((err)=>{
                 console.log(err)
+                this.setState({call:false,loading:false})
             })
+        setTimeout(()=>{
+            if(this.state.loading){
+                this.setState({loading:false})
+            }
+        },8000)
     }
 
     render(){
-        return(
-            <div>
-                {
-                    this.state.call===false?<p>page not found</p>:<p>Your Email has been confirmed. You'll be redirected shortly.</p>
-                }
-            </div>
-        )
+        if(!this.state.loading){
+            if(this.state.call){
+                return(
+                    <div>
+                        <p>Your Email has been confirmed. You'll be redirected shortly</p>
+                    </div>
+                )
+            }
+            else{
+                return(
+                    <div>
+                        <p>{this.state.data.message||'Error confirming email'}</p>
+                    </div>
+                )
+            }
+        }
+        else{
+            return(
+                <div>
+                        <p>Loading</p>
+                </div>
+            )
+        }
     }
 }
 

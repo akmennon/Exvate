@@ -21,8 +21,14 @@ App.use(cors({exposedHeaders: ['x-auth','full'],credentials: true, origin: true}
 App.use('/',router)
 
 App.use((err,req,res,next)=>{
-    const {statusCode,message} = err
-    res.status(statusCode).send({status:false,message})
+    if(err.statusCode){
+        const {statusCode,message} = err
+        res.status(statusCode).send({status:false,message})
+    }
+    else{
+        console.log(err)
+        res.status(500).send("Server error")
+    }
 })
 
 const expressServer = App.listen(port,()=>{

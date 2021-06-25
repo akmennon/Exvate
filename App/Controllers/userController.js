@@ -2,6 +2,8 @@ const User = require('../Models/user')
 const pick = require('lodash/pick')
 const errorHandler = require('../Resolvers/errorHandler')
 
+/* Work left : Pick */
+
 /* User signup function */
 
 module.exports.create = (req,res,next) =>{
@@ -120,17 +122,11 @@ module.exports.confirmSignupEmail = (req,res,next) =>{
     const token = req.params.token
 
     User.confirmEmail(token)
-        .then(function(user){
-            if(user){
-                res.json({value:true})
-            }
-            else{
-                res.json({value:false})
-            }
+        .then(function(response){
+            res.json(response)
         })
         .catch(function(err){
-            console.log(err)
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -153,7 +149,7 @@ module.exports.confirmChangePassword = (req,res,next) =>{
 
 /* Admin login function */
 
-module.exports.adminLogin = (req,res) =>{
+module.exports.adminLogin = (req,res,next) =>{
     const body = req.body
 
     User.adminLogin(body.email,body.password)
@@ -164,24 +160,25 @@ module.exports.adminLogin = (req,res) =>{
                 res.setHeader('x-admin',token).send({})
             })
             .catch(function(err){
-                res.json(err)
+                errorHandler(err,next)
             })
 }
 
 /* Admin logout function */
 
-module.exports.adminLogout = (req,res) =>{
-    User.findByIdAndUpdate(req.user._id,{$pull:{isAdmin:{token:req.token}}},{new:true, runValidators:true})
+module.exports.adminLogout = (req,res,next) =>{
+    User.findByIdAndUpdate(req.user._id,{$pull:{isAdmin:{token:req.token}}})
         .then(function(){
             res.json('Successfully logged out')
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
+/* LAST - Adding response and reject structure, error handling - this work controller being worked on frontend pending */
 /* Adds, deletes or updates a work for the host*/
-module.exports.addWork = (req,res) =>{
+module.exports.addWork = (req,res,next) =>{
     const body = req.body
     const userId = req.params.id
 
@@ -190,8 +187,7 @@ module.exports.addWork = (req,res) =>{
             res.json(user)
         })
         .catch((err)=>{
-            console.log(err)
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -275,7 +271,7 @@ module.exports.all = (req,res) =>{
 }
 
 /* ADMIN - Finds the admin by his token - For react admin to verify*/
-module.exports.adminToken = (req,res) =>{
+module.exports.adminToken = (req,res,next) =>{
     const token = req.header('x-admin')
 
     User.findByAdminToken(token)
@@ -314,7 +310,7 @@ module.exports.suppliers = (req,res) =>{
 }*/
 
 /* ADMIN - Finds the details of the user including his work */
-module.exports.details = (req,res) =>{
+module.exports.details = (req,res,next) =>{
     const id = req.params.id
 
     User.findById(id).populate('work.workDetails.options') //UNRELIABLE - use projection
@@ -322,7 +318,9 @@ module.exports.details = (req,res) =>{
             if(user){
                 res.json(user)
             }
-            res.status(404).send('Not found')
+            else{
+                res.status(404).send('Not found')
+            }
         })
         .catch((err)=>{
             errorHandler(err,next)

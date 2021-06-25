@@ -31,16 +31,15 @@ io.of('/admin').on('connection',(socket)=>{
             socket.emit('token',{token:adminToken})
         }
         catch(err){
-            socket.emit('token',{err:err})
+            console.log(err)
         }
     })
 
     /*-------------------- Logs out as well as remove the token --------------------*/
     socket.on('disconnect',async (reason)=>{
         try{
-            const admin = await User.findOne({'isAdmin.token':adminToken})
-            admin.isAdmin.token = undefined
-            await admin.save()
+            const result = await User.updateOne({'isAdmin.token':adminToken},{$unset:{'admin.isAdmin.token':''}})
+            console.log(result)
         }
         catch(err){
             console.log(err)

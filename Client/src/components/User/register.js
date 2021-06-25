@@ -1,5 +1,6 @@
 import React from 'react'
 import axios from '../../config/axios'
+import errMsg from '../../config/errMsg'
 
 /* registration */
 
@@ -9,7 +10,11 @@ class Register extends React.Component{
         this.state={
             name:'',
             password:'',
-            email:''
+            email:'',
+            message:'',
+            data:{},
+            status:true,
+            loading:false
         }
     }
 
@@ -24,16 +29,18 @@ class Register extends React.Component{
                 email:this.state.email
             }
         }
+        this.setState({loading:true})
+        setTimeout(()=>{
+            this.setState({loading:false})
+        },8000)
 
         axios.post('/user/signup',registerData)
-            .then((response)=>{
-                console.log(response)
-                this.props.history.push('/user/login')
+            .then((res)=>{
+                this.setState({data:res.data,status:true,loading:false})
             })
             .catch((err)=>{
-                console.log(err)
+                this.setState({name:'',password:'',email:'',message:errMsg(err,'Error Registering'),status:false,loading:false})
             })
-
     }
 
     handleClick = (e) =>{
@@ -46,6 +53,15 @@ class Register extends React.Component{
             })
         }
     }
+
+    hiddenMsg = () =>{
+        if(!this.state.status){
+            return <p>{this.state.message}</p>
+        }
+        else{
+            return <span/>
+        }
+    }
     
     render(){
         return(
@@ -55,16 +71,19 @@ class Register extends React.Component{
                     <h1>Register</h1>
 
                     <label htmlFor='name'>Name </label>
-                    <input type='text' id='name' name='name' placeholder='Name' onChange={this.handleClick}/>
+                    <input type='text' id='name' name='name' placeholder='Name' onChange={this.handleClick} value={this.state.name}/>
 
                     <label htmlFor='email'>Email </label>
-                    <input type='text' id='email' name='email' placeholder='Email' onChange={this.handleClick}/>
+                    <input type='text' id='email' name='email' placeholder='Email' onChange={this.handleClick} value={this.state.email}/>
 
                     <label htmlFor='password'>Password </label>
-                    <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick}/>
+                    <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick} value={this.state.password}/>
 
-                    <button type='submit'>Register</button>
+                    <button type='submit'>Register {this.state.loading?<p>O</p>:<span/>}</button>
                 </form>
+                {
+                    this.hiddenMsg()
+                }
                 <button name='resendEmail' onClick={this.handleClick}>Resend Email</button>
             </div>
         )
