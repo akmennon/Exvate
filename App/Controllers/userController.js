@@ -357,7 +357,7 @@ module.exports.hostCancel = (req,res) =>{
         })
 }
 
-module.exports.userEdit = (req,res) =>{
+module.exports.userEdit = (req,res,next) =>{
     const user = req.user
     const body = req.body
     const id = req.params.id
@@ -367,6 +367,6 @@ module.exports.userEdit = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }

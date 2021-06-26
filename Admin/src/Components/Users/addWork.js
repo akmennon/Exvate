@@ -1,7 +1,7 @@
 import React,{Fragment, useEffect, useState} from "react";
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import { Title,SimpleForm,AutocompleteInput,FormDataConsumer,ArrayInput,SimpleFormIterator,TextInput,SelectArrayInput,NumberInput,BooleanInput } from 'react-admin';
+import { Title,SimpleForm,AutocompleteInput,FormDataConsumer,ArrayInput,SimpleFormIterator,TextInput,SelectArrayInput,NumberInput,BooleanInput,SelectInput } from 'react-admin';
 import axios from '../../config/Axios'
 
 /* MULTI WORK - PENDING DECISION (IF REQUIRED OR NOT) */
@@ -60,46 +60,44 @@ const GetOptions = (props) =>{
 const ArrayWorks = (props)=>{
     const {work} = props
     if(work&&work.options){
-        return work.options.options.map((option)=>{
-            return option.params.map((param,index)=>{
-                if(param.tierType===true){
-                    const choices = param.values.map((value,index)=>{
-                        return (
-                            {
-                                label:value.label,
-                                value:value
-                            }
-                        )
-                    })
+        return work.options.options[0].params.map((param,index)=>{
+            if(param.tierType===true){
+                const choices = param.values.map((value,index)=>{
                     return (
-                        <Fragment key={param._id}>
-                            <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
-                            <br></br>
-                            <BooleanInput defaultValue={param.tierType} source={props.getSource(`params[${index}].tierType`)} options={{disabled:true}} label='Tier type'/>
-                            <br></br>
-                            <SelectArrayInput source={props.getSource(`params[${index}].values`)} choices={choices} optionText='label' optionValue='value' label='Param values'/>
-                            <br></br>
-                        </Fragment>
+                        {
+                            label:value.label,
+                            value:value
+                        }
                     )
-                }
-                else{
-                    console.log(param)
-                    return (
-                        <Fragment key={param._id}>
-                            <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
-                            <br></br>
-                            <NumberInput initialValue={10} source={props.getSource(`params[${index}].values[${0}].min`)} label='Minimum'/>
-                            <br></br>
-                            <NumberInput initialValue={100} source={props.getSource(`params[${index}].values[${0}].max`)} label='Maximum'/>
-                            <br></br>
-                            <NumberInput initialValue={param.values[0].time} source={props.getSource(`params[${index}].values[${0}].time`)} options={{disabled:true}} label='Time'/>
-                            <br></br>
-                            <BooleanInput initialValue={param.values[0].amount} source={props.getSource(`params[${index}].values[${0}].amount`)} label='Amount'/>
-                            <br></br>
-                        </Fragment>
-                    )
-                }
-            })
+                })
+                return (
+                    <Fragment key={param._id}>
+                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <br></br>
+                        <BooleanInput defaultValue={param.tierType} source={props.getSource(`params[${index}].tierType`)} options={{disabled:true}} label='Tier type'/>
+                        <br></br>
+                        <SelectArrayInput source={props.getSource(`params[${index}].values`)} choices={choices} optionText='label' optionValue='value' label='Param values'/>
+                        <br></br>
+                    </Fragment>
+                )
+            }
+            else{
+                console.log(param)
+                return (
+                    <Fragment key={param._id}>
+                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <br></br>
+                        <NumberInput initialValue={10} source={props.getSource(`params[${index}].values[${0}].min`)} label='Minimum'/>
+                        <br></br>
+                        <NumberInput initialValue={100} source={props.getSource(`params[${index}].values[${0}].max`)} label='Maximum'/>
+                        <br></br>
+                        <NumberInput initialValue={param.values[0].time} source={props.getSource(`params[${index}].values[${0}].time`)} options={{disabled:true}} label='Time'/>
+                        <br></br>
+                        <BooleanInput initialValue={param.values[0].amount} source={props.getSource(`params[${index}].values[${0}].amount`)} label='Amount'/>
+                        <br></br>
+                    </Fragment>
+                )
+            }
         })
     }
     else{
@@ -132,8 +130,13 @@ const AddWork = (props) => {
     return(
         <Card>
             <CardContent>
-                <Title title="Add Work"/>
+                <Title title="Update Work"/>
                 <SimpleForm submitOnEnter={false} save={(data)=>Save(data,props)} >
+                <SelectInput source="select" choices={[
+                    { id: 'delete', name: 'Delete' },
+                    { id: 'update', name: 'Update' },
+                    { id: 'Add', name: 'Add' },
+                ]} />
                     <ArrayInput source='options.options' label='Options'>
                         <SimpleFormIterator>
                             <FormDataConsumer>

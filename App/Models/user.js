@@ -119,8 +119,6 @@ const userSchema = new Schema({
                 switch(value){
                     case 'User':
                         return true
-                    case 'Admin':
-                        return true
                     case 'Supplier':
                         return true
                     case 'Affiliate':
@@ -212,7 +210,9 @@ const userSchema = new Schema({
                 },
                 number:{
                     type:Number,
-                    default:1
+                    default:1,
+                    min:1,
+                    max:10
                 },
                 doneBy:{
                     type:Schema.Types.ObjectId,
@@ -632,67 +632,53 @@ userSchema.statics.updateWork = async function(id,body){
     
     try{
         const user = await User.findById(id)
-
-        /* deletes the work */
-        if(body.select == 'delete'){
-            const workIndex = user.work.workDetails.findIndex((element)=>{
-                return element.workId == params.workId
-            })
-            await Option.deleteOne({'_id':user.work.workDetails[workIndex].options})
-            user.work.workDetails.splice(workIndex,1)
-            await user.save()
-            return Promise.resolve({status:true,message:'Work deleted'})
-        }
-
-        /* checks permission to add multiwork */
-        if(params.options.options.length>1){
-            return Promise.reject({status:false,message:'Not a proper request',statusCode:400})
-        }
-
-        /* updates the work */
-        if(body.select == 'update'){
-            const workIndex = user.work.workDetails.findIndex((element)=>{
-                return element.workId == params.workId
-            })
-
-            user.work.workDetails[workIndex] = params
-            await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{$set:{'options':params.options}})
-            return Promise.resolve({status:true,message:'Work Updated'})
-        }
-
-        /* could be wrong,check */
-        let workIndex = user.work.workDetails.findIndex((element)=>{
+        const workIndex = user.work.workDetails.findIndex((element)=>{
             return element.workId == params.workId
         })
 
-        /* if added, checks if work already exists */
         if(workIndex!=-1){
+            /* deletes the work */
+            if(body.select == 'delete'){
+                await Option.deleteOne({'_id':user.work.workDetails[workIndex].options})
+                user.work.workDetails.splice(workIndex,1)
+                await user.save()
+                return Promise.resolve({status:true,message:'Work deleted'})
+            }
+
+            /* checks permission to add multiwork */
+            if(params.options.options.length>1){
+                return Promise.reject({status:false,message:'Not a proper request',statusCode:400})
+            }
+
+            /* updates the work */
+            if(body.select == 'update'){
+                await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{$set:{'options':params.options}})
+
+                if(!user.work.workDetails[workIndex].workId == params.workId){
+                    user.work.workDetails[workIndex].workId = params.workId
+                    await user.save()
+                }
+                return Promise.resolve({status:true,message:'Work Updated'})
+            }
+
             return Promise.reject({status:false,message:'Work already exists',statusCode:403})
         }
         else{
             const option = new Option(params.options)
             params.options = option
             /* checks permission if user can add multiple works */
-            if(user.work.workDetails.length>1){
-                if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
-                    return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
-                }
+            if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
+                return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
+            }
 
-                await params.options.save()
-                user.work.workDetails.push(params)
-                await user.save()
-                return Promise.resolve({status:true,message:'Work Added'})
-            }
-            else{
-                await params.options.save()
-                user.work.workDetails.push(params)
-                await user.save()
-                return Promise.resolve({status:true,message:'Work Added'})
-            }
+            await params.options.save()
+            user.work.workDetails.push(params)
+            await user.save()
+            return Promise.resolve({status:true,message:'Work Added'})
         }
     }
     catch(err){
-        Promise.reject(err)
+        return Promise.reject(err)
     }
 }
 
@@ -882,7 +868,7 @@ userSchema.statics.hostCancel = async function(orderId,reqUser){
 userSchema.statics.userEdit = async function(user,body,id){
     const User = this
 
-    const userBody = pick(body,['name','email.email','mobile','address','userType','supplier'])
+    const userBody = pick(body,['name','email.email','mobile','address','userType','supplier','perms'])
 
     try{
         if(user.isAdmin.value||user._id==id){

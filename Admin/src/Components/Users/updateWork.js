@@ -1,155 +1,178 @@
-import React,{Fragment}from "react";
+import React,{Fragment, useEffect, useState} from "react";
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import CardHeader from '@material-ui/core/CardHeader';
-import { Title, useQuery, Loading } from 'react-admin';
-import { makeStyles } from '@material-ui/core/styles'
-import Button from '@material-ui/core/Button'
-import Typography from '@material-ui/core/Typography'
+import { Title,SimpleForm,AutocompleteInput,FormDataConsumer,ArrayInput,SimpleFormIterator,TextInput,SelectArrayInput,NumberInput,BooleanInput,SelectInput } from 'react-admin';
+import axios from '../../config/Axios'
 
-const useStyles = makeStyles((theme)=>({
-    column:{
-        'display':'flex',
-        'flexDirection':'column',
-        'alignItems':'center'
-    },
-    content:{
-        'display':'flex',
-        'flexDirection':'row',
-        'justifyContent':'space-between'
-    },
-    header:{
-        'padding':5
-    },
-    subtitle:{
-        'marginTop':50,
-        'marginLeft':30
+/* check initial value persistence when works are changed */
+
+const SelectorInput = (props) =>{
+    const [data,setData] = useState([])
+    useEffect(()=>{
+        const token = sessionStorage.getItem('token')
+        axios.get('/searchWorks',{
+            headers:{
+                'x-admin':token
+            }
+        })
+        .then((response)=>{
+            setData(response.data)
+        })
+        .catch((err)=>{
+            console.log(err)
+        })
+    },[])
+    if(data.length!==0){
+        return <AutocompleteInput source={props.source} choices={data} optionValue='_id' optionText='title' suggestionLimit={4} label='Work'/>
     }
-}))
+    else{
+        return null
+    }
+}
 
-const UpdateWork = (props) => {
-    const { data, loading, error } = useQuery({ 
-        type: 'getOne',
-        resource: 'users',
-        payload: { id: props.match.params.id }
+const ArrayWorks = (props)=>{
+    const {work} = props
+    if(work&&work.options){
+        return work.options.options[0].params.map((param,index)=>{
+            if(param.tierType===true){
+                const choices = param.values.map((value,index)=>{
+                    return (
+                        {
+                            label:value.label,
+                            value:value
+                        }
+                    )
+                })
+                console.log(param._id)
+                return (
+                    <Fragment key={param._id}>
+                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <br></br>
+                        <BooleanInput defaultValue={param.tierType} source={props.getSource(`params[${index}].tierType`)} disabled label='Tier type'/>
+                        <br></br>
+                        <SelectArrayInput source={props.getSource(`params[${index}].values`)} choices={choices} optionText='label' optionValue='value' label='Param values'/>
+                        <br></br>
+                    </Fragment>
+                )
+            }
+            else{
+                console.log(param)
+                return (
+                    <Fragment key={param._id}>
+                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <br></br>
+                        <NumberInput initialValue={10} source={props.getSource(`params[${index}].values[${0}].min`)} label='Minimum'/>
+                        <br></br>
+                        <NumberInput initialValue={100} source={props.getSource(`params[${index}].values[${0}].max`)} label='Maximum'/>
+                        <br></br>
+                        <NumberInput initialValue={param.values[0].time} source={props.getSource(`params[${index}].values[${0}].time`)} options={{disabled:true}} label='Time'/>
+                        <br></br>
+                        <BooleanInput initialValue={param.values[0].amount} disabled source={props.getSource(`params[${index}].values[${0}].amount`)} label='Amount'/>
+                        <br></br>
+                    </Fragment>
+                )
+            }
+        })
+    }
+    else{
+        return <div/>
+    }
+}
+
+const Save = (data,props) =>{
+    data.options.options[0].userWork = props.match.params.id
+    data.workId = data.options.options[0].workId
+    const token = sessionStorage.getItem('token')
+    return axios.post(`/user/${props.match.params.id}/work`,{
+        ...data
+    },{
+        headers:{
+            'x-admin':token
+        }
     })
-    const classes = useStyles()
+    .then((response)=>{
+        console.log(response.data)
+        props.history.goBack()
+    })
+    .catch((err)=>{
+        console.log(err)
+    })
+}
 
-    if (loading) return <Loading />;
-    if (error) return null;
-    if (!data) return null;
-    console.log(data)
+const AddWork = (props) => {
+    const [work,setWork] = useState({})
 
-    if(!data.work.workDetails[0]||data.work.workDetails[0].workId===undefined){
+    useEffect(()=>{
+        const token = sessionStorage.getItem('token')
+        axios.get(`/works/${props.match.params.workId}`,{
+            headers:{
+                'x-admin':token
+            }
+        })
+        .then((response)=>{
+            console.log(response.data)
+            setWork(response.data)
+        })
+        .catch((err)=>{
+            console.log(err)
+        })
+    },[props.match.params.workId,setWork])
+
+    if(work){
+        let record = work
+        record.select = 'update'
         return(
             <Card>
-                <Title title="User Works" />
                 <CardContent>
-                    <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/addWork`)}>Add Work</Button>
-                    <Typography variant='subtitle1' className={classes.subtitle}>No works added</Typography>
+                    <Title title="Update Work"/>
+                    <SimpleForm submitOnEnter={false} save={(data)=>Save(data,props)} record={record}>
+                    <SelectInput source="select" choices={[
+                        { id: 'update', name: 'Update' },
+                        { id: 'delete', name: 'Delete' }
+                    ]} />
+                        <ArrayInput source='options.options' label='Options'>
+                            <SimpleFormIterator>
+                                <FormDataConsumer>
+                                    {
+                                        (props)=>{
+                                            return <SelectorInput {...props} source={props.getSource('workId')}/>
+                                        }
+                                    }
+                                </FormDataConsumer>
+                                <FormDataConsumer>
+                                    {
+                                        (props)=>{
+                                            if(props.scopedFormData){
+                                                props.scopedFormData.workTitle = work.title
+                                                return <TextInput source={props.getSource('workTitle')} options={{disabled:true}}label="Work Title"/>
+                                            }
+                                            return null
+                                        }
+                                    }
+                                </FormDataConsumer>
+                                <FormDataConsumer>
+                                    {
+                                        (props)=>{
+                                            return <ArrayWorks work={work} source={props.getSource('')} {...props}/>
+                                        }
+                                    }
+                                </FormDataConsumer>
+                            </SimpleFormIterator>
+                        </ArrayInput>
+                    </SimpleForm>
                 </CardContent>
             </Card>
         )
     }
     else{
-        return(
+        return (
             <Card>
-                <Title title="User works" />
                 <CardContent>
-                    {
-                        data.work.workDetails.map((element)=>{
-                            return(
-                                <Card key={element.options.options[0].workId}>
-                                    <CardHeader action={<Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/addWork`)}>Add Work</Button>}/>
-                                    <CardContent className={classes.content}>
-                                        <div className={classes.column}>
-                                            <Typography>Title</Typography>
-                                            <Typography>{element.options.options[0].workTitle}</Typography>
-                                        </div>
-
-                                        {
-                                            element.options.options[0].params.map((param)=>{
-                                                if(param.tierType===true){
-                                                    if(param.values.length>1){
-                                                        let label='',values='',time='';
-                                                        param.values.map((value)=>{
-                                                            label = label + ` ${value.label}`
-                                                            values = values + ` ${value.value}`
-                                                            time = time + ` ${value.time}`
-                                                            return null
-                                                        })
-                                                        return(
-                                                            <Fragment key={param._id}>
-                                                                <div className={classes.column}>
-                                                                    <Typography>{param.title}</Typography>
-                                                                    <Typography>{label}</Typography>
-                                                                </div>
-    
-                                                                <div className={classes.column}>
-                                                                    <Typography>Price</Typography>
-                                                                    <Typography>{values}</Typography>
-                                                                </div>
-    
-                                                                <div className={classes.column}>
-                                                                    <Typography>Time</Typography>
-                                                                    <Typography>{time}</Typography>
-                                                                </div>
-                                                            </Fragment>
-                                                        )
-                                                    }
-                                                    else{
-                                                        return(
-                                                            <Fragment key={param._id}>
-                                                                <div className={classes.column}>
-                                                                    <Typography>{param.title}</Typography>
-                                                                    <Typography>{param.values[0].label}</Typography>
-                                                                </div>
-    
-                                                                <div className={classes.column}>
-                                                                    <Typography>Price</Typography>
-                                                                    <Typography>{param.values[0].value}</Typography>
-                                                                </div>
-    
-                                                                <div className={classes.column}>
-                                                                    <Typography>Time</Typography>
-                                                                    <Typography>{param.values[0].time}</Typography>
-                                                                </div>
-                                                            </Fragment>
-                                                        )
-                                                    }
-                                                }
-                                                else{
-                                                    return(
-                                                        <Fragment key={param._id}>
-                                                            <div className={classes.column}>
-                                                                <Typography>Label</Typography>
-                                                                <Typography>{param.title}</Typography>
-                                                            </div>
-
-                                                            <div className={classes.column}>
-                                                                <Typography>Maximum</Typography>
-                                                                <Typography>{param.values[0].max}</Typography>
-                                                            </div>
-
-                                                            <div className={classes.column}>
-                                                                <Typography>Minimum</Typography>
-                                                                <Typography>{param.values[0].min}</Typography>
-                                                            </div>
-                                                        </Fragment>
-                                                    )
-                                                }
-                                            })
-                                        }
-                                        <Button variant='outlined' color='primary' onClick={()=>{return null}}>Delete</Button>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })
-                    }
+                    <Title title="Update Work"/>
                 </CardContent>
             </Card>
         )
     }
-}
+};
 
-export default UpdateWork;
+export default AddWork;

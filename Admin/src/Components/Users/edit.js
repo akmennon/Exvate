@@ -5,6 +5,7 @@ import {
     Edit,
     TextInput,
     BooleanInput,
+    NumberInput,
     ArrayInput,
     SimpleFormIterator,
     SelectInput,
@@ -13,14 +14,47 @@ import {
     required,
     email
 } from 'react-admin';
+import {useFormState} from 'react-final-form'
 
-const HostInput = props =>{
-    return(
-        <BooleanInput source="supplier" defaultValue={false} {...props}/>
-    )
+const SupplierInput = props =>{
+    const { values } = useFormState()
+
+    if(values.userType==="Organizer"){
+        return null
+    }
+    else{
+        return(
+            <BooleanInput source="supplier" defaultValue={false} {...props}/>
+        )
+    }
 }
 
-/* PENDING ARRAY WORK - perhaps*/
+const WorkLengthInput = props =>{
+    const { values } = useFormState()
+
+    if(values.perms.supplier.multipleWorks.value===true){
+        return <NumberInput source="perms.supplier.multipleWorks.number" label="Number of works allowed" {...props} min={0} max={0} validate={[required()]} />
+    }
+    else{
+        return null
+    }
+}
+
+const PermissionsTab = props =>{
+    const { values } = useFormState()
+    console.log(values)
+
+    if(values.supplier===true){
+        return (
+            <FormTab label="Permission" {...props} >
+                <BooleanInput source="perms.supplier.multipleWorks.value" label="Multiple works" defaultValue={false}/>
+                <WorkLengthInput/>
+            </FormTab>
+        )
+    }
+    return <span/>
+}
+
 const UserEdit = (props) => {
     return (
         <Edit {...props}>
@@ -50,12 +84,9 @@ const UserEdit = (props) => {
                         ]} 
                         optionText="type" optionValue="id"
                     />
-                    <HostInput />
+                    <SupplierInput />
                 </FormTab>
-                <FormTab label="Permission">
-                    <BooleanInput source="perms.host.multipleWorks.value" label="Multiple works" defaultValue={false}/>
-                    <BooleanInput source="perms.host.multiWork.value" label="Multi work" defaultValue={false}/>
-                </FormTab>
+                <PermissionsTab/>
             </TabbedForm>
         </Edit>
     )
