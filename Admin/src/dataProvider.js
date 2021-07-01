@@ -13,7 +13,7 @@ const httpClient = (url, options = {}) => {
     return fetchUtils.fetchJson(url, options);
 }
 
-export default {
+const DataProvider = {
     getList: (resource, params) => {
         const { page, perPage } = params.pagination;
         const { field, order } = params.sort;
@@ -36,7 +36,7 @@ export default {
     },
 
     getOne: (resource, params) => {
-        console.log(params)
+        console.log(`${apiUrl}/${resource}/${params.id}`)
         return httpClient(`${apiUrl}/${resource}/${params.id}`)
                 .then(({ json }) => {
                     return ({
@@ -116,3 +116,5 @@ export default {
         }).then(({ json }) => ({ data: json }));
     }
 };
+
+export default DataProvider

@@ -41,13 +41,9 @@ workSchema.statics.createNew = (body) =>{
 
     const work = new Work(workBody)
 
-    /* checks if it is a single work */
-    if(options.options.length===1){
-
-        /* workId is saved to the first element, since its single work */
-        options.options[0].workId=work._id
-        results.result[0].workId=work._id
-    }
+    options.workId=work._id
+    options.workTitle=work.title
+    results.workId=work._id
 
     const option = new Option(options)
     const result = new Result(results)
@@ -76,11 +72,11 @@ workSchema.statics.workEdit = async (body) =>{
     const workBody = pick(body,['title','type','category','_id'])
 
     try{
-        await Option.updateOne({_id:options._id},{...options})
-        await Result.updateOne({_id:results._id},{...results})
-        await Work.updateOne({_id:workBody._id},{...workBody,$set:{options:options._id,result:results._id}})
+        await Option.findByIdAndUpdate(options._id,options)
+        await Result.updateOne({_id:results._id},{$set:{...results}})
+        await Work.updateOne({_id:workBody._id},{$set:{...workBody,options:options._id,result:results._id}})
 
-        return Promise.resolve('Work updated')
+        return Promise.resolve('Work Updated')
     }
     catch(e){
         console.log(e)

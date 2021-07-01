@@ -1,4 +1,4 @@
-import React,{Fragment} from 'react'
+import React from 'react'
 import { Show, SimpleShowLayout, TextField, BooleanField,useQuery, ArrayField,Datagrid,Loading,NumberField,EditButton} from 'react-admin';
 
 const ParamValues = (props) =>{

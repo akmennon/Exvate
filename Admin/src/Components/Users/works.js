@@ -65,15 +65,15 @@ const UpdateWork = (props) => {
                     {
                         data.work.workDetails.map((element)=>{
                             return(
-                                <Card key={element.options.options[0].workId}>
+                                <Card key={element.options.workId}>
                                     <CardContent className={classes.content}>
                                         <div className={classes.column}>
                                             <Typography>Title</Typography>
-                                            <Typography>{element.options.options[0].workTitle}</Typography>
+                                            <Typography>{element.options.workTitle}</Typography>
                                         </div>
 
                                         {
-                                            element.options.options[0].params.map((param)=>{
+                                            element.options.params.map((param)=>{
                                                 if(param.tierType===true){
                                                     if(param.values.length>1){
                                                         let label='',values='',time='';
@@ -145,7 +145,7 @@ const UpdateWork = (props) => {
                                                 }
                                             })
                                         }
-                                        <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/updatework/${element.options.options[0].workId}`)}>Update</Button>
+                                        <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/updatework/${element.options.workId}`)}>Update</Button>
                                     </CardContent>
                                 </Card>
                             )

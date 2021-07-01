@@ -1,7 +1,7 @@
 import React,{Fragment, useEffect, useState} from "react";
 import Card from '@material-ui/core/Card';
 import CardContent from '@material-ui/core/CardContent';
-import { Title,SimpleForm,AutocompleteInput,FormDataConsumer,ArrayInput,SimpleFormIterator,TextInput,SelectArrayInput,NumberInput,BooleanInput,SelectInput } from 'react-admin';
+import { Title,SimpleForm,AutocompleteInput,FormDataConsumer,TextInput,SelectArrayInput,NumberInput,BooleanInput } from 'react-admin';
 import axios from '../../config/Axios'
 
 /* MULTI WORK - PENDING DECISION (IF REQUIRED OR NOT) */
@@ -24,7 +24,7 @@ const SelectorInput = (props) =>{
         })
     },[])
     if(data.length!==0){
-        return <AutocompleteInput source={props.source} choices={data} optionValue='_id' optionText='title' suggestionLimit={4} label='Work'/>
+        return <AutocompleteInput source='options.workId' choices={data} optionValue='_id' optionText='title' suggestionLimit={4} label='Work'/>
     }
     else{
         return null
@@ -33,8 +33,8 @@ const SelectorInput = (props) =>{
 
 const GetOptions = (props) =>{
     let workId = ''
-    if(props.scopedFormData&&props.scopedFormData.workId){
-        workId = props.scopedFormData.workId
+    if(props.formData&&props.formData.options&&props.formData.options.workId){
+        workId = props.formData.options.workId
     }
     const {setWork} = props
     useEffect(()=>{
@@ -60,7 +60,7 @@ const GetOptions = (props) =>{
 const ArrayWorks = (props)=>{
     const {work} = props
     if(work&&work.options){
-        return work.options.options[0].params.map((param,index)=>{
+        return work.options.params.map((param,index)=>{
             if(param.tierType===true){
                 const choices = param.values.map((value,index)=>{
                     return (
@@ -72,11 +72,11 @@ const ArrayWorks = (props)=>{
                 })
                 return (
                     <Fragment key={param._id}>
-                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <TextInput initialValue={param.title} source={`options.params[${index}].title`} options={{disabled:true}} label='Param title'/>
                         <br></br>
-                        <BooleanInput defaultValue={param.tierType} source={props.getSource(`params[${index}].tierType`)} options={{disabled:true}} label='Tier type'/>
+                        <BooleanInput defaultValue={param.tierType} disabled source={`options.params[${index}].tierType`} options={{disabled:true}} label='Tier type'/>
                         <br></br>
-                        <SelectArrayInput source={props.getSource(`params[${index}].values`)} choices={choices} optionText='label' optionValue='value' label='Param values'/>
+                        <SelectArrayInput source={`options.params[${index}].values`} choices={choices} optionText='label' optionValue='value' label='Param values'/>
                         <br></br>
                     </Fragment>
                 )
@@ -85,15 +85,15 @@ const ArrayWorks = (props)=>{
                 console.log(param)
                 return (
                     <Fragment key={param._id}>
-                        <TextInput initialValue={param.title} source={props.getSource(`params[${index}].title`)} options={{disabled:true}} label='Param title'/>
+                        <TextInput initialValue={param.title} source={`options.params[${index}].title`} options={{disabled:true}} label='Param title'/>
                         <br></br>
-                        <NumberInput initialValue={10} source={props.getSource(`params[${index}].values[${0}].min`)} label='Minimum'/>
+                        <NumberInput initialValue={10} source={`options.params[${index}].values[${0}].min`} label='Minimum'/>
                         <br></br>
-                        <NumberInput initialValue={100} source={props.getSource(`params[${index}].values[${0}].max`)} label='Maximum'/>
+                        <NumberInput initialValue={100} source={`options.params[${index}].values[${0}].max`} label='Maximum'/>
                         <br></br>
-                        <NumberInput initialValue={param.values[0].time} source={props.getSource(`params[${index}].values[${0}].time`)} options={{disabled:true}} label='Time'/>
+                        <NumberInput initialValue={param.values[0].time} source={`options.params[${index}].values[${0}].time`} options={{disabled:true}} label='Time'/>
                         <br></br>
-                        <BooleanInput initialValue={param.values[0].amount} source={props.getSource(`params[${index}].values[${0}].amount`)} label='Amount'/>
+                        <BooleanInput initialValue={param.values[0].amount} disabled source={`options.params[${index}].values[${0}].amount`} label='Amount'/>
                         <br></br>
                     </Fragment>
                 )
@@ -106,8 +106,10 @@ const ArrayWorks = (props)=>{
 }
 
 const Save = (data,props) =>{
-    data.options.options[0].userWork = props.match.params.id
-    data.workId = data.options.options[0].workId
+    console.log(data.options)
+    data.options.userWork = props.match.params.id
+    data.select = 'Add'
+    data.workId = data.options.workId
     const token = sessionStorage.getItem('token')
     return axios.post(`/user/${props.match.params.id}/work`,{
         ...data
@@ -132,47 +134,38 @@ const AddWork = (props) => {
             <CardContent>
                 <Title title="Update Work"/>
                 <SimpleForm submitOnEnter={false} save={(data)=>Save(data,props)} >
-                <SelectInput source="select" choices={[
-                    { id: 'delete', name: 'Delete' },
-                    { id: 'update', name: 'Update' },
-                    { id: 'Add', name: 'Add' },
-                ]} />
-                    <ArrayInput source='options.options' label='Options'>
-                        <SimpleFormIterator>
-                            <FormDataConsumer>
-                                {
-                                    (props)=>{
-                                        return <SelectorInput {...props} source={props.getSource('workId')}/>
-                                    }
+                    <FormDataConsumer>
+                        {
+                            (props)=>{
+                                return <SelectorInput {...props} />
+                            }
+                        }
+                    </FormDataConsumer>
+                    <FormDataConsumer>
+                        {
+                            (props)=>{
+                                return <GetOptions {...props} setWork={setWork} />
+                            }
+                        }
+                    </FormDataConsumer>
+                    <FormDataConsumer>
+                        {
+                            (props)=>{
+                                if(props.formData&&props.formData.options){
+                                    props.formData.options.workTitle = work.title
+                                    return <TextInput source='options.workTitle' options={{disabled:true}} label="Work Title"/>
                                 }
-                            </FormDataConsumer>
-                            <FormDataConsumer>
-                                {
-                                    (props)=>{
-                                        return <GetOptions {...props} setWork={setWork} source={props.getSource('')}/>
-                                    }
-                                }
-                            </FormDataConsumer>
-                            <FormDataConsumer>
-                                {
-                                    (props)=>{
-                                        if(props.scopedFormData){
-                                            props.scopedFormData.workTitle = work.title
-                                            return <TextInput source={props.getSource('workTitle')} options={{disabled:true}}label="Work Title"/>
-                                        }
-                                        return null
-                                    }
-                                }
-                            </FormDataConsumer>
-                            <FormDataConsumer>
-                                {
-                                    (props)=>{
-                                        return <ArrayWorks work={work} source={props.getSource('')} {...props}/>
-                                    }
-                                }
-                            </FormDataConsumer>
-                        </SimpleFormIterator>
-                    </ArrayInput>
+                                return null
+                            }
+                        }
+                    </FormDataConsumer>
+                    <FormDataConsumer>
+                        {
+                            (props)=>{
+                                return <ArrayWorks work={work} {...props}/>
+                            }
+                        }
+                    </FormDataConsumer>
                 </SimpleForm>
             </CardContent>
         </Card>

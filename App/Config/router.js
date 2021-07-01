@@ -75,7 +75,7 @@ router.get('/order/:id',authUser,orders.details)
 router.get('/order/confirm/:id',authUser,orders.confirm)
 
 /* PENDING */
-router.post('/user/:id/work',authUser,options.findOption,users.addWork)
+/*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/
 
 /* PENDING */
 router.post('/user/work/details',authUser,users.workAll)

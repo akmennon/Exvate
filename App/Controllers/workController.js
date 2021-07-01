@@ -37,7 +37,6 @@ module.exports.detail = (req,res) =>{
     const id = req.params.id
     Work.findById(id).populate('options').populate({path:'category',select:'title'}).populate({path:'type',select:'title'}).populate('result')
         .then(function(work){
-            console.log(work.options.options)
             res.json(work)
         })
         .catch(function(err){

@@ -8,7 +8,6 @@ const generator = require('generate-password')
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
-const { updateOne, deleteOne } = require('./work/optionSubdoc')
 
 const Schema = mongoose.Schema
 
@@ -645,36 +644,81 @@ userSchema.statics.updateWork = async function(id,body){
                 return Promise.resolve({status:true,message:'Work deleted'})
             }
 
-            /* checks permission to add multiwork */
-            if(params.options.options.length>1){
-                return Promise.reject({status:false,message:'Not a proper request',statusCode:400})
-            }
-
             /* updates the work */
             if(body.select == 'update'){
-                await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{$set:{'options':params.options}})
+                const workOption = await Option.findOne({'workId':params.workId._id,'userWork':{$exists:false}}).lean()
+                console.log(workOption)
+                delete workOption._id
+                const option = new Option(workOption)
+                option._id = user.work.workDetails[workIndex].options
 
-                if(!user.work.workDetails[workIndex].workId == params.workId){
-                    user.work.workDetails[workIndex].workId = params.workId
-                    await user.save()
+                /* Entered Param validation */
+                if(params.options.params.length!=option.params.length){
+                    return Promise.reject({status:false,message:'Not proper params',statusCode:400})
                 }
+                else{
+                    let check=[];
+                    params.options.params.map((param)=>{
+                        workOption.params.map((ele,index)=>{
+                            if(ele.title==param.title){ //Checks if all the params in the options and the obtains options are the same (by title)
+                                check[index]=true
+                            }
+                        })
+                    })
+                    if(check.length!=params.options.params.length){
+                        return Promise.reject({status:false,message:'Not proper params',statusCode:400})
+                    }
+                }
+                
+                option.params = params.options.params
+                option.userWork = id
+
+                await option.save()
+                await user.save()
                 return Promise.resolve({status:true,message:'Work Updated'})
             }
 
             return Promise.reject({status:false,message:'Work already exists',statusCode:403})
         }
         else{
-            const option = new Option(params.options)
-            params.options = option
-            /* checks permission if user can add multiple works */
-            if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
-                return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
-            }
+            if(body.select=='Add'){
+                const workOption = await Option.findOne({'workId':params.workId,'userWork':{$exists:false}}).lean()
+                console.log(workOption)
+                delete workOption._id
+                const option = new Option(workOption)
 
-            await params.options.save()
-            user.work.workDetails.push(params)
-            await user.save()
-            return Promise.resolve({status:true,message:'Work Added'})
+                /* Entered Param validation */
+                if(params.options.params.length!=option.params.length){
+                    return Promise.reject({status:false,message:'Not proper params',statusCode:400})
+                }
+                else{
+                    let check=[];
+                    params.options.params.map((param)=>{
+                        workOption.params.map((ele,index)=>{
+                            if(ele.title==param.title){ //Checks if all the params in the options and the obtains options are the same (by title)
+                                check[index]=true
+                            }
+                        })
+                    })
+                    if(check.length!=params.options.params.length){
+                        return Promise.reject({status:false,message:'Not proper params',statusCode:400})
+                    }
+                }
+
+                option.params = params.options.params
+                option.userWork = id
+
+                /* checks permission if user can add multiple works */
+                if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
+                    return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
+                }
+
+                await option.save()
+                user.work.workDetails.push({workId:params.workId,options:option})
+                await user.save()
+                return Promise.resolve({status:true,message:'Work Added'})
+            }
+            return Promise.reject({status:false,message:'Invalid work change attempt',statusCode:403})
         }
     }
     catch(err){

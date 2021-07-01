@@ -4,6 +4,7 @@ import PostFilter from './filters'
 
 const FinishedField = (props) =>{
     let record
+    console.log(props)
     if(props.record.completionVerified.length!==0){
         record = {finished:true}
     }
@@ -17,7 +18,7 @@ const orderList = props => (
    <List {...props} filters={<PostFilter />}>
        <Datagrid rowClick="show">
            <TextField source="workId.title" label="Work"/>
-           <TextField source="userId.name" label="User"/>
+           <TextField source="userId.email.email" label="User"/>
            <TextField source="status" />
            <TextField source="paymentStatus.value" label="Payment Status"/>
            <TextField source="paymentStatus.hostPayment" label="Host Payment"/>

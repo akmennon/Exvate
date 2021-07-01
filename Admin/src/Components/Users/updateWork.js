@@ -33,7 +33,7 @@ const SelectorInput = (props) =>{
 const ArrayWorks = (props)=>{
     const {work} = props
     if(work&&work.options){
-        return work.options.options[0].params.map((param,index)=>{
+        return work.options.params.map((param,index)=>{
             if(param.tierType===true){
                 const choices = param.values.map((value,index)=>{
                     return (
@@ -80,23 +80,45 @@ const ArrayWorks = (props)=>{
 }
 
 const Save = (data,props) =>{
-    data.options.options[0].userWork = props.match.params.id
-    data.workId = data.options.options[0].workId
     const token = sessionStorage.getItem('token')
-    return axios.post(`/user/${props.match.params.id}/work`,{
-        ...data
-    },{
-        headers:{
-            'x-admin':token
-        }
-    })
-    .then((response)=>{
-        console.log(response.data)
-        props.history.goBack()
-    })
-    .catch((err)=>{
-        console.log(err)
-    })
+    switch(data.select){
+        case 'update':
+            data.options.userWork = props.match.params.id
+            data.workId = data.options.workId
+            return axios.post(`/user/${props.match.params.id}/work`,{
+                ...data
+            },{
+                headers:{
+                    'x-admin':token
+                }
+            })
+            .then((response)=>{
+                console.log(response.data)
+                props.history.goBack()
+            })
+            .catch((err)=>{
+                console.log(err)
+            })
+        case 'delete':
+            axios.post(`/user/${props.match.params.id}/work`,{
+                select:data.select,
+                workId:data.options.workId
+            },{
+                headers:{
+                    'x-admin':token
+                }
+            })
+            .then((response)=>{
+                console.log(response.data)
+                props.history.goBack()
+            })
+            .catch((err)=>{
+                console.log(err)
+            })
+        break;
+        default:
+            console.log('Invalid option')
+    }
 }
 
 const AddWork = (props) => {
@@ -130,7 +152,7 @@ const AddWork = (props) => {
                         { id: 'update', name: 'Update' },
                         { id: 'delete', name: 'Delete' }
                     ]} />
-                        <ArrayInput source='options.options' label='Options'>
+                        <ArrayInput source='options' label='Options'>
                             <SimpleFormIterator>
                                 <FormDataConsumer>
                                     {
