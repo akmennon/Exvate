@@ -621,7 +621,6 @@ userSchema.statics.saveOrder = async function(order,id){
     }
 }
 
-/* Test Pending - Multiple work - default to be set to 3 and ability to be changed - Change validation to accomodate it */
 /* Adds,deletes or updates work for the host*/
 userSchema.statics.updateWork = async function(id,body){
     const User = this
@@ -646,11 +645,9 @@ userSchema.statics.updateWork = async function(id,body){
 
             /* updates the work */
             if(body.select == 'update'){
-                const workOption = await Option.findOne({'workId':params.workId._id,'userWork':{$exists:false}}).lean()
-                console.log(workOption)
+                const workOption = await Option.findOne({'_id':params.options._id,'userWork':{$exists:false}}).lean()
                 delete workOption._id
-                const option = new Option(workOption)
-                option._id = user.work.workDetails[workIndex].options
+                const option = Object.assign({},workOption)
 
                 /* Entered Param validation */
                 if(params.options.params.length!=option.params.length){
@@ -659,8 +656,8 @@ userSchema.statics.updateWork = async function(id,body){
                 else{
                     let check=[];
                     params.options.params.map((param)=>{
-                        workOption.params.map((ele,index)=>{
-                            if(ele.title==param.title){ //Checks if all the params in the options and the obtains options are the same (by title)
+                        option.params.map((ele,index)=>{
+                            if(ele._id==param._id){ //Checks if all the params in the options and the obtains options are the same (by title)
                                 check[index]=true
                             }
                         })
@@ -670,11 +667,28 @@ userSchema.statics.updateWork = async function(id,body){
                     }
                 }
                 
-                option.params = params.options.params
+                let errorCheck = false
+                option.params = option.params.map((param,paramIndex)=>{ //filtering the main work params by Id (if tierType) or saves from the frontend params (non tierType)
+                    if(param.tierType){
+                        param.values = param.values.filter((value,index)=>{
+                            return params.options.params[paramIndex].values.includes((value._id).toString())?true:false
+                        })
+                    }
+                    else if((param.values[0]._id).toString() == params.options.params[paramIndex].values[0]._id){
+                        param.values = params.options.params[paramIndex].values
+                    }
+                    else{
+                        errorCheck = true
+                    }
+                    return param
+                })
                 option.userWork = id
 
-                await option.save()
-                await user.save()
+                if(errorCheck){
+                    return Promise.reject({status:false,message:'Not proper params',statusCode:400}) //does not work
+                }
+
+                await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{...option})
                 return Promise.resolve({status:true,message:'Work Updated'})
             }
 
@@ -705,8 +719,26 @@ userSchema.statics.updateWork = async function(id,body){
                     }
                 }
 
-                option.params = params.options.params
+                let errorCheck = false
+                option.params = option.params.map((param,paramIndex)=>{ //filtering the main work params by Id and adding 
+                    if(param.tierType){
+                        param.values = param.values.filter((value,index)=>{
+                            return params.options.params[paramIndex].values.includes((value._id).toString())?true:false
+                        })
+                    }
+                    else if((param.values[0]._id).toString() == params.options.params[paramIndex].values[0]._id){
+                        param.values = params.options.params[paramIndex].values
+                    }
+                    else{
+                        errorCheck = true
+                    }
+                    return param
+                })
                 option.userWork = id
+
+                if(errorCheck){
+                    return Promise.reject({status:false,message:'Not proper params',statusCode:400}) //does not work
+                }
 
                 /* checks permission if user can add multiple works */
                 if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){

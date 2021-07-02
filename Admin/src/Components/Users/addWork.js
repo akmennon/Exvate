@@ -66,7 +66,7 @@ const ArrayWorks = (props)=>{
                     return (
                         {
                             label:value.label,
-                            value:value
+                            _id:value._id
                         }
                     )
                 })
@@ -76,16 +76,17 @@ const ArrayWorks = (props)=>{
                         <br></br>
                         <BooleanInput defaultValue={param.tierType} disabled source={`options.params[${index}].tierType`} options={{disabled:true}} label='Tier type'/>
                         <br></br>
-                        <SelectArrayInput source={`options.params[${index}].values`} choices={choices} optionText='label' optionValue='value' label='Param values'/>
+                        <SelectArrayInput source={`options.params[${index}].values`} choices={choices} optionText='label' optionValue='_id' label='Param values'/>
                         <br></br>
                     </Fragment>
                 )
             }
             else{
-                console.log(param)
                 return (
                     <Fragment key={param._id}>
                         <TextInput initialValue={param.title} source={`options.params[${index}].title`} options={{disabled:true}} label='Param title'/>
+                        <br></br>
+                        <TextInput initialValue={param.values[0]._id} source={`options.params[${index}].values[${0}]._id`} options={{disabled:true}} label='Param id'/>
                         <br></br>
                         <NumberInput initialValue={10} source={`options.params[${index}].values[${0}].min`} label='Minimum'/>
                         <br></br>
