@@ -770,26 +770,11 @@ userSchema.statics.workAll = async function (id,body){
             case 'orders':
                 return Promise.resolve({order:user.work.workOrder})
             default:
-                return Promise.reject(`Option doesn't exist`)
+                return Promise.reject({status:false,message:`Option doesn't exist`,statusCode:404})
         }
     }
     catch(err){
-        console.log(err)
-        return Promise.reject('error finding work details')
-    }
-}
-
-/* Finds all the orders of a user */
-userSchema.statics.orders = async function(id){
-    const User = this
-
-    try{
-        const user = await User.findById(id).populate('orders').lean()
-        return Promise.resolve(user.orders)
-    }
-    catch(err){
-        console.log(err)
-        return Promise.reject('error finding work details')
+        return Promise.reject(err)
     }
 }
 
@@ -799,11 +784,14 @@ userSchema.statics.forgotCheck = async function(token){
 
     try{
         const user = await User.findOne({'forgotToken.token':token},"_id forgotToken").lean()
+        if(user.isAdmin.value){
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
+        }
         if(user&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
             return Promise.resolve({value:true})
         }
         else{
-            return Promise.reject({message:'Unauthorized or expired token',statusCode:401})
+            return Promise.reject({status:false,message:'Unauthorized or expired token',statusCode:401})
         }
     }
     catch(e){

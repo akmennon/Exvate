@@ -31,15 +31,15 @@ io.on('connection',(socket)=>{
 /*-------------------- Order Namespace [executed when user accesses a product page from the frontend] --------------------*/
 
 io.of('/orderfn').on('connection',(socket)=>{
-    let resultValue,order
+    let resultValue
 
     let output  //[{workId:"",price:1,time:1,amount:1}]
 
     /*-------------------- Result finder [executed for the frontend product page to obatin its result to calculate the price and time] --------------------*/
     socket.on('result',async (resultId)=>{
         try{
-            const result = await Result.findOne({_id:resultId})
-            resultValue = result.result
+            const result = await Result.findOne({_id:resultId,})
+            resultValue = result
         }
         catch(err){
             console.log('Error fetching result ',err)
@@ -51,52 +51,48 @@ io.of('/orderfn').on('connection',(socket)=>{
 
         let multiOutput = []    //used to send back the result from calculation
 
-        if(result.length==1){   //checks if there is only a single order
+        if(resultValue.workId){
+            if(result.length==1){   //checks if there is only a single order
 
-                result = result[0]  //input is send as an array (since there is a possibility of multiple orders)
-
-                /* The inputs are saved to the found result from the database to calculate the values*/
-                const tempValue = resultValue.map((elements)=>{
-
-                    /* Saves the params to the relevant works in the result to calculate the price*/
-                    let foundResult = result.find((element)=>{
-                        return elements.workId==element.workId
-                    })
-        
-                    elements.values = foundResult.values
-                    elements.time.values = foundResult.time.values
-        
-                    return elements
-                })
+                /* Saves the params to the relevant works in the result to calculate the price*/
+                if(resultValue.workId.toString()!=result[0].workId){
+                    socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
+                }
+    
+                resultValue.values = result[0].values
+                resultValue.time.values = result[0].time.values
         
                 /* Calculates the total price from the modified result object and saves it to the output argument */
-                output = calcResult(tempValue,output)
+                output = calcResult(resultValue)
 
                 /* Sent back as an array */
                 multiOutput = multiOutput.concat(output)
+            }
+            else{
+                if(result.length==0){
+                    socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
+                }
+                /* Method to calculate price for multiple orders [Single order calculation with a loop] */
+                result.map((result)=>{
+
+                    /* Saves the params to the relevant works in the result to calculate the price*/
+                    if(resultValue.workId!=result.workId){
+                        socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
+                    }
+        
+                    resultValue.values = result.values
+                    resultValue.time.values = result.time.values
+            
+                    /* Calculates the total price from the modified result object and saves it to the output argument */
+                    output = calcResult(resultValue,output)
+
+                    /* Sent back as an array */
+                    multiOutput = multiOutput.concat(output)
+                })
+            }
         }
         else{
-
-            /* Method to calculate price for multiple orders [Single order calculation with a loop] */
-            result.map((result)=>{
-
-                const tempValue = resultValue.map((elements)=>{
-                    let foundResult = result.find((element)=>{
-                        return elements.workId==element.workId
-                    })
-        
-                    elements.values = foundResult.values
-                    elements.time.values = foundResult.time.values
-        
-                    return elements
-                })
-        
-                output = calcResult(tempValue,output)
-        
-                console.log(output)
-
-                multiOutput = multiOutput.concat(output)
-            })
+            socket.emit('errorResult',{status:false,statusCode:403,message:'Refresh'})
         }
         
         /* The total values are sent back to frontend */

@@ -6,82 +6,32 @@ const timeCalc = require('./CalcResult/timeCalc')
 
 /* Function that calculates the output from the result */
 
-const calcResult = (result) =>{
+const calcResult = (resultValue) =>{
     let output=[]/*[{workId:"",price:1,time:1,amount:1}]*/
 
-    result.map((element,resIndex)=>{
+    valueKeys=[]
+    timeKeys=[]
 
-        /* checks preValues (if values should be obtained from previous work) 
-            Eg - number of designs difference on manufacturing increasing price
-        */
-        if(element.preValues.length===0){
-            valueKeys=[]
-            timeKeys=[]
+    resultValue.calc.map((calcElement)=>{
+        valueCalc(calcElement,resultValue,output)
+        valueKeys = [...new Set([...valueKeys,...calcElement.keys])]
+    })
 
-            element.calc.map((calcElement)=>{
-                valueCalc(calcElement,element,output)
-                valueKeys = [...new Set([...valueKeys,...calcElement.keys])]
-            })
+    resultValue.time.calc.map((calcElement)=>{
+        timeCalc(calcElement,resultValue,output)
+        timeKeys = [...new Set([...timeKeys,...calcElement.keys])]
+    })
 
-            element.time.calc.map((calcElement)=>{
-                timeCalc(calcElement,element,output)
-                timeKeys = [...new Set([...timeKeys,...calcElement.keys])]
-            })
-
-            element.values.map((value,index)=>{
-                if(!valueKeys.includes(index)){
-                    output[resIndex].price = output[resIndex].price + value
-                }
-            })
-
-            element.time.values.map((time,index)=>{
-                if(!timeKeys.includes(index)){
-                    output[resIndex].time = output[resIndex].time + time
-                }
-            })
-
-            return element
+    resultValue.values.map((value,index)=>{
+        if(!valueKeys.includes(index)){
+            output.price = output.price + value
         }
-        else{
-            valueKeys=[]
-            timeKeys=[]
+    })
 
-            /* Saves the values from the previous result work */
-            element.preValues.map((prev)=>{
-                
-                /* finds the required result from the workId */
-                let foundResult = result.find(work => { return work.workId == prev.workId })
-
-                /* time and values are saved to the current result */
-                element.values.push(foundResult.values[prev.prevKey])
-                element.time.values.push(foundResult.time.values[prev.prevKey])
-            })
-
-
-            element.calc.map((calcElement)=>{
-                valueCalc(calcElement,element,output)
-                valueKeys = [...new Set([...valueKeys,...calcElement.keys])]
-            })
-
-            element.time.calc.map((calcElement)=>{
-                timeCalc(calcElement,element,output)
-                timeKeys = [...new Set([...timeKeys,...calcElement.keys])]
-            })
-
-            element.values.map((value,index)=>{
-                if(!valueKeys.includes(index)){
-                    output[resIndex].price = output[resIndex].price + value
-                }
-            })
-
-            element.time.values.map((time,index)=>{
-                if(!timeKeys.includes(index)){
-                    output[resIndex].time = output[resIndex].time + time
-                }
-            })
+    resultValue.time.values.map((time,index)=>{
+        if(!timeKeys.includes(index)){
+            output.time = output.time + time
         }
-
-        return element
     })
 
     return output

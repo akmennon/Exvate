@@ -176,7 +176,7 @@ module.exports.adminLogout = (req,res,next) =>{
         })
 }
 
-/* LAST - Adding response and reject structure, error handling - this work controller being worked on frontend pending */
+/* Adding response and reject structure, error handling - this work controller being worked on frontend pending */
 /* Adds, deletes or updates a work for the host*/
 module.exports.addWork = (req,res,next) =>{
     const body = req.body
@@ -200,21 +200,7 @@ module.exports.workAll = (req,res) =>{
             res.json(works)
         })
         .catch((err)=>{
-            res.json(err)
-        })
-}
-
-module.exports.orders = (req,res) =>{ // UNRELIABLE - Check if needed/not
-    const body = req.body
-    console.log(body)
-
-    User.orders(req.user._id,req.body)
-        .then((orders)=>{
-            res.json(orders)
-        })
-        .catch((err)=>{
-            console.log(err)
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -283,7 +269,7 @@ module.exports.adminToken = (req,res,next) =>{
         })
 }
 
-/* ADMIN - Finds all the suppliers for the type of work */
+/* LAST - ADMIN - Finds all the suppliers for the type of work */
 module.exports.suppliers = (req,res) =>{
     const orderId = req.params.id
 

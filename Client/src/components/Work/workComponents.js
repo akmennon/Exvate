@@ -1,8 +1,8 @@
-import React,{useEffect} from 'react'
+import React from 'react'
 import TierSlider from './tierSlider'
 import RangeSlider from './rangeSlider'
 import {connect} from 'react-redux'
-import {subOrderInitial,resultInitial} from './workFns'
+import {orderInitial,resultInitial} from './workFns'
 import {startsetOrder} from '../../action/orderAction'
 
 /* 
@@ -14,38 +14,6 @@ import {startsetOrder} from '../../action/orderAction'
         checkbox for sliders to be implemented
 
 */
-
-const HiddenComponent = ({work,workIndex,addValue,orderNumber}) =>{
-    useEffect(()=>{
-        work.params.map((param,paramIndex)=>{
-            if(param.tierType){
-                const initial = param.values.find((element)=>{ return element.initial===true})
-                /* initial object for values */
-                const value = {
-                    value:initial.value,
-                    time:initial.time,
-                    index:paramIndex,
-                    workId:work.workId,
-                    workIndex:workIndex
-                }
-                addValue(value,param,orderNumber)
-            }
-            else{
-                const value = {
-                    value:param.values[0].value,
-                    time:param.values[0].time,
-                    index:paramIndex,
-                    workId:work.workId,
-                    workIndex:workIndex
-                }
-                addValue(value,param,orderNumber)
-            }
-            return null
-        })
-    },[work,workIndex,addValue,orderNumber])
-    return null
-}
-
 
 /* Component which decodes the options to creates components ( sliders, dropdowns etc ) */
 
@@ -69,6 +37,7 @@ class WorkComponents extends React.Component{
             const allResult = this.state.multiOrder.map((ele)=>{
                 return ele.result
             })
+            console.log(this.state.multiOrder)
             this.props.socket.emit('calculatePrice',allResult)
         }
 
@@ -77,12 +46,8 @@ class WorkComponents extends React.Component{
 
             const multiOrder = this.state.multiOrder.map((ele)=>{
                 /* userId is saved to each element, since each is an order */
-                const subOrders = ele.subOrders.map((element)=>{
-                    element.userId=this.props.user._id
-                    return element
-                })
-
-                return {order:subOrders[0],result:ele.result}
+                ele.subOrders.userId=this.props.user._id
+                return {order:ele.subOrders,result:ele.result}
             })
 
             const redirect = () =>{
@@ -103,7 +68,7 @@ class WorkComponents extends React.Component{
     addValue = async (values,params,orderNumber) =>{
         if(this.state.multiOrder[orderNumber]===undefined){
             this.setState((prevState)=>{
-                prevState.multiOrder[orderNumber]={result:[],subOrders:[]}
+                prevState.multiOrder[orderNumber]={result:{},subOrders:{}}
                 return {
                     multiOrder:prevState.multiOrder
                 }
@@ -114,14 +79,14 @@ class WorkComponents extends React.Component{
         /* Initiates the result (for calculation) */
         const result = resultInitial(values)
         /* Initiates the order structure and suborders (for ordering) */
-        const order = subOrderInitial(values,this.props.user._id,params)
+        const order = orderInitial(values,this.props.user._id,params)
 
         /* Initiated order and result are saved to state respect. */
         this.setState((previousState)=>{
             let prevState = previousState.multiOrder[orderNumber]
-            if(!prevState.result[values.workIndex]){
-                prevState.result[values.workIndex] = result
-                prevState.subOrders[values.workIndex] = order   
+            if(!prevState.result||!prevState.result.values){
+                prevState.result = result
+                prevState.subOrders = order   
                 return {
                     result:prevState.result,
                     subOrders:prevState.subOrders
@@ -129,11 +94,11 @@ class WorkComponents extends React.Component{
             }
             else{
                 /* according to the index, order.variable's values are changed */
-                prevState.subOrders[values.workIndex].values.variables[values.index]={value:values.value,title:params.title,unit:params.unit}
+                prevState.subOrders.values.variables[values.index]={value:values.value,title:params.title,unit:params.unit}
 
                 /* time and value changes for the result are saved acc. to the index */
-                prevState.result[values.workIndex].values[values.index]=values.value
-                prevState.result[values.workIndex].time.values[values.index]=values.time 
+                prevState.result.values[values.index]=values.value
+                prevState.result.time.values[values.index]=values.time 
 
                 /* changed result and orders are saved */
                 return {
@@ -146,17 +111,17 @@ class WorkComponents extends React.Component{
 
     /* Component which creates sliders etc from the passed params */
 
-    makeElements = (params,Paramindex,workId,workIndex,orderNumber) =>{ 
+    makeElements = (params,Paramindex,workId,orderNumber) =>{ 
         switch(params.optionType){
             case 'slider':
                 if(params.tierType===true){ //To check the type of sliders
                     return (
-                        <TierSlider paramIndex={Paramindex} workIndex={workIndex} params={params} workId={workId} handleValues={this.addValue} orderNumber={orderNumber} key={params._id} />
+                        <TierSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={this.addValue} orderNumber={orderNumber} key={params._id} />
                     )
                 }
                 else{
                     return (
-                        <RangeSlider paramIndex={Paramindex} workIndex={workIndex} params={params} workId={workId} handleValues={this.addValue} orderNumber={orderNumber} key={params._id} />
+                        <RangeSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={this.addValue} orderNumber={orderNumber} key={params._id} />
                     )
                 }
             case 'checkbox':
@@ -196,25 +161,29 @@ class WorkComponents extends React.Component{
             <div>
                 {   
                     [...Array(this.state.orders)].map((x,orderNumber)=>{
+                        console.log(this.props.work)
                         //Loop to render components of options of each work
-                        return this.props.work.options.options.map((work,workIndex)=>{
-                            if(!work.hidden){/* Error : rerender updates need to be controlled */
-                                return (
-                                    <div key={work._id}>
-                                        <h1>{this.props.work.options.options.length===1?<span/>:work.workTitle}</h1>
-                                        {   
-                                            //Loop to render components such as sliders from each params
-                                            work.params.map((param,paramIndex)=>{
-                                                return this.makeElements(param,paramIndex,work.workId,workIndex,orderNumber)
-                                            })
+                        return (
+                            <div key={orderNumber}>
+                                <h1>{this.props.work.workTitle}</h1>
+                                {   
+                                    //Loop to render components such as sliders from each params
+                                    this.props.work.options.params.map((param,paramIndex)=>{
+                                        if(paramIndex===0){
+                                            return <div key={paramIndex}> 
+                                                        <h3>Order {orderNumber+1}</h3>
+                                                        {
+                                                            this.makeElements(param,paramIndex,this.props.work._id,orderNumber)
+                                                        }
+                                                    </div>
                                         }
-                                    </div>
-                                )
-                            }
-                            else{
-                                return <HiddenComponent key={work._id} work={work} workIndex={workIndex} addValue={this.addValue} orderNumber={orderNumber}/>
-                            }
-                        })
+                                        else{
+                                            return this.makeElements(param,paramIndex,this.props.work._id,orderNumber)
+                                        }
+                                    })
+                                }
+                            </div>
+                        )
                     })
                 }
                 <p>{this.state.totalPrice?`Total Price - ${this.state.totalPrice}`:<span/>}</p>

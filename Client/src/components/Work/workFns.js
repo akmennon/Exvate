@@ -1,5 +1,5 @@
 /* Inititates the suborders */
-export const subOrderInitial = (values,userId,params) =>{
+export const orderInitial = (values,userId,params) =>{
     /* variables array created for variables array in order schema */
     let variables = []
 
