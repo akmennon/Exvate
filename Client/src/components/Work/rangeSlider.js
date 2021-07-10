@@ -20,8 +20,7 @@ class RangeSlider extends React.Component{
                 value:this.props.params.values[0].value,
                 time:this.props.params.values[0].time,
                 index:this.props.paramIndex,
-                workId:this.props.workId,
-                workIndex:this.props.workIndex
+                workId:this.props.workId
             }
         }
 

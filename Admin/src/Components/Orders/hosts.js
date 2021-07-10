@@ -13,6 +13,7 @@ import axios from '../../config/Axios';
 import TextField from '@material-ui/core/TextField';
 import DataTable from './hostTable'
 import MenuItem from '@material-ui/core/MenuItem'
+import { useSelector } from 'react-redux';
 
 const useStyles = makeStyles((theme) => ({
     column: {
@@ -316,6 +317,7 @@ const hosts = (data, classes, props, params, setParams, open, setOpen, order, co
 
 function HostsList(props) {
     const classes = useStyles()
+    const orderSaved = useSelector(state=>state.order)
     const [params, setParams] = useState(
         {
             values: {
@@ -340,9 +342,10 @@ function HostsList(props) {
     const { data, loading, error } = useQuery({
         type: 'getMany',
         resource: `orders/${props.match.params.id}/suppliers`,
-        payload: { id: props.match.params.id }
+        payload: { id: props.match.params.id, workId:orderSaved.workId._id}
     });
 
+    console.log(orderSaved)
     const token = sessionStorage.getItem('token')
 
     useEffect(() => {

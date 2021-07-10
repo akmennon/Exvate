@@ -1,6 +1,7 @@
 const User = require('../Models/user')
 const pick = require('lodash/pick')
 const errorHandler = require('../Resolvers/errorHandler')
+const { response } = require('express')
 
 /* Work left : Pick */
 
@@ -270,10 +271,11 @@ module.exports.adminToken = (req,res,next) =>{
 }
 
 /* LAST - ADMIN - Finds all the suppliers for the type of work */
-module.exports.suppliers = (req,res) =>{
+module.exports.suppliers = (req,res,next) =>{
     const orderId = req.params.id
+    const body = req.body
 
-    User.orderSuppliers(orderId)
+    User.orderSuppliers(body.workId)
         .then((response)=>{
             res.json(response)
         })
@@ -349,6 +351,20 @@ module.exports.userEdit = (req,res,next) =>{
     const id = req.params.id
 
     User.userEdit(user,body,id)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.suspend = (req,res,next) =>{
+    const adminId = req.user
+    const userId = req.params.id
+    const body = req.body
+
+    User.suspend(userId,body,adminId)
         .then((response)=>{
             res.json(response)
         })

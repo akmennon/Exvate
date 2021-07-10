@@ -67,7 +67,7 @@ const ArrayWorks = (props)=>{
                         {
                             label:value.label,
                             _id:value._id
-                        }
+                        }   
                     )
                 })
                 return (
@@ -86,7 +86,7 @@ const ArrayWorks = (props)=>{
                     <Fragment key={param._id}>
                         <TextInput initialValue={param.title} source={`options.params[${index}].title`} options={{disabled:true}} label='Param title'/>
                         <br></br>
-                        <TextInput initialValue={param.values[0]._id} source={`options.params[${index}].values[${0}]._id`} options={{disabled:true}} label='Param id'/>
+                        <TextInput initialValue={param.values[0]._id} source={`options.params[${index}].values[${0}]._id`} options={{disabled:true}} label='Value id'/>
                         <br></br>
                         <NumberInput initialValue={10} source={`options.params[${index}].values[${0}].min`} label='Minimum'/>
                         <br></br>

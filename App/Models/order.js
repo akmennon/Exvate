@@ -343,7 +343,7 @@ const orderSchema = new Schema({
     }
 })
 
-/* creates a draft */
+/* creates one or multiple orders */
 orderSchema.statics.createOrder = async function(orderValues,resultValue){
     const Order = this
 
@@ -356,19 +356,13 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue){
                 /* workIds of frontend result and db result is matched
                     and the values are saved to the db result
                 */
+
+                if(resultValue.workId.toString() == orderValues.result.workId){
+                    resultValue.values = orderValues.result.values
+                    resultValue.time.values = orderValues.result.time.values
+                }
         
-                const tempValue = resultValue.map((elements)=>{
-                    let foundResult = orderValues.result.find((element)=>{
-                        return elements.workId==element.workId
-                    })
-        
-                    elements.values = foundResult.values
-                    elements.time.values = foundResult.time.values
-        
-                    return elements
-                })
-        
-                output = calcResult(tempValue,output) /*[{workId:"",price:1,time:1,amount:1}]*/
+                output = calcResult(resultValue,output) /*[{workId:"",price:1,time:1,amount:1}]*/
         
                 let value
                 orderFinal = orderValues.order
@@ -380,7 +374,8 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue){
                 const order = new Order(orderFinal)
 
                 /* Result is modelled and saved */
-                const result = new Result({result:tempValue,orderId:order._id})
+                delete resultValue._id
+                const result = new Result({...resultValue,orderId:order._id})
                 const savedResult = await result.save()
 
                 order.result = savedResult

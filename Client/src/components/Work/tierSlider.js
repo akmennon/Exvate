@@ -15,8 +15,7 @@ class TierSlider extends React.Component{
                 value:0,
                 time:0,
                 index:this.props.paramIndex,
-                workId:this.props.workId,
-                workIndex:this.props.workIndex
+                workId:this.props.workId
             }
         }
 

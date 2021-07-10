@@ -21,6 +21,17 @@ import WorkCreate from './Components/Works/create'
 import workShow from './Components/Works/show'
 import WorkEdit from './Components/Works/edit'
 import UserEdit from './Components/Users/edit'
+import {Provider} from 'react-redux'
+
+//React admin - dependencies
+import { createHashHistory } from 'history';
+
+import store from './config/store';
+
+//For redux dependencies
+const dataProvider = DataProvider
+const authProvider = AuthProvider
+const history = createHashHistory();
 
 class App extends React.Component{
   constructor(props){
@@ -31,14 +42,26 @@ class App extends React.Component{
   }
 
   render(){
+    console.log({
+      authProvider,
+      dataProvider,
+      history,
+      })
     return (
-      <Admin dataProvider={DataProvider} authProvider={AuthProvider} dashboard={Dashboard} customRoutes={CustomRoutes} catchAll={NotFound} title='Sourceo'>
-        <Resource name='orders' list={OrderList} show={OrderShow} options={{ label: 'Orders' }}/>
-        <Resource name='works' list={WorkList} create={WorkCreate} show={workShow} edit={WorkEdit} options={{ label: 'Works' }}/>
-        <Resource name='users' list={UserList} show={UserShow} edit={UserEdit} options={{ label: 'Users' }} create={UserCreate}/>
-        <Resource name='categories' list={CategoriesList} options={{ label: 'Categories' }} create={CategoriesCreate} edit={CategoriesEdit}/>
-        <Resource name='types' list={TypesList} options={{ label: 'Types' }} create={TypesCreate} edit={TypesEdit}/>
-      </Admin>
+      <Provider store={store({
+        authProvider,
+        dataProvider,
+        history,
+        })}
+      >
+        <Admin dataProvider={DataProvider} authProvider={AuthProvider} dashboard={Dashboard} history={history} customRoutes={CustomRoutes} catchAll={NotFound} title='Sourceo'>
+          <Resource name='orders' list={OrderList} show={OrderShow} options={{ label: 'Orders' }}/>
+          <Resource name='works' list={WorkList} create={WorkCreate} show={workShow} edit={WorkEdit} options={{ label: 'Works' }}/>
+          <Resource name='users' list={UserList} show={UserShow} edit={UserEdit} options={{ label: 'Users' }} create={UserCreate}/>
+          <Resource name='categories' list={CategoriesList} options={{ label: 'Categories' }} create={CategoriesCreate} edit={CategoriesEdit}/>
+          <Resource name='types' list={TypesList} options={{ label: 'Types' }} create={TypesCreate} edit={TypesEdit}/>
+        </Admin>
+      </Provider>
     );
   }
 }

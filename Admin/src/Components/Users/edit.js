@@ -33,20 +33,21 @@ const WorkLengthInput = props =>{
     const { values } = useFormState()
 
     if(values.perms.supplier.multipleWorks.value===true){
-        return <NumberInput source="perms.supplier.multipleWorks.number" label="Number of works allowed" {...props} min={0} max={0} validate={[required()]} />
+        return <NumberInput source="perms.supplier.multipleWorks.number" label="Number of works allowed" {...props} min={1} max={10} validate={[required()]} />
     }
     else{
         return null
     }
 }
 
-const PermissionsTab = props =>{
+const SupplierTab = props =>{
     const { values } = useFormState()
     console.log(values)
 
     if(values.supplier===true){
         return (
-            <FormTab label="Permission" {...props} >
+            <FormTab label="Supplier" {...props} >
+                <BooleanInput source="perms.supplier.verified" label="Verified Supplier" defaultValue={false}/>
                 <BooleanInput source="perms.supplier.multipleWorks.value" label="Multiple works" defaultValue={false}/>
                 <WorkLengthInput/>
             </FormTab>
@@ -79,14 +80,15 @@ const UserEdit = (props) => {
                 <FormTab label="User Type">
                     <SelectInput source="userType" choices={[
                             { id: 'User', type: 'User' },
-                            { id: 'Company', type: 'Company' },
-                            { id: 'Organizer', type: 'Organizer' },
+                            { id: 'Supplier', type: 'Supplier' },
+                            { id: 'Affiliate', type: 'Affiliate' },
+                            { id: 'CHA', type: 'CHA' }
                         ]} 
                         optionText="type" optionValue="id"
                     />
                     <SupplierInput />
                 </FormTab>
-                <PermissionsTab/>
+                <SupplierTab/>
             </TabbedForm>
         </Edit>
     )

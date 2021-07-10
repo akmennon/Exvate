@@ -4,14 +4,15 @@ import RangeSlider from './rangeSlider'
 import {connect} from 'react-redux'
 import {orderInitial,resultInitial} from './workFns'
 import {startsetOrder} from '../../action/orderAction'
+import calcResult from '../resolvers/calcResult'
 
 /* 
 
     Pending :
         Dropdown and checkbox
         Redirect to this page after logging in
-        Authentication for socket order
         checkbox for sliders to be implemented
+        Time calculation
 
 */
 
@@ -23,7 +24,10 @@ class WorkComponents extends React.Component{
         this.state={
             multiOrder:[],
             orders:1,
-            totalPrice:''
+            totalPrice:'',
+            status:true,
+            errMessage:'',
+            time:''
         }
     }
 
@@ -31,14 +35,57 @@ class WorkComponents extends React.Component{
 
     handleClick = (e) =>{  
 
-        /* created result is sent for calculation */
+        /* The created result is calculated for the price from the work result */
         if(e.target.name==='price'){
             console.log(this.state.result)
-            const allResult = this.state.multiOrder.map((ele)=>{
-                return ele.result
-            })
             console.log(this.state.multiOrder)
-            this.props.socket.emit('calculatePrice',allResult)
+
+            const result = Object.assign({},this.props.work.result)
+            
+            if(result){
+                if(this.state.multiOrder.length===1){
+                    let output
+                    result.values = this.state.multiOrder[0].result.values
+                    result.time.values = this.state.multiOrder[0].result.time.values
+                    output = calcResult(result)
+                    this.setState({totalPrice:output[0].price,time:output[0].time})
+                }
+                else{
+                    if(this.state.multiOrder.length===0){
+                        console.log('error')
+                    }
+                    let resultValue = {}
+
+                    /* Method to calculate price for multiple orders [Single order calculation with a loop] */
+                    this.state.multiOrder.map((order)=>{
+                        let output
+
+                        result.values = order.result.values
+                        result.time.values = order.result.time.values
+                
+                        if(resultValue&&resultValue.price){
+                            output = calcResult(result,output)
+                            resultValue.price = resultValue.price + output[0].price
+                            resultValue.time = resultValue.time + output[0].time
+                        }
+                        else{
+                            output = calcResult(result,output)
+                            resultValue.price = output[0].price
+                            resultValue.time = output[0].time
+                        }
+                        /* Calculates the total price from the modified result object and saves it to the output argument */
+                        
+                        console.log(resultValue)
+                        return null
+                    })
+                    this.setState({totalPrice:resultValue.price,time:resultValue.time})
+                }
+
+
+            }
+            else{
+                console.log('error')
+            }
         }
 
         /* created order is sent for ordering  */
@@ -76,17 +123,17 @@ class WorkComponents extends React.Component{
         }
         /* ran for each component initially and on changes */
 
-        /* Initiates the result (for calculation) */
-        const result = resultInitial(values)
-        /* Initiates the order structure and suborders (for ordering) */
-        const order = orderInitial(values,this.props.user._id,params)
-
         /* Initiated order and result are saved to state respect. */
         this.setState((previousState)=>{
             let prevState = previousState.multiOrder[orderNumber]
             if(!prevState.result||!prevState.result.values){
-                prevState.result = result
-                prevState.subOrders = order   
+
+                /* Initiates the result (for calculation) */
+                prevState.result = resultInitial(values)
+
+                /* Initiates the order structure and suborders (for ordering) */
+                prevState.subOrders = orderInitial(values,this.props.user._id,params)   
+
                 return {
                     result:prevState.result,
                     subOrders:prevState.subOrders
@@ -137,25 +184,6 @@ class WorkComponents extends React.Component{
         }
     }
 
-    /* sockets */
-    componentDidMount(){
-
-        /* socket to find the initial price of the work */
-        this.props.socket.on('total',(results)=>{   
-            let total = 0
-            results.map((result)=>{
-                return total = total + result.price
-            })
-            this.setState({totalPrice:total})
-        })
-
-    }
-
-    /* closes the socket on unmount */
-    componentWillUnmount(){
-        this.props.socket.close()
-    }
-
     render(){
         return(
             <div>
@@ -187,6 +215,7 @@ class WorkComponents extends React.Component{
                     })
                 }
                 <p>{this.state.totalPrice?`Total Price - ${this.state.totalPrice}`:<span/>}</p>
+                <p>{this.state.status?`${this.state.errMessage}`:<span/>}</p>
                 <button onClick={this.handleClick} name='price'>Check Price</button>
                 <button onClick={this.handleClick} name='order'>Order</button>
                 <button onClick={()=>this.setState((prevState)=> {return {orders:prevState.orders+1}})} name='Add'>Add</button>

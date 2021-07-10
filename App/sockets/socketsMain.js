@@ -1,26 +1,12 @@
 /*-------------------- Socketio Server [called in index.js] --------------------*/
 
-/* 
-
-    PENDING:
-        Time calculation
-
-*/
-
 /* io variable imported from servers.js */
 const io = require('../../servers').io
-
-/* Function which calculates the price and time from the inputs */
-const calcResult = require('../Resolvers/calcResult')
 
 const mongoose = require('mongoose')
 
 /* Required model */
-const Result = mongoose.model('Result')
-
-/* Admin Namespace and its functions */
-
-require('./adminSocket')
+const User = mongoose.model('User')
 
 /* Main namespace connection */
 
@@ -28,77 +14,50 @@ io.on('connection',(socket)=>{
     console.log('Socket has been connected')
 })
 
-/*-------------------- Order Namespace [executed when user accesses a product page from the frontend] --------------------*/
+/*-------------------- Admin Socket [Checks admin authentication and session using sockets] --------------------*/
 
-io.of('/orderfn').on('connection',(socket)=>{
-    let resultValue
+io.of('/admin').on('connection',(socket)=>{
 
-    let output  //[{workId:"",price:1,time:1,amount:1}]
+    let adminToken
 
-    /*-------------------- Result finder [executed for the frontend product page to obatin its result to calculate the price and time] --------------------*/
-    socket.on('result',async (resultId)=>{
+    console.log('connected to admin socket')
+
+    /*-------------------- Authenticates the admin --------------------*/
+    socket.on('login',async (creds)=>{
+        const admin = await User.adminLogin(creds.email,creds.password)
+
         try{
-            const result = await Result.findOne({_id:resultId,})
-            resultValue = result
+
+            /* Checks if the admin already has a session*/
+            if(io.of('/admin').adapter.rooms[admin._id]){
+                Promise.reject('Already logged in')
+            }
+
+            /* creates a room with admin's id */
+            socket.join(admin._id)
+
+            /* Creates a token for the admin */
+            adminToken = await admin.generateAdminToken()
+
+            /* Token is sent back to the frontend */
+            socket.emit('token',{token:adminToken})
         }
         catch(err){
-            console.log('Error fetching result ',err)
+            console.log(err)
         }
     })
 
-    /*-------------------- Price calculator [Calculates the price with the params from the found result using Calcresult fn] --------------------*/
-    socket.on('calculatePrice',(result)=>{
-
-        let multiOutput = []    //used to send back the result from calculation
-
-        if(resultValue.workId){
-            if(result.length==1){   //checks if there is only a single order
-
-                /* Saves the params to the relevant works in the result to calculate the price*/
-                if(resultValue.workId.toString()!=result[0].workId){
-                    socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
-                }
-    
-                resultValue.values = result[0].values
-                resultValue.time.values = result[0].time.values
-        
-                /* Calculates the total price from the modified result object and saves it to the output argument */
-                output = calcResult(resultValue)
-
-                /* Sent back as an array */
-                multiOutput = multiOutput.concat(output)
-            }
-            else{
-                if(result.length==0){
-                    socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
-                }
-                /* Method to calculate price for multiple orders [Single order calculation with a loop] */
-                result.map((result)=>{
-
-                    /* Saves the params to the relevant works in the result to calculate the price*/
-                    if(resultValue.workId!=result.workId){
-                        socket.emit('errorResult',{status:false,statusCode:403,message:'Input error'})
-                    }
-        
-                    resultValue.values = result.values
-                    resultValue.time.values = result.time.values
-            
-                    /* Calculates the total price from the modified result object and saves it to the output argument */
-                    output = calcResult(resultValue,output)
-
-                    /* Sent back as an array */
-                    multiOutput = multiOutput.concat(output)
-                })
-            }
+    /*-------------------- Logs out as well as remove the token --------------------*/
+    socket.on('disconnect',async (reason)=>{
+        try{
+            const result = await User.updateOne({'isAdmin.token':adminToken},{$unset:{'admin.isAdmin.token':''}})
+            console.log(result)
         }
-        else{
-            socket.emit('errorResult',{status:false,statusCode:403,message:'Refresh'})
+        catch(err){
+            console.log(err)
         }
-        
-        /* The total values are sent back to frontend */
-        socket.emit('total',multiOutput)
-
     })
+
 })
 
 module.exports = io

@@ -7,9 +7,9 @@ const sendMail = require('../Resolvers/sendMail')
 module.exports.create = async (req,res) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
     const body = req.body
     
-    Result.findById(body.resultId)//use ({workId:body.workId,orderId:{$exists:false}}) after updating database
+    Result.findById(body.resultId).lean()//ResultId sent seperately from the frontend
         .then((result)=>{
-            return Order.createOrder(body.orderData,result.result) //UNRELIABLE - Use pick here
+            return Order.createOrder(body.orderData,result) //UNRELIABLE - Use pick here
         })
         .then((order)=>{
             return User.saveOrder(order,req.user._id)

@@ -1,7 +1,6 @@
 import React from 'react'
 import WorkComponents from './workComponents'
 import axios from '../../config/axios'
-import io from 'socket.io-client'
 import {setWork} from '../../action/workAction'
 import {connect} from 'react-redux'
 
@@ -11,8 +10,7 @@ class Work extends React.Component{
     constructor(props){
         super(props)
         this.state={
-            work:'',
-            socket: io('http://localhost:3015/orderfn')  //socket for price and time calculation
+            work:''
         }
     }
 
@@ -22,7 +20,6 @@ class Work extends React.Component{
         axios.get(`/works/${this.props.match.params.id}`)
             .then((response)=>{
                 console.log(response.data)
-                this.state.socket.emit('result',response.data.result)
                 this.props.dispatch(setWork(response.data))
                 this.setState({work:response.data})
             })
@@ -43,7 +40,7 @@ class Work extends React.Component{
             return( //Work component is executed after api call
                 <div>
                     <h1>{this.state.work.title}</h1>
-                    <WorkComponents parent={this.props} work={this.state.work} socket={this.state.socket}/>
+                    <WorkComponents parent={this.props} work={this.state.work}/>
                 </div>
             )
         }

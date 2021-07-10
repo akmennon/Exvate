@@ -11,6 +11,9 @@ import axios from '../../config/Axios'
 import { Fragment } from "react";
 import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
+import { useDispatch } from "react-redux";
+import { setOrder } from "../../Action/orderAction";
+
 
 const useStyles = makeStyles( (theme) => ({
     'actions':{
@@ -205,7 +208,7 @@ const PostShowActions = (props) => {
                                             </div>
                                         </div>
                                         {
-                                            shippingDetails.shipmentType=='Cargo'?(
+                                            shippingDetails.shipmentType==='Cargo'?(
                                                 <Fragment>
                                                     <div className={styles.paymentSelect}>
                                                         <Typography>Incoterm :</Typography>
@@ -373,6 +376,7 @@ const PostShowActions = (props) => {
 
 const OrderShow = (props) => { 
     const {record} = useShowController(props)
+    useDispatch()(setOrder(record))
     return (
     <Show actions={<PostShowActions {...props} record={record} />} {...props}>
         <SimpleShowLayout>

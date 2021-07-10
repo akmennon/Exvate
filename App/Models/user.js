@@ -122,6 +122,8 @@ const userSchema = new Schema({
                         return true
                     case 'Affiliate':
                         return true
+                    case 'CHA':
+                        return true
                     default:
                         return false
                 }
@@ -199,8 +201,8 @@ const userSchema = new Schema({
         },
         supplier:{
             verified:{
-                type:Schema.Types.ObjectId,
-                ref:'User'
+                type:Boolean,
+                default:false
             },
             multipleWorks:{
                 value:{
@@ -209,7 +211,6 @@ const userSchema = new Schema({
                 },
                 number:{
                     type:Number,
-                    default:1,
                     min:1,
                     max:10
                 },
@@ -622,14 +623,21 @@ userSchema.statics.saveOrder = async function(order,id){
 }
 
 /* Adds,deletes or updates work for the host*/
-userSchema.statics.updateWork = async function(id,body){
+userSchema.statics.updateWork = async function(id,body,reqUser){
     const User = this
 
     const params = pick(body,['workId','options'])
     console.log(params)
     
     try{
-        const user = await User.findById(id)
+        let user
+        if(reqUser.isAdmin.value){
+            user = await User.findById(id)
+        }
+        else{
+            user = reqUser
+        }
+
         const workIndex = user.work.workDetails.findIndex((element)=>{
             return element.workId == params.workId
         })
@@ -689,6 +697,9 @@ userSchema.statics.updateWork = async function(id,body){
                 }
 
                 await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{...option})
+                if(reqUser.isAdmin.value){
+                    await User.updateOne({'user.workDetails.workId':params.workId},{$push:{'work.workDetails.$.verified':{verifiedBy:reqUser._id,verifiedAt:Date.now()}}})
+                }
                 return Promise.resolve({status:true,message:'Work Updated'})
             }
 
@@ -746,7 +757,12 @@ userSchema.statics.updateWork = async function(id,body){
                 }
 
                 await option.save()
-                user.work.workDetails.push({workId:params.workId,options:option})
+                if(!reqUser.isAdmin.value){
+                    user.work.workDetails.push({workId:params.workId,options:option,verified:{verifiedBy:reqUser._id,verifiedAt:Date.now()}})
+                }
+                else{
+                    user.work.workDetails.push({workId:params.workId,options:option})
+                }
                 await user.save()
                 return Promise.resolve({status:true,message:'Work Added'})
             }
@@ -800,16 +816,15 @@ userSchema.statics.forgotCheck = async function(token){
 }
 
 /* Find suppliers based on the order inventory requirement */
-userSchema.statics.orderSuppliers = async function(orderId){
+userSchema.statics.orderSuppliers = async function(workId){
     const User = this
 
     try{
-        let order = await Order.findById(orderId) //UNRELIABLE -  use projection
-        let suppliers = await User.find({'work.workDetails.workId':order.workId,supplier:true}) //UNRELIABLE -  use projection
-        if(order&&suppliers){
+        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,verified:{$size:{$gte:1}}}}}) //UNRELIABLE -  use projection
+        if(suppliers.length!==0){
             return Promise.resolve({order,suppliers})
         }
-        return Promise.reject({message:'Error fetching suppliers',statusCode:404})
+        return Promise.reject({message:'Unable to find suppliers',statusCode:404})
     }
     catch(e){
         return Promise.reject({message:'Error fetching suppliers',statusCode:500})
@@ -947,6 +962,21 @@ userSchema.statics.userEdit = async function(user,body,id){
     catch(e){
         console.log(e)
         Promise.reject('Error updating user')
+    }
+}
+
+userSchema.statics.suspend = async function (userId,body,adminId){
+    const User = this
+
+    try{
+        const user = await User.findById(userId)
+        if(body.action==='suspend'){
+            
+        }
+    }
+    catch(e){
+        console.log(e)
+        return Promise.reject(e)
     }
 }
 
