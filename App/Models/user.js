@@ -107,7 +107,9 @@ const userSchema = new Schema({
             type:String
         },
         auth:{
-            type:Number
+            type:Number, //Highest level = 0
+            min:0,
+            max:5
         }
     },
     userType:{                              // To assign the user type
@@ -183,10 +185,24 @@ const userSchema = new Schema({
                     type:Boolean,
                     default:false
                 },
-                doneBy:{
-                    type:Schema.Types.ObjectId,
-                    ref:'User'
-                }
+                duration:{
+                    type:Date
+                },
+                details:[{
+                    reason:{
+                        type:String,
+                        maxlength:120,
+                        minlength:5
+                    },
+                    doneBy:{
+                        type:Schema.Types.ObjectId,
+                        ref:'User'
+                    },
+                    createdAt:{
+                        type:Date,
+                        default:Date.now
+                    }
+                }]
             },
             banned:{
                 value:{
@@ -196,6 +212,14 @@ const userSchema = new Schema({
                 doneBy:{
                     type:Schema.Types.ObjectId,
                     ref:'User'
+                },
+                reason:{
+                    type:String,
+                    maxlength:120,
+                    minlength:5
+                },
+                createdAt:{
+                    type:Date
                 }
             }
         },
@@ -205,35 +229,38 @@ const userSchema = new Schema({
                 default:false
             },
             multipleWorks:{
-                value:{
-                    type:Boolean,
-                    default:false
-                },
-                number:{
+                workCount:{
                     type:Number,
                     min:1,
                     max:10
                 },
-                doneBy:{
+                doneBy:[{
                     type:Schema.Types.ObjectId,
                     ref:'User'
-                }
+                }]
             },
             suspended:{
                 value:{
                     type:Boolean,
                     default:false
                 },
-                doneBy:{
-                    type:Schema.Types.ObjectId,
-                    ref:'User'
-                },
-                createdAt:{
-                    type:Date
-                },
                 duration:{
                     type:Date
-                }
+                },
+                details:[{
+                    reason:{
+                        type:String,
+                        maxlength:120,
+                        minlength:5
+                    },
+                    doneBy:{
+                        type:Schema.Types.ObjectId,
+                        ref:'User'
+                    },
+                    createdAt:{
+                        type:Date
+                    }
+                }]
             },
             banned:{
                 value:{
@@ -247,8 +274,10 @@ const userSchema = new Schema({
                 createdAt:{
                     type:Date
                 },
-                duration:{
-                    type:Date
+                reason:{
+                    type:String,
+                    maxlength:120,
+                    minlength:5
                 }
             }
         }
@@ -752,7 +781,7 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
                 }
 
                 /* checks permission if user can add multiple works */
-                if(!user.perms.supplier.multipleWorks.value || (user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1)){
+                if(user.perms.supplier.multipleWorks.number < user.work.workDetails.length + 1){
                     return Promise.reject({status:false,message:'Contact support to add more inventories',statusCode:403})
                 }
 
@@ -936,7 +965,7 @@ userSchema.statics.hostCancel = async function(orderId,reqUser){
         reqUser.work.workOrder = reqUser.work.workOrder.filter(ele=>ele!=orderId)
         await Order.updateOne({_id:order},{'verified.value':false,'host.assigned':[],$addToSet:{'host.removed':reqUser._id}})
         await reqUser.save()
-        Promise.resolve(reqUser)
+        return Promise.resolve(reqUser)
     }
     catch(e){
         console.log(e)
@@ -953,7 +982,7 @@ userSchema.statics.userEdit = async function(user,body,id){
         if(user.isAdmin.value||user._id==id){
             const user = await User.findByIdAndUpdate(id,{...userBody})
             console.log(user)
-            return Promise.reject('Successfully updated')
+            return Promise.resolve('Successfully updated')
         }
         else{
             return Promise.reject('Unauthorised')
@@ -965,13 +994,89 @@ userSchema.statics.userEdit = async function(user,body,id){
     }
 }
 
-userSchema.statics.suspend = async function (userId,body,adminId){
+userSchema.statics.suspend = async function (userId,body,admin){
     const User = this
 
     try{
         const user = await User.findById(userId)
+        body.duration = new Date(body.duration)
+        if(user.isAdmin.value&&admin.isAdmin.auth>=user.isAdmin.auth){ //higher auth means lower authorization
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
+        }
         if(body.action==='suspend'){
-            
+            if(body.target=='user'){
+                if(user.perms.user.suspended.value){
+                    return Promise.reject({status:false,message:'Already under suspension',statusCode:403})
+                }
+                user.perms.user.suspended = {...user.perms.user.suspended,value:true,duration:body.duration}
+                user.perms.user.suspended.details.push({doneBy:admin._id,reason:body.reason})
+                console.log(user)
+                await user.save()
+                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+            }
+            else if(body.target=='supplier'){
+                if(!user.supplier){
+                    return Promise.reject({status:false,message:'Invalid action on user type',statusCode:400})
+                }
+                if(user.perms.supplier.suspended.value){
+                    return Promise.reject({status:false,message:'Already under suspension',statusCode:403})
+                }
+                user.perms.supplier.suspended = {...user.perms.supplier.suspended,value:true,duration:body.duration}
+                user.perms.supplier.suspended.details.push({doneBy:admin._id,reason:body.reason})
+                console.log(user)
+                await user.save()
+                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+            }
+            else{
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
+            }
+        }
+        else if(body.action==='ban'){
+            if(body.target=='user'){
+                if(user.perms.user.banned.value){
+                    return Promise.reject({status:false,message:'Already banned',statusCode:403})
+                }
+                user.perms.user.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
+                console.log(user)
+                await user.save()
+                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+            }
+            else if(body.target=='supplier'){
+                if(!user.supplier){
+                    Promise.reject({status:false,message:'Invalid action on user type',statusCode:400})
+                }
+                if(user.perms.supplier.banned.value){
+                    return Promise.reject({status:false,message:'Already banned',statusCode:403})
+                }
+                user.perms.supplier.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
+                console.log(user)
+                await user.save()
+                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+            }
+            else{
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
+            }
+        }
+        else{
+            return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
+        }
+    }
+    catch(e){
+        console.log(e)
+        return Promise.reject(e)
+    }
+}
+
+userSchema.statics.supplierVerify = async function(userId,body,admin){
+    const User = this
+
+    try{
+        const result = await User.updateOne({_id:userId},{$set:{'perms.supplier.multipleWorks.workCount':body.workCount,'perms.supplier.verified':body.verified},$push:{'perms.supplier.multipleWorks.doneBy':admin._id}})
+        if(result.nModified){
+            return Promise.resolve({status:true,message:'Modified successfully',statusCode:200})
+        }
+        else{
+            return Promise.reject({status:false,message:'Unable to modify',statusCode:404})
         }
     }
     catch(e){

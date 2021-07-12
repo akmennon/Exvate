@@ -7,6 +7,8 @@ import Fade from '@material-ui/core/Fade';
 import TextField1 from '@material-ui/core/TextField';
 import { Typography,Select,MenuItem,Button } from "@material-ui/core";
 import axios from '../../config/Axios'
+import Clear from '@material-ui/icons/Clear'
+import Check from '@material-ui/icons/Check'
 
 const useStyles = makeStyles(theme=>({
         topBar:{
@@ -69,22 +71,32 @@ const useStyles = makeStyles(theme=>({
     })
 )
 
-const handleClick = (type,params,id) =>{
+const handleClick = (type,params,id,modOpen) =>{
     switch(type){
         case 'suspend':
+            axios.post(`/users/${id}/suspend`,params)
+            .then((res)=>{
+                console.log(res)
+                modOpen(p=>({...p,open:false}))
+            })
+            .catch((err)=>{
+                console.log(err)
+            })
+        break;
+        case 'verify':
             const token = sessionStorage.getItem('token')
-            axios.post(`/users/${id}/suspend`,params,{
+            axios.post(`/users/${id}/verifySupplier`,params,{
                 headers:{
                     'x-admin':token
                 }
             })
             .then((res)=>{
-                console.log(res.message)
-
+                console.log(res)
+                modOpen(p=>({...p,open:false}))
             })
-        break;
-        case 'verify':
-        
+            .catch((err)=>{
+                console.log(err)
+            })
         break;
         default:
         console.log('error handling click')
@@ -93,8 +105,8 @@ const handleClick = (type,params,id) =>{
 
 const ModalBody = (props) =>{
     const classes = useStyles()
-    const [data,setData] = useState({multipleWorks:true,number:1,verified:false})
-    const [suspend,setSuspend] = useState({action:'ban',duration:1,target:'supplier'})
+    const [data,setData] = useState({workCount:props.data.perms.supplier.multipleWorks.workCount||1,verified:props.data.perms.supplier.verified||false})
+    const [suspend,setSuspend] = useState({action:'suspend',duration:Date.now(),target:'user',reason:'',email:'',password:''})
 
     if(props.mod.type === 'multiOrder'){
         console.log(data)
@@ -114,41 +126,28 @@ const ModalBody = (props) =>{
                         </Select>
                     </div>
                 </div>
-                <div className={classes.verifySelect}>
-                    <Typography>Multiple orders :</Typography>
-                    <div className={classes.select}>
-                        <Select
-                        value={data.multipleWorks}
-                        onChange={(e)=>{setData(p=>({...p,multipleWorks:e.target.value}))}}
-                        label="Multiple orders"
-                        variant="outlined"
-                        >
-                            <MenuItem value={true}>True</MenuItem>
-                            <MenuItem value={false}>False</MenuItem>
-                        </Select>
-                    </div>
-                </div>
                 <div className={classes.container} noValidate>
-                    <Typography>Order Count :</Typography>
+                    <Typography>Work Count :</Typography>
                     <TextField1
                         type="number"
-                        defaultValue={data.number}
+                        defaultValue={data.workCount}
                         className={classes.textField}
                         InputLabelProps={{
                         shrink: true,
                         }}
-                        onChange={(e)=>{setData(p=>({...p,number:Number(e.target.value)}))}}
+                        onChange={(e)=>{setData(p=>({...p,workCount:Number(e.target.value)}))}}
                         variant="outlined"
                     />
                 </div>
                 <div className={classes.verifySelectButton}>
-                    <Button variant="contained" color="primary" onClick={()=>handleClick('verify',data,props.match.params.id)}>Update</Button>
+                    <Button variant="contained" color="primary" onClick={()=>handleClick('verify',data,props.match.params.id,props.modOpen)}>Update</Button>
                 </div>
             </div>
         )
     }
     else if(props.mod.type === 'suspend'){
         console.log(suspend)
+        console.log(props)
         return (
             <div className={classes.suspendContainer}>
                 <div className={classes.verifySelect}>
@@ -157,7 +156,6 @@ const ModalBody = (props) =>{
                         <Select
                         value={suspend.action}
                         onChange={(e)=>{setSuspend(p=>({...p,action:e.target.value}))}}
-                        label="Action"
                         variant="outlined"
                         >
                             <MenuItem value={'suspend'}>Suspend</MenuItem>
@@ -171,12 +169,26 @@ const ModalBody = (props) =>{
                         <Select
                         value={suspend.target}
                         onChange={(e)=>{setSuspend(p=>({...p,target:e.target.value}))}}
-                        label="Target"
                         variant="outlined"
                         >
                             <MenuItem value={'user'}>User</MenuItem>
-                            <MenuItem value={'supplier'}>Supplier</MenuItem>
+                            {props.data.supplier?<MenuItem value={'supplier'}>Supplier</MenuItem>:<span/>}
                         </Select>
+                    </div>
+                </div>
+                <div className={classes.verifySelect}>
+                    <Typography>Reason :</Typography>
+                    <div className={classes.select}>
+                        <TextField1
+                            type='text'
+                            value={suspend.reason}
+                            className={classes.select}
+                            variant="outlined"
+                            InputLabelProps={{
+                            shrink: true,
+                            }}
+                            onChange={(e)=>{setSuspend(p=>({...p,reason:e.target.value}))}}
+                        />
                     </div>
                 </div>
                 {
@@ -184,20 +196,37 @@ const ModalBody = (props) =>{
                         <div className={classes.container} noValidate>
                             <Typography>Duration :</Typography>
                             <TextField1
-                                type="number"
+                                type="date"
                                 defaultValue={suspend.duration}
                                 className={classes.textField}
                                 InputLabelProps={{
                                 shrink: true,
                                 }}
-                                onChange={(e)=>{setSuspend(p=>({...p,number:Number(e.target.value)}))}}
+                                onChange={(e)=>{setSuspend(p=>({...p,duration:e.target.value}))}}
                                 variant="outlined"
                             />
                         </div>
                     ):<span/>
                 }
+                <div>
+                    <Typography id="auth-modal-title">Authentication</Typography>
+                    <TextField1
+                        label="email"
+                        type="email"
+                        variant='outlined'
+                        onChange={(e)=>{setSuspend(cred=>({...cred,email:e.target.value}))}}
+                        value={suspend.email}
+                    />
+                    <TextField1
+                        label="password"
+                        type="password"
+                        variant='outlined'
+                        onChange={(e)=>{setSuspend(cred=>({...cred,password:e.target.value}))}}
+                        value={suspend.password}
+                    />
+                </div>
                 <div className={classes.verifySelectButton}>
-                    <Button variant="contained" color="primary" onClick={()=>handleClick('suspend',suspend,props.match.params.id)}>{suspend.action}</Button>
+                    <Button variant="contained" color="primary" onClick={()=>handleClick('suspend',suspend,props.match.params.id,props.modOpen)}>{suspend.action}</Button>
                 </div>
             </div>
         )
@@ -238,6 +267,25 @@ const UserShowActions = (props) => {
     </TopToolbar>
 )};
 
+const AdminField = ({ source, record }) =>{
+    if(record.isAdmin.value===undefined){
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
+                <span style={{'font-size':12,opacity:0.6}}>isAdmin</span>
+                <Clear/>
+            </div>
+        )
+    }
+    else{
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
+                <span style={{'font-size':12,opacity:0.6}}>isAdmin</span>
+                <Check/>
+            </div>
+        )
+    }
+}
+
 const UserShow = (props) => {
 
     return (
@@ -248,6 +296,7 @@ const UserShow = (props) => {
             <TextField source='mobile' label='Mobile' />
             <BooleanField source='email.confirmed.value' label='Email Verified' emptyText="false"/>
             <TextField source='supplier' label='Supplier' />
+            <AdminField source='isAdmin.value' label='Admin' />
         </SimpleShowLayout>
     </Show>
 )};

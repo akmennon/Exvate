@@ -360,13 +360,27 @@ module.exports.userEdit = (req,res,next) =>{
 }
 
 module.exports.suspend = (req,res,next) =>{
-    const adminId = req.user
+    const admin = req.user
     const userId = req.params.id
     const body = req.body
 
-    User.suspend(userId,body,adminId)
-        .then((response)=>{
-            res.json(response)
+    User.suspend(userId,body,admin)
+        .then((resp)=>{
+            res.json(resp)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.supplierVerify = (req,res,next) =>{
+    const admin = req.user
+    const userId = req.params.id
+    const body = req.body
+
+    User.supplierVerify(userId,body,admin)
+        .then((resp)=>{
+            res.json(resp)
         })
         .catch((err)=>{
             errorHandler(err,next)
