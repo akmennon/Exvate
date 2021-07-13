@@ -233,6 +233,57 @@ const ModalBody = (props) =>{
     }
 }
 
+const AdminModalBody = (props) =>{
+    const classes = useStyles()
+    const [suspend,setSuspend] = useState({action:'ban',target:'user',reason:'',email:'',password:''})
+
+    return (
+        <div className={classes.suspendContainer}>
+            <div className={classes.verifySelect}>
+                <Typography>Action : Ban </Typography>
+            </div>
+            <div className={classes.verifySelect}>
+                <Typography>Target : User </Typography>
+            </div>
+            <div className={classes.verifySelect}>
+                <Typography>Reason :</Typography>
+                <div className={classes.select}>
+                    <TextField1
+                        type='text'
+                        value={suspend.reason}
+                        className={classes.select}
+                        variant="outlined"
+                        InputLabelProps={{
+                        shrink: true,
+                        }}
+                        onChange={(e)=>{setSuspend(p=>({...p,reason:e.target.value}))}}
+                    />
+                </div>
+            </div>
+            <div>
+                <Typography id="auth-modal-title">Authentication</Typography>
+                <TextField1
+                    label="email"
+                    type="email"
+                    variant='outlined'
+                    onChange={(e)=>{setSuspend(cred=>({...cred,email:e.target.value}))}}
+                    value={suspend.email}
+                />
+                <TextField1
+                    label="password"
+                    type="password"
+                    variant='outlined'
+                    onChange={(e)=>{setSuspend(cred=>({...cred,password:e.target.value}))}}
+                    value={suspend.password}
+                />
+            </div>
+            <div className={classes.verifySelectButton}>
+                <Button variant="contained" color="primary" onClick={()=>handleClick('suspend',suspend,props.match.params.id,props.modOpen)}>{suspend.action}</Button>
+            </div>
+        </div>
+    )
+}
+
 const UserShowActions = (props) => {
     const classes = useStyles()
     const [mod, modOpen] = useState({open:false,type:''});
@@ -252,7 +303,7 @@ const UserShowActions = (props) => {
         >
             <Fade in={mod.open}>
                 <div className={classes.paper}>
-                    <ModalBody mod={mod} modOpen={modOpen} {...props} />
+                    {props.data.isAdmin&&props.data.isAdmin.value?<AdminModalBody mod={mod} modOpen={modOpen} {...props} />:<ModalBody mod={mod} modOpen={modOpen} {...props} />}
                 </div>
             </Fade>
         </Modal>
@@ -268,10 +319,10 @@ const UserShowActions = (props) => {
 )};
 
 const AdminField = ({ source, record }) =>{
-    if(record.isAdmin.value===undefined){
+    if(!record.isAdmin||!record.isAdmin.value){
         return (
             <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
-                <span style={{'font-size':12,opacity:0.6}}>isAdmin</span>
+                <span style={{'fontSize':12,opacity:0.6}}>isAdmin</span>
                 <Clear/>
             </div>
         )
@@ -279,7 +330,7 @@ const AdminField = ({ source, record }) =>{
     else{
         return (
             <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
-                <span style={{'font-size':12,opacity:0.6}}>isAdmin</span>
+                <span style={{'fontSize':12,opacity:0.6}}>isAdmin</span>
                 <Check/>
             </div>
         )

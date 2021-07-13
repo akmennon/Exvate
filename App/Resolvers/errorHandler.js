@@ -5,6 +5,9 @@ const errorHandler = (err,next) =>{
     if(err.statusCode){
         error.statusCode = err.statusCode
         error.message = err.message
+        if(err.payload){
+            error.payload = err.payload
+        }
     }
     else{
         error.statusCode = 500

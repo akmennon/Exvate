@@ -14,7 +14,7 @@ const errorHandler = require('../Resolvers/errorHandler')
         else{
             User.findByAdminToken(token)
                 .then(function(user){
-                    if(user&&user.isAdmin.value){
+                    if(user&&user.isAdmin.value&&!user.isAdmin.banned.value){
                         req.user = user
                         req.token = token
                         next()
@@ -36,7 +36,7 @@ const errorHandler = require('../Resolvers/errorHandler')
 
         User.adminSignAction(body.email,body.password)
             .then(function(user){
-                if(user&&user.isAdmin){
+                if(user&&user.isAdmin&&!user.isAdmin.banned.value){
                     req.user = user
                     next()
                 }

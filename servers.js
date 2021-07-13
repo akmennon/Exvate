@@ -22,8 +22,13 @@ App.use('/',router)
 
 App.use((err,req,res,next)=>{
     if(err.statusCode){
-        const {statusCode,message} = err
-        res.status(statusCode).send({status:false,message})
+        const {statusCode,message,payload} = err
+        if(payload){
+            res.status(statusCode).send({status:false,message,payload})
+        }
+        else{
+            res.status(statusCode).send({status:false,message})
+        }
     }
     else{
         console.log(err)

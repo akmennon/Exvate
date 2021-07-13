@@ -8,25 +8,23 @@ export const removeUser = () =>{
     return {type:'REMOVE_USER'}
 }
 
-export const startSetUser = (loginData,redirect) =>{    //login action
+export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
     return ((dispatch)=>{
         axios.post('/user/login',loginData)
             .then((response)=>{
-                if(response.data.hasOwnProperty('errors')){
-                    console.log(response.data.errors)
-                }
-                else if(!response.data.payload._id){
-                    console.log(response.data)
-                }
-                else{
-                    localStorage.setItem('x-auth',response.headers['x-auth'])
-                    console.log(response.data)
-                    dispatch(setUser(response.data.payload))
-                    redirect()
-                }
+                localStorage.setItem('x-auth',response.headers['x-auth'])
+                console.log(response.data)
+                dispatch(setUser(response.data.payload))
+                redirect()
             })
             .catch((err)=>{
-                console.log(err)
+                console.log(err.response.data)
+                if(err.response.data.payload&&err.response.data.payload.email){
+                    setAuth(p=>({...p,password:'',resendMail:true}))
+                }
+                else{
+                    setAuth(p=>({...p,password:''}))
+                }
             })
     })
 }

@@ -109,7 +109,24 @@ const userSchema = new Schema({
         auth:{
             type:Number, //Highest level = 0
             min:0,
-            max:5
+            max:3
+        },
+        banned:{
+            value:{
+                type:Boolean
+            },
+            doneBy:{
+                type:Schema.Types.ObjectId,
+                ref:'User'
+            },
+            createdAt:{
+                type:Date
+            },
+            reason:{
+                type:String,
+                maxlength:120,
+                minlength:5
+            }
         }
     },
     userType:{                              // To assign the user type
@@ -366,36 +383,46 @@ userSchema.methods.registerMail = async function(){
 
 /* PENDING - Lazy - Login function. Also checks if the email has been confirmed */
 
-userSchema.statics.findByCredentials = function(email,password){
+userSchema.statics.findByCredentials = async function(email,password){
     const User = this
 
-    return User.findOne({'email.email':email})
-        .then(function(user){
+    try{
+        const user = await User.findOne({'email.email':email})
 
-            /* checks if user is present and if email is confirmed */
-            if(!user){
-                return Promise.reject({message:'Invalid email or password',statusCode:401})
-            }else if(!user.email.confirmed.value){
-                if(user.adminCreated){
-                    user.email.confirmed.value = true
-                }else{
-                    return Promise.reject({message:'Please confirm email',statusCode:401})
-                }
-            }
+        if(!user){
+            return Promise.reject({message:'Invalid email or password',statusCode:401})
+        }
+        else if(!user.email.confirmed.value){
+            //Admin created user work
+            /*if(user.adminCreated){
+                user.email.confirmed.value = true
+            }else{
+                return Promise.reject({message:'Please confirm email',statusCode:401,payload:{email:false}})
+            }*/
 
-            return bcryptjs.compare(password,user.password)
-                .then(function(result){
-                    if(result){
-                        return Promise.resolve(user)
-                    }
-                    else{
-                        return Promise.reject({message:'Invalid email or password',statusCode:401})
-                    }
-                })
-                .catch(function(err){
-                    return Promise.reject(err)
-                })
-        })
+            return Promise.reject({status:false,message:'Please confirm email',statusCode:401,payload:{email:true}})
+        }
+        
+        if(user.perms.user.suspended.value){
+            return Promise.reject({status:false,message:'User suspended',statusCode:401,payload:{duration:new Date(user.perms.user.suspended.duration)}})     
+        }
+
+        if(user.perms.user.banned.value){
+            return Promise.reject({status:false,message:'User Banned',statusCode:401})
+        }
+        
+        const result = bcryptjs.compare(password,user.password)
+
+        if(result){
+            return Promise.resolve(user)
+        }
+        else{
+            return Promise.reject({message:'Invalid email or password',statusCode:401})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 /* Finds user by the given email */
@@ -580,6 +607,9 @@ userSchema.statics.adminLogin = async function(email,password){
     try{
         const user = await User.findOne({'email.email':email})
         if(!user||!user.isAdmin.value){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+        if(user.isAdmin.banned.value){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
         const result = await bcryptjs.compare(password,user.password)
@@ -1033,13 +1063,24 @@ userSchema.statics.suspend = async function (userId,body,admin){
         }
         else if(body.action==='ban'){
             if(body.target=='user'){
-                if(user.perms.user.banned.value){
-                    return Promise.reject({status:false,message:'Already banned',statusCode:403})
+                if(user.isAdmin.value){
+                    if(user.isAdmin.banned.value){
+                        return Promise.reject({status:false,message:'Already banned',statusCode:403})
+                    }
+                    user.isAdmin.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
+                    console.log(user)
+                    await user.save()
+                    return Promise.resolve({status:true,message:'Banned successfully',statusCode:200})
                 }
-                user.perms.user.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
-                console.log(user)
-                await user.save()
-                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+                else{
+                    if(user.perms.user.banned.value){
+                        return Promise.reject({status:false,message:'Already banned',statusCode:403})
+                    }
+                    user.perms.user.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
+                    console.log(user)
+                    await user.save()
+                    return Promise.resolve({status:true,message:'Banned successfully',statusCode:200})
+                }
             }
             else if(body.target=='supplier'){
                 if(!user.supplier){
@@ -1051,7 +1092,7 @@ userSchema.statics.suspend = async function (userId,body,admin){
                 user.perms.supplier.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
                 console.log(user)
                 await user.save()
-                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
+                return Promise.resolve({status:true,message:'Banned Supplier successfully',statusCode:200})
             }
             else{
                 return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
