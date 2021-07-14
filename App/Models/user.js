@@ -167,16 +167,15 @@ const userSchema = new Schema({
                 type:Schema.Types.ObjectId,
                 ref:'Option'
             },
-            verified:[{
+            verified:{
                 verifiedBy:{
                     type:Schema.Types.ObjectId,
                     ref:'User'
                 },
                 verifiedAt:{
-                    type:Date,
-                    default:Date.now
+                    type:Date
                 }
-            }]
+            }
         }],
         workOrder:[{
             type:Schema.Types.ObjectId,
@@ -403,11 +402,11 @@ userSchema.statics.findByCredentials = async function(email,password){
             return Promise.reject({status:false,message:'Please confirm email',statusCode:401,payload:{email:true}})
         }
         
-        if(user.perms.user.suspended.value){
+        if(user.perms.user.suspended&&user.perms.user.suspended.value){
             return Promise.reject({status:false,message:'User suspended',statusCode:401,payload:{duration:new Date(user.perms.user.suspended.duration)}})     
         }
 
-        if(user.perms.user.banned.value){
+        if(user.perms.user.banned&&user.perms.user.banned.value){
             return Promise.reject({status:false,message:'User Banned',statusCode:401})
         }
         
@@ -450,9 +449,23 @@ userSchema.statics.findByToken = function(token){
     return User.findOne({'tokens.token':token})
             .then(function(user){
                 if(user){
-
+                    if(user.isAdmin.value){
+                        return Promise.reject({status:false,message:'Invalid Usertype',statusCode:403})
+                    }
+                    else if(user.perms.user.suspended&&user.perms.user.suspended.value){
+                        console.log(new Date(user.perms.user.suspended.duration))
+                        return Promise.reject({status:false,message:`Under suspension`,statusCode:401})
+                    }
+                    else if(user.perms.user.banned&&user.perms.user.banned.value){
+                        return Promise.reject({status:false,message:`Banned`,statusCode:401})
+                    }
+                    else{
+                        return Promise.resolve(user)
+                    }
                 }
-                return Promise.resolve(user)
+                else{
+                    return Promise.reject({status:false,message:`Unauthorized`,statusCode:401})
+                }
             })
             .catch(function(err){
                 return Promise.reject(err)
@@ -578,12 +591,18 @@ userSchema.statics.confirmPassword = async function(token,password){
 
 /* Admin credential middleware check */
 
-userSchema.statics.adminSignAction = async function(email,password){
+userSchema.statics.adminSignAction = async function(email,password,token){
     const User = this
 
     try{
-        const user = await User.findOne({'email.email':email})
+        const user = await User.findOne({'email.email':email,'isAdmin.token':token})
         if(!user){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+        if(!user.isAdmin||!user.isAdmin.value){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+        if(user.isAdmin.banned&&user.isAdmin.banned.value){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
         const result = await bcryptjs.compare(password,user.password)
@@ -609,7 +628,7 @@ userSchema.statics.adminLogin = async function(email,password){
         if(!user||!user.isAdmin.value){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
-        if(user.isAdmin.banned.value){
+        if(user.isAdmin.banned&&user.isAdmin.banned.value){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
         const result = await bcryptjs.compare(password,user.password)
@@ -654,7 +673,7 @@ userSchema.statics.findByAdminToken = function(token){
 
     return User.findOne({'isAdmin.token':token}).lean()
                 .then(function(user){
-                    if(!user){
+                    if(!user||!user.isAdmin||!user.isAdmin.value||(user.isAdmin.banned&&user.isAdmin.banned.value)){
                         return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
                     }
                     return Promise.resolve(user)
@@ -682,11 +701,11 @@ userSchema.statics.saveOrder = async function(order,id){
 }
 
 /* Adds,deletes or updates work for the host*/
-userSchema.statics.updateWork = async function(id,body,reqUser){
+userSchema.statics.updateWork = async function(reqUser,body,id){
     const User = this
 
-    const params = pick(body,['workId','options'])
-    console.log(params)
+    const reqParams = pick(body,['workId','options'])
+    console.log(reqParams)
     
     try{
         let user
@@ -698,7 +717,7 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
         }
 
         const workIndex = user.work.workDetails.findIndex((element)=>{
-            return element.workId == params.workId
+            return element.workId == reqParams.workId
         })
 
         if(workIndex!=-1){
@@ -712,24 +731,24 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
 
             /* updates the work */
             if(body.select == 'update'){
-                const workOption = await Option.findOne({'_id':params.options._id,'userWork':{$exists:false}}).lean()
+                const workOption = await Option.findOne({'_id':reqParams.options._id,'userWork':{$exists:false}}).lean()
                 delete workOption._id
                 const option = Object.assign({},workOption)
 
                 /* Entered Param validation */
-                if(params.options.params.length!=option.params.length){
+                if(reqParams.options.params.length!=option.params.length){
                     return Promise.reject({status:false,message:'Not proper params',statusCode:400})
                 }
                 else{
                     let check=[];
-                    params.options.params.map((param)=>{
+                    reqParams.options.params.map((param)=>{
                         option.params.map((ele,index)=>{
                             if(ele._id==param._id){ //Checks if all the params in the options and the obtains options are the same (by title)
                                 check[index]=true
                             }
                         })
                     })
-                    if(check.length!=params.options.params.length){
+                    if(check.length!=reqParams.options.params.length){
                         return Promise.reject({status:false,message:'Not proper params',statusCode:400})
                     }
                 }
@@ -738,11 +757,11 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
                 option.params = option.params.map((param,paramIndex)=>{ //filtering the main work params by Id (if tierType) or saves from the frontend params (non tierType)
                     if(param.tierType){
                         param.values = param.values.filter((value,index)=>{
-                            return params.options.params[paramIndex].values.includes((value._id).toString())?true:false
+                            return reqParams.options.params[paramIndex].values.includes((value._id).toString())?true:false
                         })
                     }
-                    else if((param.values[0]._id).toString() == params.options.params[paramIndex].values[0]._id){
-                        param.values = params.options.params[paramIndex].values
+                    else if((param.values[0]._id).toString() == reqParams.options.params[paramIndex].values[0]._id){
+                        param.values = reqParams.options.params[paramIndex].values
                     }
                     else{
                         errorCheck = true
@@ -756,8 +775,24 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
                 }
 
                 await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{...option})
-                if(reqUser.isAdmin.value){
-                    await User.updateOne({'user.workDetails.workId':params.workId},{$push:{'work.workDetails.$.verified':{verifiedBy:reqUser._id,verifiedAt:Date.now()}}})
+
+                if(reqUser.isAdmin.value&&body.verified){ //Verifies the work, when admin updates and also adds verified variable as true
+                    for(let i=0;i<user.work.workDetails.length;i++){
+                        if(user.work.workDetails[i].workId.toString()==reqParams.workId){
+                            user.work.workDetails[i].verified = {verifiedBy:reqUser._id,verifiedAt:Date.now()}
+                            break;
+                        }
+                    }
+                    await user.save()
+                }
+                else{//Remove verification when the user is making the update
+                    for(let i=0;i<user.work.workDetails.length;i++){
+                        if(user.work.workDetails[i].workId.toString()==reqParams.workId){
+                            delete user.work.workDetails[i].verified
+                            break;
+                        }
+                    }
+                    await user.save()
                 }
                 return Promise.resolve({status:true,message:'Work Updated'})
             }
@@ -766,25 +801,25 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
         }
         else{
             if(body.select=='Add'){
-                const workOption = await Option.findOne({'workId':params.workId,'userWork':{$exists:false}}).lean()
+                const workOption = await Option.findOne({'workId':reqParams.workId,'userWork':{$exists:false}}).lean()
                 console.log(workOption)
                 delete workOption._id
                 const option = new Option(workOption)
 
                 /* Entered Param validation */
-                if(params.options.params.length!=option.params.length){
+                if(reqParams.options.params.length!=option.params.length){
                     return Promise.reject({status:false,message:'Not proper params',statusCode:400})
                 }
                 else{
                     let check=[];
-                    params.options.params.map((param)=>{
+                    reqParams.options.params.map((param)=>{
                         workOption.params.map((ele,index)=>{
                             if(ele.title==param.title){ //Checks if all the params in the options and the obtains options are the same (by title)
                                 check[index]=true
                             }
                         })
                     })
-                    if(check.length!=params.options.params.length){
+                    if(check.length!=reqParams.options.params.length){
                         return Promise.reject({status:false,message:'Not proper params',statusCode:400})
                     }
                 }
@@ -793,11 +828,11 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
                 option.params = option.params.map((param,paramIndex)=>{ //filtering the main work params by Id and adding 
                     if(param.tierType){
                         param.values = param.values.filter((value,index)=>{
-                            return params.options.params[paramIndex].values.includes((value._id).toString())?true:false
+                            return reqParams.options.params[paramIndex].values.includes((value._id).toString())?true:false
                         })
                     }
-                    else if((param.values[0]._id).toString() == params.options.params[paramIndex].values[0]._id){
-                        param.values = params.options.params[paramIndex].values
+                    else if((param.values[0]._id).toString() == reqParams.options.params[paramIndex].values[0]._id){
+                        param.values = reqParams.options.params[paramIndex].values
                     }
                     else{
                         errorCheck = true
@@ -816,11 +851,11 @@ userSchema.statics.updateWork = async function(id,body,reqUser){
                 }
 
                 await option.save()
-                if(!reqUser.isAdmin.value){
-                    user.work.workDetails.push({workId:params.workId,options:option,verified:{verifiedBy:reqUser._id,verifiedAt:Date.now()}})
+                if(reqUser.isAdmin.value&&body.verified){
+                    user.work.workDetails.push({workId:reqParams.workId,options:option,verified:{verifiedBy:reqUser._id,verifiedAt:Date.now()}})
                 }
                 else{
-                    user.work.workDetails.push({workId:params.workId,options:option})
+                    user.work.workDetails.push({workId:reqParams.workId,options:option})
                 }
                 await user.save()
                 return Promise.resolve({status:true,message:'Work Added'})
@@ -879,14 +914,14 @@ userSchema.statics.orderSuppliers = async function(workId){
     const User = this
 
     try{
-        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,verified:{$size:{$gte:1}}}}}) //UNRELIABLE -  use projection
+        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}}}).lean() //UNRELIABLE -  use projection
         if(suppliers.length!==0){
             return Promise.resolve({order,suppliers})
         }
         return Promise.reject({message:'Unable to find suppliers',statusCode:404})
     }
     catch(e){
-        return Promise.reject({message:'Error fetching suppliers',statusCode:500})
+        return Promise.reject(e)
     }
 }
 
@@ -1033,6 +1068,7 @@ userSchema.statics.suspend = async function (userId,body,admin){
         if(user.isAdmin.value&&admin.isAdmin.auth>=user.isAdmin.auth){ //higher auth means lower authorization
             return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
+        user.tokens = []
         if(body.action==='suspend'){
             if(body.target=='user'){
                 if(user.perms.user.suspended.value){
@@ -1067,6 +1103,7 @@ userSchema.statics.suspend = async function (userId,body,admin){
                     if(user.isAdmin.banned.value){
                         return Promise.reject({status:false,message:'Already banned',statusCode:403})
                     }
+                    user.isAdmin.token = undefined
                     user.isAdmin.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
                     console.log(user)
                     await user.save()

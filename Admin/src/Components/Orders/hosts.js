@@ -265,7 +265,7 @@ const conditionModal = ({ reset, setOpen, confirm, setParams, params, classes, p
 }
 
 const hosts = (data, classes, props, params, setParams, open, setOpen, order, confirm,cred, paymentDetails,setCred,setPaymentDetails) => {
-    if (data.suppliers || data.suppliers.length !== 0) {
+    if (data&&data.suppliers&&data.suppliers.length !== 0) {
         console.log(params)
         console.log(data)
         const reset = () => {
@@ -345,34 +345,28 @@ function HostsList(props) {
         payload: { id: props.match.params.id, workId:orderSaved.workId._id}
     });
 
+    useEffect(()=>{
+
+        setOrder(orderSaved)
+
+        orderSaved.values.variables = orderSaved.values.variables.map((ele) => {
+            ele.id = ele._id
+            if (!ele.unit) {
+                ele.unit = ''
+            }
+            return ele
+        })
+        
+        setParams(p => ({ ...p, values: { ...p.values, price: orderSaved.values.price, time: orderSaved.values.time, variables: orderSaved.values.variables, hostAmount:orderSaved.paymentStatus.hostAmount||0 } }))//Validity Days check from server
+    },[])
+
     console.log(orderSaved)
+    console.log(params)
     const token = sessionStorage.getItem('token')
 
-    useEffect(() => {
-        axios.get(`orders/${props.match.params.id}`, {
-            headers: {
-                'x-admin': token
-            }
-        })
-            .then((response) => {
-                setOrder(response.data)
-                response.data.values.variables = response.data.values.variables.map((ele) => {
-                    ele.id = ele._id
-                    if (!ele.unit) {
-                        ele.unit = ''
-                    }
-                    return ele
-                })
-                setParams(p => ({ ...p, values: { ...p.values, price: response.data.values.price, time: response.data.values.time, variables: response.data.values.variables, hostAmount:response.data.paymentStatus.hostAmount||0 } }))//Validity Days check from server
-            })
-            .catch((err) => {
-                console.log(err)
-            })
-    }, [token, props.match.params.id])
 
     if (loading) { return <Loading /> }
     if (error) { console.log(error) }
-    if (!data) return null;
 
     const confirmAssign = (type) => {
         setOpen(false)
@@ -385,7 +379,7 @@ function HostsList(props) {
                 })
                 .then((response) => {
                     console.log(response.data)
-                    if (response.data._id !== props.match.params.id) {
+                    if (orderSaved._id !== props.match.params.id) {
                         props.history.goBack()
                     }
                     else {

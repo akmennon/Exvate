@@ -167,6 +167,7 @@ const AddWork = (props) => {
                             }
                         }
                     </FormDataConsumer>
+                    <BooleanInput initialValue={false} source={`verified`} label='Verified'/>
                 </SimpleForm>
             </CardContent>
         </Card>

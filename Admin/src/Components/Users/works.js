@@ -46,15 +46,27 @@ const UpdateWork = (props) => {
     console.log(data)
 
     if(!data.work.workDetails[0]||data.work.workDetails[0].workId===undefined){
-        return(
-            <Card>
-                <Title title="User Works" />
-                <CardContent>
-                    <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/addWork`)}>Add Work</Button>
-                    <Typography variant='subtitle1' className={classes.subtitle}>No works added</Typography>
-                </CardContent>
-            </Card>
-        )
+        if(data){
+            return(
+                <Card>
+                    <Title title="User Works" />
+                    <CardContent>
+                        <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/addWork`)}>Add Work</Button>
+                        <Typography variant='subtitle1' className={classes.subtitle}>No works added</Typography>
+                    </CardContent>
+                </Card>
+            )
+        }
+        else{
+            return(
+                <Card>
+                    <Title title="User Works" />
+                    <CardContent>
+                        <Typography variant='subtitle1' className={classes.subtitle}>Error Fetching inventories</Typography>
+                    </CardContent>
+                </Card>
+            )
+        }
     }
     else{
         return(
@@ -145,7 +157,7 @@ const UpdateWork = (props) => {
                                                 }
                                             })
                                         }
-                                        <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/updatework/${element.options.workId}`)}>Update</Button>
+                                        <Button variant='outlined' color='primary' onClick={()=>props.history.push(`/users/${props.match.params.id}/updatework/${element.options.workId}`)}>Verify</Button>
                                     </CardContent>
                                 </Card>
                             )

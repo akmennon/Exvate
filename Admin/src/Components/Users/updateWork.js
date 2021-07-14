@@ -134,6 +134,7 @@ const AddWork = (props) => {
                             {
                                 (props)=>{
                                     if(props.formData&&props.formData.options){
+                                        console.log(props.formData)
                                         props.formData.options.workId = work._id
                                         props.formData.options.workTitle = work.title
                                         props.formData.options._id = work.options._id
@@ -150,6 +151,7 @@ const AddWork = (props) => {
                                 }
                             }
                         </FormDataConsumer>
+                        <BooleanInput initialValue={false} source={`verified`} label='Verified'/>
                     </SimpleForm>
                 </CardContent>
             </Card>

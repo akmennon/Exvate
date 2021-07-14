@@ -14,14 +14,9 @@ const errorHandler = require('../Resolvers/errorHandler')
         else{
             User.findByAdminToken(token)
                 .then(function(user){
-                    if(user&&user.isAdmin.value&&!user.isAdmin.banned.value){
-                        req.user = user
-                        req.token = token
-                        next()
-                    }
-                    else{
-                        res.status(401).send('Invalid request')
-                    }
+                    req.user = user
+                    req.token = token
+                    next()
                 })
                 .catch(function(err){
                     errorHandler(err,next)
@@ -33,16 +28,12 @@ const errorHandler = require('../Resolvers/errorHandler')
     
     module.exports.authAdminSign = (req,res,next) =>{
         const body = req.body
+        const token = req.header('x-admin')
 
-        User.adminSignAction(body.email,body.password)
+        User.adminSignAction(body.email,body.password,token)
             .then(function(user){
-                if(user&&user.isAdmin&&!user.isAdmin.banned.value){
-                    req.user = user
-                    next()
-                }
-                else{
-                    res.status(401).send('Invalid attempt')
-                }
+                req.user = user
+                next()
             })
             .catch(function(err){
                 errorHandler(err,next)

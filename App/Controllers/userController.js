@@ -183,7 +183,7 @@ module.exports.addWork = (req,res,next) =>{
     const body = req.body
     const userId = req.params.id
 
-    User.updateWork(userId,body)
+    User.updateWork(req.user,body,userId)
         .then((user)=>{
             res.json(user)
         })
