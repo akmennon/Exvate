@@ -17,7 +17,7 @@ const QuickFilter = ({ label }) => {
 const UserFilter = (props) => (
     <Filter {...props}>
         <SearchInput source="q" alwaysOn />
-        <QuickFilter label="host" source="host" defaultValue={true}  />
+        <QuickFilter label="Supplier" source="supplier" defaultValue={true}  />
     </Filter>
 );
 

@@ -2,6 +2,7 @@ const Order = require('../Models/order')
 const User = require('../Models/user')
 const Result = require('../Models/work/resultSubdoc')
 const sendMail = require('../Resolvers/sendMail')
+const errorHandler = require('../Resolvers/errorHandler')
 
 /* creates an order (actually used in sockets) */
 module.exports.create = async (req,res) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
@@ -84,7 +85,7 @@ module.exports.confirm = (req,res) =>{
         })
 }
 
-module.exports.verifyOrder = (req,res) =>{
+module.exports.verifyOrder = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
     const body = req.body
@@ -127,7 +128,7 @@ module.exports.verifyOrder = (req,res) =>{
         })
         .catch((err)=>{
             console.log(err)
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 

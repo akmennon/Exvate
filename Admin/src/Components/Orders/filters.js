@@ -18,7 +18,6 @@ const PostFilter = (props) => (
     <Filter {...props}>
         <SearchInput source="q" alwaysOn />
         <QuickFilter label="Unverified" source="verified.value" defaultValue={false}  />
-        <QuickFilter label="Main Order" source="subOrder" defaultValue={false} />
     </Filter>
 );
 

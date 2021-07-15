@@ -52,7 +52,11 @@ const DataProvider = {
         };
         const url = `${apiUrl}/${resource}?${stringify(query)}`;
         console.log(url)
-        return httpClient(url).then(({ json }) => {return({ data: json })});
+        return httpClient(url).then(({ json }) => {
+            json.forEach(element => {
+                element.id = element._id
+            });
+            return({ data: json })});
     },
 
     getManyReference: (resource, params) => {

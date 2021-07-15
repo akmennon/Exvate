@@ -2,7 +2,12 @@
 const orderReducer = (state={},action) =>{
     switch(action.type){
         case 'SET_ORDER':
-            return action.payload
+            if(action.payload){
+                return action.payload
+            }
+            else{
+                return null
+            }
         case 'REMOVE_ORDER':
             return {}
         default:

@@ -39,9 +39,9 @@ router.post('/user/resendRegisterMail',users.resendRegisterMail)
 router.get('/user/confirmSign/:token',users.confirmSignupEmail)
 router.get('/user/forgotCheck',users.forgotCheck)
 router.post('/user/confirmForgot/:token',users.confirmChangePassword)
-router.get('/user/workOrders/:id',authUser,users.workOrders)
-router.get('/host/orders/:orderId/cancel',authUser,users.hostCancel)/* Add suspension if cancelled during active order */
-router.get('/host/orders/:orderId/complete',authUser,orders.completeOrder)
+router.get('/supplier/:id/workOrders',authUser,users.workOrders)
+router.get('/supplier/orders/:orderId/cancel',authUser,users.supplierCancel)/* Add suspension if cancelled during active order */
+router.get('/supplier/orders/:orderId/complete',authUser,orders.completeOrder)
 router.post('/admin/login',users.adminLogin)
 router.post('/admin/types',admin.authAdminSign,adminLevel(1),types.create)
 router.get('/admin/types',admin.authAdminToken,types.all)
@@ -69,7 +69,7 @@ router.get('/admin/orders/:id',admin.authAdminToken,orders.details)
 router.get('/admin/orders/:id/suppliers',admin.authAdminToken,users.suppliers)
 router.post('/admin/orders/verify/:id',admin.authAdminToken,adminLevel(1),orders.verifyOrder)
 router.post('/admin/orders/payment/:id',admin.authAdminSign,adminLevel(1),orders.paymentConfirm)
-router.get('/admin/workOrders/:id',admin.authAdminToken,users.workOrders)/* not used */
+router.get('/admin/supplier/:id/workOrders',admin.authAdminToken,users.workOrders)/* not used */
 router.post('/admin/orders/:id/orderfn',admin.authAdminSign,adminLevel(1),orders.orderFns)
 router.post('/admin/orders/:id/refund',admin.authAdminSign,adminLevel(1),orders.refundOrder)
 router.post('/admin/orders/:id/samples',admin.authAdminSign,adminLevel(1),orders.samples)

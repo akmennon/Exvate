@@ -8,7 +8,7 @@ import Backdrop from '@material-ui/core/Backdrop';
 import Select from '@material-ui/core/Select'
 import Fade from '@material-ui/core/Fade';
 import { makeStyles } from '@material-ui/core/styles';
-import { Title, Loading, useQuery } from 'react-admin';
+import { Title, Loading, Error as MyError, useRefresh } from 'react-admin';
 import axios from '../../config/Axios';
 import TextField from '@material-ui/core/TextField';
 import DataTable from './hostTable'
@@ -199,7 +199,7 @@ const conditionModal = ({ reset, setOpen, confirm, setParams, params, classes, p
                     value={params.values.validTill}
                 />
                 <button onClick={() => reset()}>Reset Values</button>
-                <button onClick={() => { confirm('host',params, props); setOpen(false) }}>Confirm</button>
+                <button onClick={() => { confirm('host',params, props) }}>Confirm</button>
             </div>
         )
     }
@@ -266,8 +266,6 @@ const conditionModal = ({ reset, setOpen, confirm, setParams, params, classes, p
 
 const hosts = (data, classes, props, params, setParams, open, setOpen, order, confirm,cred, paymentDetails,setCred,setPaymentDetails) => {
     if (data&&data.suppliers&&data.suppliers.length !== 0) {
-        console.log(params)
-        console.log(data)
         const reset = () => {
             setParams(p => {
                 p.values.price = order.values.price
@@ -318,6 +316,8 @@ const hosts = (data, classes, props, params, setParams, open, setOpen, order, co
 function HostsList(props) {
     const classes = useStyles()
     const orderSaved = useSelector(state=>state.order)
+    const [loading,setLoading] = useState(true)
+    const [data,setData] = useState([])
     const [params, setParams] = useState(
         {
             values: {
@@ -338,14 +338,36 @@ function HostsList(props) {
     const [order, setOrder] = useState({})
     const [cred,setCred] = useState({email:'',password:''})
     const [paymentDetails,setPaymentDetails] = useState({type:'Advance',hostId:'',statusPayment:''})
-
-    const { data, loading, error } = useQuery({
-        type: 'getMany',
-        resource: `orders/${props.match.params.id}/suppliers`,
-        payload: { id: props.match.params.id, workId:orderSaved.workId._id}
-    });
+    const refresh = useRefresh()
 
     useEffect(()=>{
+        if(!orderSaved.workId){
+            props.history.goBack()
+            return null
+        }
+        else{
+            const token = sessionStorage.getItem('token')
+            axios.get(`orders/${orderSaved.workId._id}/suppliers`,
+            {
+                headers:{
+                    'x-admin':token
+                }
+            })
+            .then((res)=>{
+                res.data.suppliers.forEach((ele)=>{
+                    ele.id = ele._id
+                    return ele
+                })
+                res.data.order = orderSaved
+                console.log(res.data)
+                setData(res.data)
+                setLoading(false)
+            })
+            .catch((err)=>{
+                setLoading(false)
+                console.log(err)
+            })
+        }
 
         setOrder(orderSaved)
 
@@ -366,7 +388,7 @@ function HostsList(props) {
 
 
     if (loading) { return <Loading /> }
-    if (error) { console.log(error) }
+    if (!data) { return <MyError/> }
 
     const confirmAssign = (type) => {
         setOpen(false)
@@ -379,12 +401,7 @@ function HostsList(props) {
                 })
                 .then((response) => {
                     console.log(response.data)
-                    if (orderSaved._id !== props.match.params.id) {
-                        props.history.goBack()
-                    }
-                    else {
-                        props.history.replace(`/orders/${props.match.params.id}/show`)
-                    }
+                    refresh(true)
                 })
                 .catch((err) => {
                     console.log(err)

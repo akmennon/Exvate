@@ -310,6 +310,9 @@ const UserShowActions = (props) => {
         <div className={classes.buttons}>
             <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/works`)}>Update Work</Button>
             <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/orders`)}>Orders</Button>
+            {
+                props.data.supplier?<Button variant="outlined" color="primary" onClick={()=>props.history.push(`/suppliers/${props.match.params.id}/workOrders`)}>Work Orders</Button>:<span/>
+            }
             <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/createOrder`)}>Create Order</Button>
             <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'multiOrder',open:true}))}>Verify Supplier</Button>
             <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspend',open:true}))}>Suspend/Ban</Button>

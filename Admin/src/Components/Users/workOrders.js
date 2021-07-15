@@ -10,7 +10,7 @@ const UserOrders = (props) => {
     const [data,setData] = useState([])
     useEffect(()=>{
         const token = sessionStorage.getItem('token')
-        axios.get(`/users/${props.match.params.id}/orders`,
+        axios.get(`/supplier/${props.match.params.id}/workOrders`,
             {
                 headers:{
                     'x-admin':token

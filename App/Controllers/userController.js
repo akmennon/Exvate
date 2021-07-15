@@ -1,7 +1,7 @@
 const User = require('../Models/user')
 const pick = require('lodash/pick')
 const errorHandler = require('../Resolvers/errorHandler')
-const { response } = require('express')
+const Order = require('mongoose').model('Order')
 
 /* Work left : Pick */
 
@@ -37,7 +37,7 @@ module.exports.login = (req,res,next) =>{
         })
         .then(function(token){
             res.setHeader('x-auth',token) // sends token as a header
-            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','host','email.email'])})
+            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email'])})
         })
         .catch(function(err){
             errorHandler(err,next)
@@ -47,7 +47,7 @@ module.exports.login = (req,res,next) =>{
 /* Show user account details (values gotten from middleware) */
 
 module.exports.account = (req,res) =>{
-    let sendUser = pick(req.user,['userType','_id','name','host','email.email'])
+    let sendUser = pick(req.user,['userType','_id','name','supplier','email.email'])
     res.json(sendUser)
 }
 
@@ -178,7 +178,7 @@ module.exports.adminLogout = (req,res,next) =>{
 }
 
 /* Adding response and reject structure, error handling - this work controller being worked on frontend pending */
-/* Adds, deletes or updates a work for the host*/
+/* Adds, deletes or updates a work for the supplier*/
 module.exports.addWork = (req,res,next) =>{
     const body = req.body
     const userId = req.params.id
@@ -226,7 +226,7 @@ module.exports.all = (req,res) =>{
     query.range = JSON.parse(query.range)
 
     if(query.filter.q){
-        User.find({'email.email':{$regex:query.filter.q}}).skip(query.range[0]).limit(query.range[1]+1-query.range[0])
+        User.find({'email.email':{$regex:query.filter.q}}).skip(query.range[0]).limit(query.range[1]+1-query.range[0]).lean()
             .then(async (users)=>{
                 const count = await User.countDocuments({'email.email':{$regex:query.filter.q}})
                 return Promise.resolve({users,count})
@@ -270,12 +270,11 @@ module.exports.adminToken = (req,res,next) =>{
         })
 }
 
-/* LAST - ADMIN - Finds all the suppliers for the type of work */
+/* ADMIN - Finds all the suppliers for the type of work */
 module.exports.suppliers = (req,res,next) =>{
-    const orderId = req.params.id
-    const body = req.body
+    const workId = req.params.id
 
-    User.orderSuppliers(body.workId)
+    User.orderSuppliers(workId)
         .then((response)=>{
             res.json(response)
         })
@@ -315,33 +314,33 @@ module.exports.details = (req,res,next) =>{
         })
 }
 
-/* ADMIN - UNRELIABLE - CONFIRM USAGE */
-module.exports.workOrders = (req,res) =>{
+/* ADMIN - UNRELIABLE - CONFIRM USAGE - move to orders */
+module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
 
     if(req.params.id!=req.user._id&&!req.user.isAdmin.value){
         res.status(401).send('Unauthorized')
     }
     else{
-        User.findById(id).populate({path:'work.workOrder',populate:{path:'workId',select:'title'}}) //UNRELIABLE - use projection
-            .then((user)=>{
-                res.json(user.work.workOrder)
+        Order.find({'host.assigned.0':id}).populate({path:'workId',select:'title'}).sort({_id:-1}) //change to supplier - when changing orders
+            .then((orders)=>{
+                res.json(orders)
             })
-            .catch((e)=>{
+            .catch((err)=>{
                 errorHandler(err,next)
             })
     }
 }
 
-module.exports.hostCancel = (req,res) =>{
+module.exports.supplierCancel = (req,res) =>{
     const orderId = req.params.orderId
 
-    User.hostCancel(orderId,req.user)
-        .then((user)=>{
-            res.json('Order has been cancelled')
+    User.supplierCancel(orderId,req.user)
+        .then((result)=>{
+            res.json(result)
         })
         .catch((e)=>{
-            res.json(e)
+            errorHandler(err,next)
         })
 }
 

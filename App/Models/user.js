@@ -914,11 +914,11 @@ userSchema.statics.orderSuppliers = async function(workId){
     const User = this
 
     try{
-        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}}}).lean() //UNRELIABLE -  use projection
+        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}},'perms.user.suspended.value':false,'perms.user.banned.value':false,'perms.supplier.suspended.value':false,'perms.supplier.banned.value':false,'isAdmin.value':{$exists:false}}).lean() //UNRELIABLE -  use projection
         if(suppliers.length!==0){
-            return Promise.resolve({order,suppliers})
+            return Promise.resolve({suppliers})
         }
-        return Promise.reject({message:'Unable to find suppliers',statusCode:404})
+        return Promise.reject({status:false,message:'Unable to find suppliers',statusCode:404})
     }
     catch(e){
         return Promise.reject(e)
@@ -968,12 +968,18 @@ userSchema.statics.orderSuppliers = async function(workId){
     }
 } */
 
-userSchema.statics.assignWork = async function(orderId,hostId,type){
+userSchema.statics.assignWork = async function(orderId,supplierId,type){
     const User = this
 
     try{
-        const supplier = await User.findById(hostId)
+        const supplier = await User.findById(supplierId)
         if(type=='assign'){
+            if(supplier.perms.supplier.suspended.value||supplier.perms.supplier.banned.value||supplier.perms.user.suspended.value||supplier.perms.user.suspended.value){
+                return Promise.reject({status:false,message:'Banned/Suspended supplier',statusCode:403})
+            }
+            if(user.isAdmin.value){
+                return Promise.reject({status:false,message:'User not allowed',statusCode:403})
+            }
             if(!supplier.work.workOrder.includes(orderId)){
                 supplier.work.workOrder.push(orderId)
                 await supplier.save()
@@ -986,10 +992,10 @@ userSchema.statics.assignWork = async function(orderId,hostId,type){
                 await supplier.save()
                 return Promise.resolve('work removed')
             }
-            return Promise.reject('User is not assigned the order')
+            return Promise.reject({status:false,message:'User is not assigned the order',statusCode:403})
         }
         else{
-            return Promise.reject('Type not provided')
+            return Promise.reject({status:false,message:'Type not provided',statusCode:403})
         }
     }
     catch(e){
@@ -1019,22 +1025,27 @@ userSchema.statics.assignWork = async function(orderId,hostId,type){
     }
 } */
 
-userSchema.statics.hostCancel = async function(orderId,reqUser){
+userSchema.statics.supplierCancel = async function(orderId,reqUser){
     const User = this
 
     try{
         const order = reqUser.work.workOrder.find(ele=>ele==orderId)
-        if(!order&&!reqUser.isAdmin.value){
-            return Promise.reject('Unauthorised')
+        if(!order){
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
         reqUser.work.workOrder = reqUser.work.workOrder.filter(ele=>ele!=orderId)
-        await Order.updateOne({_id:order},{'verified.value':false,'host.assigned':[],$addToSet:{'host.removed':reqUser._id}})
-        await reqUser.save()
-        return Promise.resolve(reqUser)
+        const result = await Order.updateOne({_id:order,status:{$nin:['Transit','Completed','Finished','Cancelled','Failed','Active']}},{'verified.value':false,'host.assigned':[],$addToSet:{'host.removed':reqUser._id}})
+        if(result.nModified!=0){
+            await reqUser.save()
+            return Promise.resolve(reqUser)
+        }
+        else{
+            return Promise.reject({status:false,message:'Unable to modify',statusCode:403})
+        }
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error cancelling order')
+        return Promise.reject(e)
     }
 }
 

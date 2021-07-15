@@ -437,38 +437,44 @@ orderSchema.statics.delete = function(id){
 /* Verifies the order */
 orderSchema.statics.verifyOrder = async function(id,body,user,User){
     const Order = this
-    const verifiedValues = pick(body,['values','host'])/* PENDING - HOST TO SUPPLIER*/
+    
+    try{
+        const verifiedValues = pick(body,['values','host'])/* PENDING - HOST TO SUPPLIER*/
 
-    let order = await Order.orderDetails(id,user)
+        let order = await Order.orderDetails(id,user)
 
-    //Verification is invalid for drafts
-    if(order.status=='Draft'||order.status == 'Failed'){
-        return Promise.reject('Order not valid for verification')
-    }
-
-    Object.assign(order.values,verifiedValues.values)
-    order.verified.verifiedBy.push({value:user._id})
-    order.paymentStatus.hostAmount = body.values.hostAmount
-    if(verifiedValues.host.assigned){
-        order.verified.value = true
-        const index = order.host.removed.indexOf(verifiedValues.host.assigned)
-        if(index!=-1){
-            order.host.removed.splice(index,1)
+        //Verification is invalid for drafts
+        if(order.status=='Draft'||order.status == 'Failed'){
+            return Promise.reject('Order not valid for verification')
         }
-        const date = new Date()
-        order.validTill = date.setDate(date.getDate()+body.values.validTill)
-        order.host.assigned = [verifiedValues.host.assigned]
-        await User.assignWork(order._id,verifiedValues.host.assigned,'assign')
-    }
-    if(verifiedValues.host.removed&&verifiedValues.host.removed.length!=0){
-        if(verifiedValues.host.removed.includes(String(order.host.assigned[0]))){
-            await User.assignWork(order._id,order.host.assigned[0],'remove')
-            order.host.assigned = []
+
+        Object.assign(order.values,verifiedValues.values)
+        order.verified.verifiedBy.push({value:user._id})
+        order.paymentStatus.hostAmount = body.values.hostAmount
+        if(verifiedValues.host.assigned){
+            order.verified.value = true
+            const index = order.host.removed.indexOf(verifiedValues.host.assigned)
+            if(index!=-1){
+                order.host.removed.splice(index,1)
+            }
+            const date = new Date()
+            order.validTill = date.setDate(date.getDate()+body.values.validTill)
+            order.host.assigned = [verifiedValues.host.assigned]
+            await User.assignWork(order._id,verifiedValues.host.assigned,'assign')
         }
-        order.host.removed = [...new Set([...order.host.removed,...verifiedValues.host.removed])]
+        if(verifiedValues.host.removed&&verifiedValues.host.removed.length!=0){
+            if(verifiedValues.host.removed.includes(String(order.host.assigned[0]))){
+                await User.assignWork(order._id,order.host.assigned[0],'remove')
+                order.host.assigned = []
+            }
+            order.host.removed = [...new Set([...order.host.removed,...verifiedValues.host.removed])]
+        }
+        order = await order.save()
+        return Promise.resolve(order)
     }
-    order = await order.save()
-    return Promise.resolve(order)
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 orderSchema.statics.paymentConfirm = async function({id,user,details}){

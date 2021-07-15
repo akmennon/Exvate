@@ -31,7 +31,7 @@ function DataTable(props) {
     useEffect(()=>{
         if(props.user._id){
             const token = localStorage.getItem('x-auth')
-            axios.get(`/user/workOrders/${props.user._id}`,{
+            axios.get(`/supplier/${props.user._id}/workOrders`,{
                 headers:{
                     'x-auth':token
                 }
@@ -112,7 +112,8 @@ function DataTable(props) {
           width: 300,
           renderCell: (params) =>
             {
-                if(params.row.status!=='Completed'){
+                console.log(params)
+                if(params.row.status!=='Completed'&&params.row.status!=='Transit'&&params.row.status!=='Finished'&&params.row.status!=='Cancelled'&&params.row.status!=='Failed'&&params.row.status!=='Active'){
                     return (
                         <div className={classes.actionsColumn}>
                             <Button variant='outlined' name='Complete' onClick={(e)=>handleClick(e,{id:params.row._id})}>Complete</Button>
