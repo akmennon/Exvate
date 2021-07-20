@@ -1,30 +1,28 @@
 const Order = require('../Models/order')
-const User = require('../Models/user')
 const Result = require('../Models/work/resultSubdoc')
 const sendMail = require('../Resolvers/sendMail')
 const errorHandler = require('../Resolvers/errorHandler')
+const User = require('../Models/user')
 
 /* creates an order (actually used in sockets) */
-module.exports.create = async (req,res) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
+module.exports.create = async (req,res,next) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
     const body = req.body
+    const user = req.user
     
     Result.findById(body.resultId).lean()//ResultId sent seperately from the frontend
         .then((result)=>{
-            return Order.createOrder(body.orderData,result) //UNRELIABLE - Use pick here
+            return Order.createOrder(body.orderData,result,user) //UNRELIABLE - Use pick here
         })
-        .then((order)=>{
-            return User.saveOrder(order,req.user._id)
-        })
-        .then((user)=>{
-            res.json('Order Complete')
+        .then((result)=>{
+            res.json(result)
         })
         .catch((err)=>{
-            console.log(err)
+            errorHandler(err,next)
         })
 }
 
 /* finds the details of the order if present in user */
-module.exports.details = (req,res) =>{
+module.exports.details = (req,res,next) =>{
     const id = req.params.id
 
     Order.orderDetails(id,req.user)
@@ -32,39 +30,22 @@ module.exports.details = (req,res) =>{
             res.json(order)
         })
         .catch((err)=>{
-            console.log(err)
+            errorHandler(err,next)
         })
 }
 
 /* All orders */
-module.exports.all = (req,res) =>{//Validation with switch
-    let query = {}
-    query.filter = JSON.parse(req.query.filter)
-    query.sort = JSON.parse(req.query.sort)
-    query.range = JSON.parse(req.query.range)
-    
-    const filter = {status:{$ne:'Draft'}}
-    Object.assign(filter,query.filter)
-    if(filter.verified){
-        filter['verified.value'] = filter.verified.value
-        delete filter.verified
-    }
-    console.log(filter)
-    const limit = query.range[1]+1-query.range[0]
-    
-    /* Suborders are removed and orders are filtered by its status */
-    Order.find(filter).populate('workId','title').populate('userId','email').skip(query.range[0]).limit(limit).sort({createdAt:-1})
-        .then(async (orders)=>{
-            const count = await Order.countDocuments(filter)//change
-            return Promise.resolve({orders,count})
-        })
-        .then((orders)=>{
-            res.setHeader('full',`orders ${query.range[0]}-${query.range[1]}/${orders.count}`)
-            res.json(orders.orders)
-        })
-        .catch((err)=>{
-            console.log(err)
-        })
+module.exports.all = (req,res,next) =>{//Validation with switch
+    const reqQuery = req.query
+
+    Order.listAll(reqQuery)
+    .then((result)=>{
+        res.setHeader('full',`orders ${result.query.range[0]}-${result.query.range[1]}/${result.count}`)
+        res.json(result.order)
+    })
+    .catch((err)=>{
+        errorHandler(err,next)
+    })
 }
 
 /* orders status is changed from draft to confirmed */
@@ -90,44 +71,11 @@ module.exports.verifyOrder = (req,res,next) =>{
     const user = req.user
     const body = req.body
 
-    let norder = {}
-
     Order.verifyOrder(id,body,user,User)    /* PENDING NOTIFICATION */
-        .then((order)=>{
-            norder = order
-            console.log(order)
-            res.json(order)
-            /*if(order.verified.value){
-                const message = 'An order has been verified and is ready for payment'
-                return User.notify('Order',order._id,message,order.userId)
-            }*/
-            if(norder.values.price>90000){ //For external payments //create proper details for payment
-                const mailData = {
-                    from: '"Sourceo" <ajaydragonballz@gmail.com>',
-                    to: norder.userId.email.email, // list of receivers
-                    subject: "Order Verified",
-                    text: `The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`
-                    /*html: "<b>Hello world?</b>"*/ // html body
-                }
-                return sendMail(mailData)
-            }
-            else{   //For online payments
-                const mailData = {
-                    from: '"Sourceo" <ajaydragonballz@gmail.com>',
-                    to: norder.userId.email.email,
-                    subject: "Order Verified",
-                    text: `The order prices have been updated and is ready for payment. Please use the website to make payment`
-                }
-                return sendMail(mailData)
-            }
-        })
-        .then((mail)=>{
-            if(mail){
-                console.log('Verified confirmation mail sent')
-            }
+        .then((result)=>{
+            res.json(result)
         })
         .catch((err)=>{
-            console.log(err)
             errorHandler(err,next)
         })
 }
@@ -271,21 +219,21 @@ module.exports.orderFns = (req,res) =>{
         })
 }
 
-module.exports.hostPayment = (req,res) =>{
+module.exports.supplierPayment = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
     const details = req.body.paymentDetails
 
-    Order.hostPayment({id,user,details})
+    Order.supplierPayment({id,user,details,User})
         .then((response)=>{
             res.json(response)
         })
         .catch((e)=>{
-            res.json(e)
+            errorHandler(e,next)
         })
 }
 
-module.exports.contractFinished = (req,res) =>{
+module.exports.contractFinished = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
 
@@ -294,6 +242,6 @@ module.exports.contractFinished = (req,res) =>{
             res.json(response)
         })
         .catch((e)=>{
-            res.json(e)
+            errorHandler(e,next)
         })
 }

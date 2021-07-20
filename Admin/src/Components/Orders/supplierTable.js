@@ -21,43 +21,43 @@ const useStyles = makeStyles((theme)=>({
 )
 
 const RenderCell = (props) =>{
-    if(props.order.host.assigned.includes(props.newParams.row._id)){
+    if(props.order.supplier.assigned.includes(props.newParams.row._id)){
         return (
             <Fragment>
-                <Button variant='outlined' color='primary' onClick={()=>{props.hostButton(props.newParams.row._id,'remove',props)}}>Remove</Button>
-                <Button variant='outlined' color='primary' onClick={()=>{props.hostButton(props.newParams.row._id,'payment',props)}}>Make Payment</Button>
+                <Button variant='outlined' color='primary' onClick={()=>{props.supplierButton(props.newParams.row._id,'remove',props)}}>Remove</Button>
+                <Button variant='outlined' color='primary' onClick={()=>{props.supplierButton(props.newParams.row._id,'payment',props)}}>Make Payment</Button>
             </Fragment>
         )
     }
     else{
-        return <Button variant='outlined' color='primary' onClick={()=>{props.hostButton(props.newParams.row._id,'assign',props)}}>Select</Button>
+        return <Button variant='outlined' color='primary' onClick={()=>{props.supplierButton(props.newParams.row._id,'assign',props)}}>Select</Button>
     }
 }
 
 const FinishButton = (props) =>{
-    return <Button variant='outlined' color='primary' onClick={()=>{props.hostButton(props.newParams.row._id,'finish',props)}}>Payment Finished</Button>
+    return <Button variant='outlined' color='primary' onClick={()=>{props.supplierButton(props.newParams.row._id,'finish',props)}}>Payment Finished</Button>
 }
 
 function DataTable(props) {
     const classes = useStyles()
-    const [hosts,setHosts] = useState([])
+    const [suppliers,setSuppliers] = useState([])
     const [payment,setPayment] = useState('')
 
     console.log(props)
     
     useEffect(()=>{
-        const newHosts = props.hosts.map((ele)=>{
+        const newSuppliers = props.suppliers.map((ele)=>{
             ele.id = ele._id
             return ele
         })
-        setHosts(newHosts)
-        setPayment(props.order.paymentStatus.hostPayment)
-    },[props.hosts,props.order.paymentStatus.hostPayment])
+        setSuppliers(newSuppliers)
+        setPayment(props.order.paymentStatus.supplierPayment)
+    },[props.suppliers,props.order.paymentStatus.supplierPayment])
 
     const paymentCell = (params) =>{
-        if(props.order.host.assigned[0]===params.row._id){
-            if(props.order.paymentStatus.hostPayment==='Completed'||props.order.paymentStatus.hostPayment==='Contract'||props.order.paymentStatus.hostPayment==='Finished'){
-                switch(props.order.paymentStatus.hostPayment){
+        if(props.order.supplier.assigned[0]===params.row._id){
+            if(props.order.paymentStatus.supplierPayment==='Completed'||props.order.paymentStatus.supplierPayment==='Contract'||props.order.paymentStatus.supplierPayment==='Finished'){
+                switch(props.order.paymentStatus.supplierPayment){
                     case 'Completed':
                         return 'Completed'
                     case 'Contract':
@@ -86,8 +86,8 @@ function DataTable(props) {
         valueGetter: (params) => params.row.mobile},
         { field: 'work', headerName: 'Work orders', width: 130,
         valueFormatter: (params) => params.row.work.workOrder.length===0?'None':`${params.row.work.workOrder.length} Assigned`},
-        { field: 'host', headerName: 'Refused', type:'boolean', width: 130,
-        valueGetter: (params) => props.order.host.removed.includes(params.row._id)?true:false},
+        { field: 'supplier', headerName: 'Refused', type:'boolean', width: 130,
+        valueGetter: (params) => props.order.supplier.removed.includes(params.row._id)?true:false},
         { field: 'payment', headerName: 'Payment', type:'text', width: 130,
         valueGetter: (params) => paymentCell(params)},
         {
@@ -99,7 +99,7 @@ function DataTable(props) {
           width: 300,
           renderCell: (params) =>
             {
-                return payment==='Completed'||payment==='Contract'||payment==='Finished'?(props.order.host.assigned.includes(params.row._id)?(payment!=='Finished'?<FinishButton newParams={params} {...props}/>:null):null):<RenderCell newParams={params} {...props}/>
+                return payment==='Completed'||payment==='Contract'||payment==='Finished'?(props.order.supplier.assigned.includes(params.row._id)?(payment!=='Finished'?<FinishButton newParams={params} {...props}/>:null):null):<RenderCell newParams={params} {...props}/>
             }    
         }
     ];
@@ -114,7 +114,7 @@ function DataTable(props) {
 
     return (
         <div style={{ height: 500, width: '100%' }}>
-            <DataGrid rows={hosts} columns={columns} pageSize={5} disableSelectionOnClick={true} components={{ noRowsOverlay: noRows}} onRowClick={(params)=>props.history.push(`/users/${params.row._id}/show`)}/>
+            <DataGrid rows={suppliers} columns={columns} pageSize={5} disableSelectionOnClick={true} components={{ noRowsOverlay: noRows}} onRowClick={(params)=>props.history.push(`/users/${params.row._id}/show`)}/>
         </div>
     );
 }

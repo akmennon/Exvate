@@ -1,6 +1,6 @@
 import React from "react";
 import { Route } from 'react-router-dom';
-import Hosts from './Orders/hosts'
+import Suppliers from './Orders/suppliers'
 import userWorks from './Users/works'
 import addWork from './Users/addWork'
 import UserOrders from './Users/orders'
@@ -9,7 +9,7 @@ import workOrders from './Users/workOrders'
 import updateWork from './Users/updateWork'
 
 const exportArray = [
-    <Route exact path="/orders/hosts/:id" component={Hosts} />,
+    <Route exact path="/orders/suppliers/:id" component={Suppliers} />,
     <Route exact path="/users/:id/works" component={userWorks}/>,
     <Route exact path="/users/:id/addWork" component={addWork}/>,
     <Route exact path="/users/:id/orders" component={UserOrders}/>,

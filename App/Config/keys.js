@@ -1,19 +1,22 @@
 
 const devKeys = () =>{
     return {
-        jwtSecret:'Secret@123&'
+        jwtSecret:'Secret@123&',
+        mongoURI:'mongodb://localhost:27017/sourceo'
     }
 }
 
 const ciKeys = () =>{
     return {
-        jwtSecret:process.env.JWT_SECRET
+        jwtSecret:process.env.JWT_SECRET,
+        mongoURI:process.env.MONGO_URI
     }
 }
 
 const prodKeys = () =>{
     return {
-        jwtSecret:process.env.JWT_SECRET
+        jwtSecret:process.env.JWT_SECRET,
+        mongoURI:process.env.MONGO_URI
     }
 }
 

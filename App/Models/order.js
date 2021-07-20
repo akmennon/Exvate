@@ -3,9 +3,11 @@ const Result = require('./work/resultSubdoc')
 const validator = require('validator')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
+const Option = require('./work/optionSubdoc.js')
 
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
+const User = require('./user')
 
 const Schema = mongoose.Schema
 
@@ -48,7 +50,39 @@ const orderSchema = new Schema({
           }
         }]
     },
-    host:{
+    address:[{
+        building:{
+            type:String,
+            maxlength:32,
+            minlength:2
+        },
+        street:{
+            type:String,
+            maxlength:32,
+            minlength:2
+        },
+        city:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        state:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        country:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        pin:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        }
+    }],
+    supplier:{
         assigned:[{
             type:Schema.Types.ObjectId,
             ref:'User'
@@ -82,7 +116,6 @@ const orderSchema = new Schema({
     },
     incoterm:{
         type:String,
-        default:'Exworks',
         validate:{
             validator:function(value){
                 switch(value){
@@ -92,7 +125,17 @@ const orderSchema = new Schema({
                         return true
                     case 'FCA':
                         return true
+                    case 'FAS':
+                        return true
                     case 'CFR':
+                        return true
+                    case 'CIP':
+                        return true
+                    case 'CPT':
+                        return true
+                    case 'DAP':
+                        return true
+                    case 'DDP':
                         return true
                     case 'Exworks':
                         return true
@@ -153,8 +196,6 @@ const orderSchema = new Schema({
                         case 'FCA':
                             return true
                         case 'CFR':
-                            return true
-                        case 'Exworks':
                             return true
                         default:
                             return false
@@ -247,7 +288,7 @@ const orderSchema = new Schema({
                 }
             }
         },
-        hostPayment:{
+        supplierPayment:{
             type:String,
             default:'Pending',
             validate:{
@@ -274,12 +315,29 @@ const orderSchema = new Schema({
                 }
             }
         },
-        hostAmount:{
+        supplierAmount:{
             type:Number
         },
         transaction:[{
             info:{
-                type:String
+                type:String,
+                validate:{
+                    validator:function(value){
+                        switch(value){
+                            case 'Advance':
+                                return true
+                            case 'LC':
+                                return true
+                            case 'Finished':
+                                return true
+                            default:
+                                return false
+                        }
+                    },
+                    message:function(){
+                        return 'Invalid transaction status'
+                    }
+                }
             },
             status:{
                 type:String,
@@ -291,7 +349,7 @@ const orderSchema = new Schema({
                             case 'Failed':
                                 return true
                             default:
-                                return 'Successful'
+                                return false
                         }
                     },
                     message:function(){
@@ -344,60 +402,73 @@ const orderSchema = new Schema({
 })
 
 /* creates one or multiple orders */
-orderSchema.statics.createOrder = async function(orderValues,resultValue){
+orderSchema.statics.createOrder = async function(orderValues,resultValue,user){
     const Order = this
 
     try{
-        const orderFinal = await Promise.all(orderValues.map(async (orderValues)=>{
+        const option = await Option.findOne({workId:orderValues[0].order.workId,userId:{$exists:false}}).lean()
+        const allOrders = []
+        await Promise.all(orderValues.map(async (orderValue)=>{
 
-            try{
-                let orderFinal,output
+            let orderFinal,output
     
-                /* workIds of frontend result and db result is matched
-                    and the values are saved to the db result
-                */
+            /* workIds of frontend result and db result is matched
+                and the values are saved to the db result
+            */
 
-                if(resultValue.workId.toString() == orderValues.result.workId){
-                    resultValue.values = orderValues.result.values
-                    resultValue.time.values = orderValues.result.time.values
+            if(resultValue.workId.toString() == orderValue.result.workId){
+                resultValue.values = orderValue.result.values
+                resultValue.time.values = orderValue.result.time.values
+            }
+            else{
+                return Promise.reject({status:false,message:'Error creating order'})
+            }
+    
+            output = calcResult(resultValue,output) /*[{workId:"",price:1,time:1,amount:1}]*/
+    
+            let value
+
+            orderFinal = {
+                userId:orderValue.order.userId,
+                workId:orderValue.order.workId,
+                values:{
+                    variables:[]
                 }
-        
-                output = calcResult(resultValue,output) /*[{workId:"",price:1,time:1,amount:1}]*/
-        
-                let value
-                orderFinal = orderValues.order
-    
-                /* since only one work is present */
-                value = pick(output[0],['time','price'])
-                Object.assign(orderFinal.values,value)
-    
-                const order = new Order(orderFinal)
-
-                /* Result is modelled and saved */
-                delete resultValue._id
-                const result = new Result({...resultValue,orderId:order._id})
-                const savedResult = await result.save()
-
-                order.result = savedResult
-                order.status = 'Pending'
-    
-                /* Order is modelled with result and saved */
-                const savedOrder = await order.save()
-                return Promise.resolve(savedOrder)
             }
-            catch(e){
-                return Promise.reject(e)
-            }
+
+            /* Variables are chosen from the backend and not from the frontend */
+            option.params.map((ele,index)=>{
+                orderFinal.values.variables[index] = {title:ele.title},
+                orderFinal.values.variables[index].unit = ele.unit
+                orderFinal.values.variables[index].value = resultValue.values[index]
+            })
+
+            /* since only one work is present */
+            value = pick(output[0],['time','price'])
+            orderFinal.values = {...orderFinal.values,...value}
+
+            const order = new Order(orderFinal)
+
+            /* Result is modelled and saved */
+            delete resultValue._id
+            const result = new Result({...resultValue,orderId:order._id})
+            const savedResult = await result.save()
+
+            order.result = savedResult
+            order.status = 'Pending'
+
+            /* Order is modelled with result and saved */
+            const savedOrder = await order.save()
+            allOrders.push(savedOrder._id)
         }))
 
-        console.log(orderFinal)
-        return Promise.resolve(orderFinal)
+        await user.saveOrder(allOrders)
+        return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
     }
     catch(e){
         console.log(e)
         return Promise.reject('Error creating order')
     }
-
 }
 
 /* Provides the entire details of an order */
@@ -405,18 +476,47 @@ orderSchema.statics.orderDetails = async function(id,user){
     const Order = this
 
     /* Checks if the order is present in the user */
-    if(user.orders.includes(id)||user.isAdmin.value){
-        try{
+    
+    try{
+        if(user.orders.includes(id)||user.isAdmin.value){
             let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'})
             return Promise.resolve(mainOrder)
         }
-        catch(e){
-            console.log(e)
-            return Promise.reject('Error in execution')
+        else{
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
     }
-    else{
-        return Promise.reject('Unauthorized')
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+orderSchema.statics.listAll = async function(reqQuery){
+    const Order = this
+    
+    try{
+        let query = {}
+        query.filter = JSON.parse(reqQuery.filter)
+        query.sort = JSON.parse(reqQuery.sort)
+        query.range = JSON.parse(reqQuery.range)
+        
+        const filter = {status:{$ne:'Draft'}}
+        Object.assign(filter,query.filter)
+        if(filter.verified){
+            filter['verified.value'] = filter.verified.value
+            delete filter.verified
+        }
+
+        console.log(filter)
+        const limit = query.range[1]+1-query.range[0]
+
+        /* Suborders are removed and orders are filtered by its status */
+        const order = await Order.find(filter).populate('workId','title').populate('userId','email').skip(query.range[0]).limit(limit).sort({createdAt:-1})
+        const count = await Order.countDocuments(filter)
+        return Promise.resolve({order,count,query})
+    }
+    catch(e){
+        return Promise.reject(e)
     }
 }
 
@@ -439,38 +539,64 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
     const Order = this
     
     try{
-        const verifiedValues = pick(body,['values','host'])/* PENDING - HOST TO SUPPLIER*/
+        const verifiedValues = pick(body,['values','supplier']) //Validation required (Pick)
 
         let order = await Order.orderDetails(id,user)
 
-        //Verification is invalid for drafts
+        //Verification is invalid for drafts or failed orders
         if(order.status=='Draft'||order.status == 'Failed'){
             return Promise.reject('Order not valid for verification')
         }
 
         Object.assign(order.values,verifiedValues.values)
         order.verified.verifiedBy.push({value:user._id})
-        order.paymentStatus.hostAmount = body.values.hostAmount
-        if(verifiedValues.host.assigned){
+        order.paymentStatus.supplierAmount = body.values.supplierAmount
+
+        if(verifiedValues.supplier.assigned){
             order.verified.value = true
-            const index = order.host.removed.indexOf(verifiedValues.host.assigned)
+            const index = order.supplier.removed.indexOf(verifiedValues.supplier.assigned)
             if(index!=-1){
-                order.host.removed.splice(index,1)
+                order.supplier.removed.splice(index,1)
             }
             const date = new Date()
             order.validTill = date.setDate(date.getDate()+body.values.validTill)
-            order.host.assigned = [verifiedValues.host.assigned]
-            await User.assignWork(order._id,verifiedValues.host.assigned,'assign')
+            order.supplier.assigned = [verifiedValues.supplier.assigned]
+            await User.assignWork(order._id,verifiedValues.supplier.assigned,'assign')
         }
-        if(verifiedValues.host.removed&&verifiedValues.host.removed.length!=0){
-            if(verifiedValues.host.removed.includes(String(order.host.assigned[0]))){
-                await User.assignWork(order._id,order.host.assigned[0],'remove')
-                order.host.assigned = []
+
+        if(verifiedValues.supplier.removed&&verifiedValues.supplier.removed.length!=0){
+            if(verifiedValues.supplier.removed.includes(String(order.supplier.assigned[0]))){
+                await User.assignWork(order._id,order.supplier.assigned[0],'remove')
+                order.supplier.assigned = []
             }
-            order.host.removed = [...new Set([...order.host.removed,...verifiedValues.host.removed])]
+            order.supplier.removed = [...new Set([...order.supplier.removed,...verifiedValues.supplier.removed])]
+            if(order.status == 'Pending'){
+                order.verified.value = false
+            }
         }
+
         order = await order.save()
-        return Promise.resolve(order)
+
+        /*if(order.verified.value){
+            const message = 'An order has been verified and is ready for payment'
+            return User.notify('Order',order._id,message,order.userId)
+        }*/
+
+        const mailData = {
+            from: '"Sourceo" <ajaydragonballz@gmail.com>',
+            to: order.userId.email.email, // list of receivers
+            subject: "Order Verified",
+            text: order.values.price>90000?`The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`:`The order prices have been updated and is ready for payment. Please use the website to make payment`
+            /*html: "<b>Hello world?</b>"*/ // html body
+        }
+        const mail = await sendMail(mailData)
+
+        if(mail){
+            return Promise.resolve({status:true,message:'Verified and mail sent to the user'})
+        }
+        else{
+            return Promise.resolve({status:true,message:'Mail not sent'})
+        }
     }
     catch(e){
         return Promise.reject(e)
@@ -578,11 +704,11 @@ orderSchema.statics.dashBoard = async function(user){
     }
 }
 
-orderSchema.statics.orderFns = async function(id,type,user,details,User){
+orderSchema.statics.orderFns = async function(id,type,user,details){
     const Order = this
 
     if(!id||!type||!user.isAdmin.value){
-        return Promise.reject('Invalid action')
+        return Promise.reject({status:false,message:'Invalid action',statusCode:403})
     }
 
     console.log(type)
@@ -591,7 +717,7 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
 
         const order = await Order.findById(id)
         if(type!='cancel'&&(!order.verified.value||(order.paymentStatus.value!='Completed'&&order.paymentStatus.value!='Contract'))){
-            return Promise.reject('Not a approved/verified/payment completed or in contract order')
+            return Promise.reject({status:false,message:'Not an approved order',statusCode:401})
         }
 
         switch(type){
@@ -599,30 +725,31 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
             case 'complete': {
 
                 if(!user.isAdmin&&!user.isAdmin.value){ //PENDING USER CONFIRMATION FOR COMPLETION
-                    if(!user.work.workOrder.includes(id)){
-                        return Promise.reject('Unauthorised')
+                    if(!user.orders.includes(id)){
+                        return Promise.reject({status:false,message:'Unauthorised',statusCode:401})
                     }
-                    const res = await Order.updateOne({_id:id,status:'Active'},{'status':'Completed'})
+                    if(order.status!='Transit'){
+                        return Promise.reject({status:false,message:'Invalid order type',statusCode:403})
+                    }
+                    const res = await Order.updateOne({_id:id,status:'Transit'},{$set:{'status':'Completed'}})
                     if(!res.nModified){
-                        return Promise.reject('Not applicable for this order')
+                        return Promise.reject({status:false,message:'Not applicable for this order',statusCode:401})
                     }
-                    return Promise.resolve('Order updated')
+                    return Promise.resolve({status:true,message:'Order Updated',statusCode:201})
                 }
                 else{
-                    let total = 0
-                    if(order.status!='Active'){
-                        return Promise.reject('Not a sinlge/active order')
+                    if(order.status!='Transit'){
+                        return Promise.reject({status:false,message:'Invalid order type',statusCode:403})
                     }
                     order.status = 'Completed'
                     await order.save()
-                    return Promise.resolve('Order completed')
+                    return Promise.resolve({status:true,message:'Order completed',statusCode:201})
                 }
             }
 
             case 'shipped': {
 
-                let total = 0
-                if(order.status!='Active'&&order.status!='Completed'){
+                if(order.status!='Active'){
                     return Promise.reject('Not a sinlge/active order')
                 }
                 order.status = 'Transit'
@@ -676,47 +803,50 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
     }
 }
 
-orderSchema.statics.hostPayment = async function({id,user,details}){
+orderSchema.statics.supplierPayment = async function({id,user,details,User}){
     const Order = this
     console.log(details)
 
     try{
         const order = await Order.findById(id)
         if(order.paymentStatus.value!=='Completed'&&order.paymentStatus.value!=='Contract'&&order.paymentStatus.value!=='Finished'){
-            return Promise.reject('Not available for this order')
+            return Promise.reject({status:false,message:'Not available for this order',statusCode:403})
         }
 
         if(details.statusPayment!='Finished'){
-            order.paymentStatus.hostPayment = details.type=='LC'?'Contract':'Completed'
-            order.paymentStatus.transaction.push({info:details.type,status:'Successful',paymentType:'Admin Created',createdBy:user._id})
+            order.paymentStatus.supplierPayment = details.type=='LC'?'Contract':'Completed'
+            order.paymentStatus.transaction.push({info:details.type,status:'Successful',paymentType:details.type,method:'Admin Created',createdBy:user._id})
             await order.save()
         }
         else{
-            order.paymentStatus.hostPayment = 'Finished'
-            order.paymentStatus.transaction.push({info:'Finished',status:'Successful',paymentType:'Admin Created',createdBy:user._id})
+            order.paymentStatus.supplierPayment = 'Finished'
+            order.paymentStatus.transaction.push({info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id})
             await order.save()
+            await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
         }
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error')
+        return Promise.reject(e)
     }
 }
 
+/* LAST - Check if supplier payment is contract - if yes - finish it too */
 orderSchema.statics.contractFinished = async (id,user) => {
 
     try{
-        const res = await Order.updateOne({_id:id,'paymentStatus.value':'Contract'},{$set:{'paymentStatus.value':'Finished'}})
+        const order = await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},{$set:{'paymentStatus.value':'Finished'},$push:{'paymentStatus.transaction':{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}}})
+        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
         if(res.nModified==0){
-            return Promise.reject('Invalid update action')
+            return Promise.reject({status:false,message:'Invalid update action',statusCode:403})
         }
         else{
-            return Promise.resolve('Contract Finished')
+            return Promise.resolve({status:true,message:'Contract Finished',statusCode:403})
         }
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error updating')
+        return Promise.reject({status:false,message:'Error updating',statusCode:403})
     }
 }
 

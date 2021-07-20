@@ -73,7 +73,7 @@ router.get('/admin/supplier/:id/workOrders',admin.authAdminToken,users.workOrder
 router.post('/admin/orders/:id/orderfn',admin.authAdminSign,adminLevel(1),orders.orderFns)
 router.post('/admin/orders/:id/refund',admin.authAdminSign,adminLevel(1),orders.refundOrder)
 router.post('/admin/orders/:id/samples',admin.authAdminSign,adminLevel(1),orders.samples)
-router.post('/admin/orders/hostPayment/:id',admin.authAdminSign,adminLevel(1),orders.hostPayment)
+router.post('/admin/orders/supplierPayment/:id',admin.authAdminSign,adminLevel(1),orders.supplierPayment)
 router.post('/admin/orders/:id/contractFinished',admin.authAdminSign,adminLevel(1),orders.contractFinished)
 router.get('/admin/token',users.adminToken)
 router.post('/admin/logout',users.adminLogout)

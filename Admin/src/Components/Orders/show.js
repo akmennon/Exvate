@@ -61,11 +61,16 @@ const PostShowActions = (props) => {
     const [cred,setCred] = useState({email:'',password:''})
     const [paymentDetails,setPaymentDetails] = useState({type:'Advance',deadline:''})
     const [shippingDetails,setShippingDetails] = useState({shipmentType:'Cargo',consignmentId:'',incoterm:'',serviceProvider:'',statusLink:'',port:'',CHA:''})
+    const token = sessionStorage.getItem('token')
 
     const handleClick = (orderId='',type,email='',pass='',props={},payment) =>{
         switch(type){
             case 'complete':
-                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'complete'})
+                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'complete'},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -74,7 +79,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'shipped':
-                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'shipped',shippingDetails})
+                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'shipped',shippingDetails},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -83,7 +92,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'finish':
-                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'finish'})
+                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'finish'},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -92,7 +105,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'contractFinished'://Pending here
-                axios.post(`/orders/${orderId}/contractFinished`,{email,password:pass})
+                axios.post(`/orders/${orderId}/contractFinished`,{email,password:pass},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -101,7 +118,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'cancel':
-                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'cancel'})
+                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'cancel'},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -114,7 +135,11 @@ const PostShowActions = (props) => {
                 const date = new Date(deadDate[0],deadDate[1],deadDate[2],0,0,0)
                 const newDate = date.toISOString(date)
                 setPaymentDetails(p=>({...p,deadline:newDate}))
-                axios.post(`orders/payment/${props.match.params.id}`,{email,password:pass,paymentDetails})
+                axios.post(`orders/payment/${props.match.params.id}`,{email,password:pass,paymentDetails},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -123,7 +148,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'refund':
-                axios.post(`/orders/${orderId}/refund`,{email,password:pass})
+                axios.post(`/orders/${orderId}/refund`,{email,password:pass},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -132,7 +161,11 @@ const PostShowActions = (props) => {
                 })
             break;
             case 'failed':
-                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'fail'})
+                axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'fail'},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
                 .then((response)=>{
                     console.log(response.data)
                 })
@@ -314,7 +347,7 @@ const PostShowActions = (props) => {
                         (<div>
                             {
                                 props.record.status!=='Cancelled'&&props.record.status!=='Failed'?
-                                <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/hosts/${props.record._id}`)}>Hosts</Button>:
+                                <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/suppliers/${props.record._id}`)}>Suppliers</Button>:
                                 props.record.paymentStatus.value==='Completed'?
                                 <Button color="primary" variant='outlined' onClick={() => {setType('refund');setOpen(true)}}>Confirm Refund</Button>:
                                 <span/>
@@ -349,20 +382,19 @@ const PostShowActions = (props) => {
                             {
                                 (props.record.paymentStatus.value==='Contract'||props.record.paymentStatus.value==='Completed')&&props.record.status!=='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
                                     <Fragment>
-                                        <Button color="primary" variant='outlined' onClick={() => {setType('complete');setOpen(true)}}>Complete</Button>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('shipped');setOpen(true)}}>Shipped</Button>
                                     </Fragment>
                                 ):<span/>
                             }
                             {
-                                props.record.status==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
+                                props.record.status!=='Completed'&&props.record.status==='Transit'&&props.record.status!=='Finished'?(
                                     <Fragment>
-                                        <Button color="primary" variant='outlined' onClick={() => {setType('shipped');setOpen(true)}}>Shipped</Button>
+                                        <Button color="primary" variant='outlined' onClick={() => {setType('complete');setOpen(true)}}>Complete</Button>
                                     </Fragment>
                                 ):<span/>
                             }
                         </div>):
-                        <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/hosts/${props.record._id}`)}>Verify</Button>
+                        <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/suppliers/${props.record._id}`)}>Verify</Button>
                     }
                 </div>
                 <EditButton basePath={props.basePath} record={props.record} />
@@ -401,8 +433,8 @@ const OrderShow = (props) => {
             <TextField source='verified.value' label='Verified' />
             <TextField source='status' label='Status' />
             <TextField source='paymentStatus.value' label='Payment' />
-            <TextField source='paymentStatus.hostPayment' label='Host payment'/>
-            <TextField source='paymentStatus.hostAmount' label='Host Amount'/>
+            <TextField source='paymentStatus.supplierPayment' label='Supplier payment'/>
+            <TextField source='paymentStatus.supplierAmount' label='Supplier Amount'/>
             <TextField source='values.price' label='Price' />
             <TextField source='values.time' label='Time' />
             <ArrayField source="values.variables" label='Values'>

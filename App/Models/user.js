@@ -180,6 +180,10 @@ const userSchema = new Schema({
         workOrder:[{
             type:Schema.Types.ObjectId,
             ref:'Order'
+        }],
+        workHistory:[{
+            type:Schema.Types.ObjectId,
+            ref:'Order'
         }]
     },
     orders:[{
@@ -297,11 +301,11 @@ const userSchema = new Schema({
                 }
             }
         }
-    },
+    }/*,                                //For admin created user
     adminCreated:{
         type:Schema.Types.ObjectId,
         ref:'User'
-    }
+    }*/
 })
 
 userSchema.pre('save',function(next){
@@ -685,18 +689,17 @@ userSchema.statics.findByAdminToken = function(token){
 
 /* UNEDITED - Not from user controller - remove this after this is edited */
 /* Helps change the order status and move it to respt. arrays in user */
-userSchema.statics.saveOrder = async function(order,id){
-    const User = this
+userSchema.methods.saveOrder = async function(order){
+    const user = this
 
     try{
-        let user = await User.findById(id)
-        user.orders = user.orders.concat(order)
-        user = await user.save()
-        return Promise.resolve(user)
+        user.orders = [...new Set([...user.orders,...order])]
+        await user.save()
+        return Promise.resolve('Saved')
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error saving order to user')
+        return Promise.reject(e)
     }
 }
 
@@ -977,9 +980,6 @@ userSchema.statics.assignWork = async function(orderId,supplierId,type){
             if(supplier.perms.supplier.suspended.value||supplier.perms.supplier.banned.value||supplier.perms.user.suspended.value||supplier.perms.user.suspended.value){
                 return Promise.reject({status:false,message:'Banned/Suspended supplier',statusCode:403})
             }
-            if(user.isAdmin.value){
-                return Promise.reject({status:false,message:'User not allowed',statusCode:403})
-            }
             if(!supplier.work.workOrder.includes(orderId)){
                 supplier.work.workOrder.push(orderId)
                 await supplier.save()
@@ -1052,7 +1052,14 @@ userSchema.statics.supplierCancel = async function(orderId,reqUser){
 userSchema.statics.userEdit = async function(user,body,id){
     const User = this
 
-    const userBody = pick(body,['name','email.email','mobile','address','userType','supplier','perms'])
+    let userBody
+
+    if(user.isAdmin.value){
+        userBody = pick(body,['name','email.email','mobile','address','userType','supplier'])
+    }
+    else{
+        userBody = pick(body,['name','email.email','mobile','userType','supplier'])
+    }
 
     try{
         if(user.isAdmin.value||user._id==id){
@@ -1170,6 +1177,18 @@ userSchema.statics.supplierVerify = async function(userId,body,admin){
     }
     catch(e){
         console.log(e)
+        return Promise.reject(e)
+    }
+}
+
+userSchema.statics.supplierWorkComplete = async function (userId,orderId){
+    const User = this
+
+    try{
+        const res = await User.updateOne({_id:userId},{$push:{'work.workHistory':orderId},$pull:{'work.workOrder':orderId}})
+        return Promise.resolve(res)
+    }
+    catch(e){
         return Promise.reject(e)
     }
 }
