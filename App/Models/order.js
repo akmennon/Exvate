@@ -148,7 +148,8 @@ const orderSchema = new Schema({
             message:function(){
                 return 'Invalid Incoterm'
             }
-        }
+        },
+        default:'Exworks'
     },
     status:{
         type:String,
@@ -479,7 +480,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     
     try{
         if(user.orders.includes(id)||user.isAdmin.value){
-            let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'})
+            let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'}).lean()
             return Promise.resolve(mainOrder)
         }
         else{
@@ -520,20 +521,6 @@ orderSchema.statics.listAll = async function(reqQuery){
     }
 }
 
-orderSchema.statics.delete = function(id){
-    const Order = this
-
-    return Order.findByIdAndDelete(id)
-        .then((order)=>{
-            console.log(order)
-            return Promise.resolve(order)
-        })
-        .catch((err)=>{
-            console.log(err)
-            return Promise.reject('Error deleting draft')
-        })
-}
-
 /* Verifies the order */
 orderSchema.statics.verifyOrder = async function(id,body,user,User){
     const Order = this
@@ -545,7 +532,7 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
 
         //Verification is invalid for drafts or failed orders
         if(order.status=='Draft'||order.status == 'Failed'){
-            return Promise.reject('Order not valid for verification')
+            return Promise.reject({status:false,message:'Order not valid for verification',statusCode:401})
         }
 
         Object.assign(order.values,verifiedValues.values)
@@ -591,12 +578,7 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
         }
         const mail = await sendMail(mailData)
 
-        if(mail){
-            return Promise.resolve({status:true,message:'Verified and mail sent to the user'})
-        }
-        else{
-            return Promise.resolve({status:true,message:'Mail not sent'})
-        }
+        return Promise.resolve({status:true,message:'Verified sucessfully'})
     }
     catch(e){
         return Promise.reject(e)
@@ -608,37 +590,45 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
 
     try{
         const order = await Order.findById(id).populate({path:'userId',select:'email'})
+
         if(order.status!='Pending'&&order.verified.value){
-            return Promise.reject('Not applicable for the order')
+            return Promise.reject({status:false,message:'Not applicable for the order',statusCode:403})
         }
+
         const date = new Date()
+        
         if(order.validTill.getTime()<date.getTime()){
-            return Promise.reject('Order validity passed. Order needs to be validated again before confirmation.')
+            return Promise.reject({status:false,message:'Order validity passed. Order needs to be validated again before confirmation',statusCode:403})
         }
+
         const transaction = {//should be changed according to transaction
             paymentType:details.type,
             createdBy:user._id,
             createdAt:new Date()
         }
+
         const deadline = new Date(details.deadline)
+
         if(details.type=='LC'){
             await Order.updateOne({_id:id},{'paymentStatus.value':'Contract',status:'Active',deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
         else{
             await Order.updateOne({_id:id},{'paymentStatus.value':'Completed',status:'Active',deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
+
         const mailData = {
             from: '"Sourceo" <ajaydragonballz@gmail.com>',
             to: order.userId.email.email, // list of receivers
             subject: "Payment Completed",
             text: `The payment has been confirmed.`
         }
+
         await sendMail(mailData)
-        return Promise.resolve('Payment has been confirmed')
+        return Promise.resolve({status:true,message:'Payment has been confirmed'})
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error confirming payment')
+        return Promise.reject(e)
     }
 }
 
@@ -674,12 +664,12 @@ orderSchema.statics.userAll = async function(id,user){
 
     try{
         if(user.isAdmin.value){
-            const orders = await Order.find({userId:id}).populate({path:'workId',select:'title'})
+            const orders = await Order.find({userId:id}).populate({path:'workId',select:'title'}).limit(20) //proper pagination required
             console.log(orders)
             return Promise.resolve(orders)
         }
         else{
-            const orders = await Order.find({userId:user.id})
+            const orders = await Order.find({userId:user.id}).limit(20)
             console.log(orders)
             return Promise.resolve(orders)
         }
@@ -690,6 +680,7 @@ orderSchema.statics.userAll = async function(id,user){
     }
 }
 
+/* Pending */
 orderSchema.statics.dashBoard = async function(user){
     const Order = this
 
@@ -704,7 +695,7 @@ orderSchema.statics.dashBoard = async function(user){
     }
 }
 
-orderSchema.statics.orderFns = async function(id,type,user,details){
+orderSchema.statics.orderFns = async function(id,type,user,details,User){
     const Order = this
 
     if(!id||!type||!user.isAdmin.value){
@@ -717,7 +708,7 @@ orderSchema.statics.orderFns = async function(id,type,user,details){
 
         const order = await Order.findById(id)
         if(type!='cancel'&&(!order.verified.value||(order.paymentStatus.value!='Completed'&&order.paymentStatus.value!='Contract'))){
-            return Promise.reject({status:false,message:'Not an approved order',statusCode:401})
+            return Promise.reject({status:false,message:'Not an approved order',statusCode:403})
         }
 
         switch(type){
@@ -743,57 +734,66 @@ orderSchema.statics.orderFns = async function(id,type,user,details){
                     }
                     order.status = 'Completed'
                     await order.save()
-                    return Promise.resolve({status:true,message:'Order completed',statusCode:201})
+                    return Promise.resolve({status:true,message:'Order completed'})
                 }
             }
 
             case 'shipped': {
 
                 if(order.status!='Active'){
-                    return Promise.reject('Not a sinlge/active order')
+                    return Promise.reject({status:false,message:'Not an active order',statusCode:403})
                 }
                 order.status = 'Transit'
                 order.shipmentDetails = details
                 await order.save()
-                return Promise.resolve('Order completed')
+                return Promise.resolve({status:true,message:'Order Shipped'})
             }
 
             case 'finish':  {
 
-                if(order.status!='Transit'){
-                    return Promise.reject('Not a single or in transit order')
+                if(order.status!='Completed' || order.paymentStatus.supplierPayment!='Finished'){
+                    return Promise.reject({status:false,message:'Not Completed/ Supplier payment pending',statusCode:403})
                 }
-                let total = 0
+                
                 order.status = 'Finished'
                 order.completionVerified.push({verifiedAt:new Date(),verifiedBy:user._id})
+                User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                 await order.save()
-                return Promise.resolve('Order completed')
+                return Promise.resolve({status:true,message:'Order completed'})
             }
                 
             case 'cancel': {
 
                 if(order.status=='Completed'||order.status=='Transit'||order.status=='Finished'||order.paymentStatus.value=='Contract'){
-                    return Promise.reject('Invalid : A completed or a finished order')
+                    return Promise.reject({status:false,message:'Invalid : A completed or a finished order',statusCode:403})
                 }
                 order.status = 'Cancelled'
                 order.cancelVerified.push({verifiedBy:user._id})
+                if(order.supplier.assigned[0]){
+                    await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
+                    order.supplier.assigned = []
+                }
                 await order.save()
-                return Promise.resolve('Order cancelled')
+                return Promise.resolve({status:true,message:'Order Cancelled'})
             }
 
-            case 'fail': {
+            case 'fail': { //Proper workflow required
 
                 if(order.paymentStatus.value!='Contract'){
-                    return Promise.reject('Not a contract')
+                    return Promise.reject({status:false,message:'Not a contract',statusCode:403})
                 }
                 order.status = 'Failed'
                 order.completionVerified.push({verifiedBy:user._id})
+                if(order.supplier.assigned[0]){
+                    await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
+                    order.supplier.assigned = []
+                }
                 await order.save()
-                return Promise.resolve('Status changed successfully')
+                return Promise.resolve({status:true,message:'Status changed successfully'})
             }
 
             default:
-                return Promise.reject('Invalid function type')
+                return Promise.reject({status:false,message:'Invalid function type',statusCode:403})
         }
 
     }
@@ -831,12 +831,13 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
     }
 }
 
-/* LAST - Check if supplier payment is contract - if yes - finish it too */
-orderSchema.statics.contractFinished = async (id,user) => {
+/* LAST - check how the supplier workComplete in this messes up the orderFns */
+orderSchema.statics.contractFinished = async (id,user,User) => {
 
     try{
-        const order = await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},{$set:{'paymentStatus.value':'Finished'},$push:{'paymentStatus.transaction':{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}}})
-        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
+        /* Checks if supplier is payment is also by contract, if it is. It is completed as well */
+        const order = await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},[{$set:{'paymentStatus.value':'Finished','paymentStatus.supplierPayment':{$cond:[{$eq:['Contract','$paymentStatus.supplierPayment']},'Finished','$paymentStatus.supplierPayment']},'paymentStatus.transaction':{$concatArrays:['$paymentStatus.transaction',[{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}]]}}}],{new:true})
+        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id) //Last 
         if(res.nModified==0){
             return Promise.reject({status:false,message:'Invalid update action',statusCode:403})
         }

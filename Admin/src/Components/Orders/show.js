@@ -370,7 +370,7 @@ const PostShowActions = (props) => {
                                 ):<span/>
                             }
                             {
-                                props.record.status==='Completed'||props.record.status==='Transit'?(
+                                props.record.status==='Completed'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('finish');setOpen(true)}}>Finished</Button>
                                 ):<span/>
                             }
@@ -434,7 +434,7 @@ const OrderShow = (props) => {
             <TextField source='status' label='Status' />
             <TextField source='paymentStatus.value' label='Payment' />
             <TextField source='paymentStatus.supplierPayment' label='Supplier payment'/>
-            <TextField source='paymentStatus.supplierAmount' label='Supplier Amount'/>
+            <TextField source='paymentStatus.supplierAmount' label='Supplier Cost'/>
             <TextField source='values.price' label='Price' />
             <TextField source='values.time' label='Time' />
             <ArrayField source="values.variables" label='Values'>

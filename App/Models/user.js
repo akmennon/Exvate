@@ -695,7 +695,7 @@ userSchema.methods.saveOrder = async function(order){
     try{
         user.orders = [...new Set([...user.orders,...order])]
         await user.save()
-        return Promise.resolve('Saved')
+        return Promise.resolve({status:true,message:'Order Saved'})
     }
     catch(e){
         console.log(e)
@@ -1185,7 +1185,10 @@ userSchema.statics.supplierWorkComplete = async function (userId,orderId){
     const User = this
 
     try{
-        const res = await User.updateOne({_id:userId},{$push:{'work.workHistory':orderId},$pull:{'work.workOrder':orderId}})
+        if(!userId){
+            return Promise.reject({status:false,message:'No supplier to complete work',statusCode:404})
+        }
+        const res = await User.updateOne({_id:userId},{$addToSet:{'work.workHistory':orderId},$pull:{'work.workOrder':orderId}})
         return Promise.resolve(res)
     }
     catch(e){

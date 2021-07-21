@@ -1,6 +1,5 @@
 const Order = require('../Models/order')
 const Result = require('../Models/work/resultSubdoc')
-const sendMail = require('../Resolvers/sendMail')
 const errorHandler = require('../Resolvers/errorHandler')
 const User = require('../Models/user')
 
@@ -48,24 +47,6 @@ module.exports.all = (req,res,next) =>{//Validation with switch
     })
 }
 
-/* orders status is changed from draft to confirmed */
-module.exports.confirm = (req,res) =>{
-    const id = req.params.id
-    let order
-
-    Order.confirmOrder(id)
-        .then((response)=>{
-            order = response
-            return User.saveOrder(order,order.userId)
-        })
-        .then(()=>{
-            res.status(200).send('Order confirmed')
-        })
-        .catch((err)=>{
-            console.log(err)
-        })
-}
-
 module.exports.verifyOrder = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
@@ -80,7 +61,7 @@ module.exports.verifyOrder = (req,res,next) =>{
         })
 }
 
-module.exports.paymentConfirm = (req,res) =>{
+module.exports.paymentConfirm = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
     const details = req.body.paymentDetails
@@ -90,67 +71,50 @@ module.exports.paymentConfirm = (req,res) =>{
             res.json(response)
         })
         .catch((e)=>{
-            console.log(e)
-            res.json(e)
+            errorHandler(err,next)
         })
 }
 
-module.exports.workOrderConfirm = (req,res) =>{//find the use
-    const id = req.params.id
-
-    Order.findById(id)
-        .then((order)=>{
-            if(order.userId!=req.user._id&&!req.user.isAdmin.value){
-                console.log('a')
-            }
-        })
-        .catch((e)=>{
-            console.log(e)
-            res.json('error fetching orders')
-        })
-}
-
-module.exports.completeOrder = (req,res) =>{
+module.exports.completeOrder = (req,res,next) =>{
     const orderId = req.params.orderId
     const user = req.user
 
     Order.completeOrder(orderId,user)
         .then((response)=>{
-            res.json('Order completed. Waiting for verification.')
+            res.json(response)
         })
         .catch((e)=>{
-            console.log(e)
-            res.status(400).send(e)
+            errorHandler(err,next)
         })
 }
 
-module.exports.cancelOrder = (req,res) =>{
+module.exports.cancelOrder = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
 
     Order.orderCancel(id,user,User)
         .then((response)=>{
-            res.json('Order cancelled')
+            res.json(response)
         })
         .catch((e)=>{
-            res.json(e)
+            errorHandler(err,next)
         })
 }
 
-module.exports.refundOrder = (req,res) =>{
+module.exports.refundOrder = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
 
     Order.refundComplete(id,user)
         .then((response)=>{
-            res.json('Refund Acknowledged')
+            res.json(response)
         })
         .catch((e)=>{
-            res.json(e)
+            errorHandler(err,next)
         })
 }
 
-module.exports.userAll = (req,res) =>{
+module.exports.userAll = (req,res,next) =>{
     const id = req.params.id
 
     Order.userAll(id,req.user)
@@ -158,11 +122,12 @@ module.exports.userAll = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.dashBoard = (req,res) =>{
+/* Pending */
+module.exports.dashBoard = (req,res,next) =>{
     const user = req.user
 
     Order.dashBoard(user)
@@ -170,11 +135,11 @@ module.exports.dashBoard = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.failedOrder = (req,res) =>{
+module.exports.failedOrder = (req,res,next) =>{
     const user = req.user
     const id = req.params.id
 
@@ -183,11 +148,11 @@ module.exports.failedOrder = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            res.status(400).send(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.samples = (req,res) =>{
+module.exports.samples = (req,res,next) =>{
     const user = req.user
     const id = req.params.id
     const type = req.body.type
@@ -197,12 +162,11 @@ module.exports.samples = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            console.log(err)
-            res.status(400).send("Invalid action")
+            errorHandler(err,next)
         })
 }
 
-module.exports.orderFns = (req,res) =>{
+module.exports.orderFns = (req,res,next) =>{
     const user = req.user
     const id = req.params.id
     const type = req.body.type
@@ -214,8 +178,7 @@ module.exports.orderFns = (req,res) =>{
             res.json(response)
         })
         .catch((err)=>{
-            console.log(err)
-            res.status(400).send('Invalid action')
+            errorHandler(err,next)
         })
 }
 
@@ -237,7 +200,7 @@ module.exports.contractFinished = (req,res,next) =>{
     const id = req.params.id
     const user = req.user
 
-    Order.contractFinished(id,user)
+    Order.contractFinished(id,user,User)
         .then((response)=>{
             res.json(response)
         })

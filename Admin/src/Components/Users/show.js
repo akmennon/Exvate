@@ -289,37 +289,43 @@ const UserShowActions = (props) => {
     const [mod, modOpen] = useState({open:false,type:''});
 
     console.log(props)
-    return (
-    <TopToolbar className={classes.topBar}>
-        <Modal
-            className={classes.modal}
-            open={mod.open}
-            onClose={()=>modOpen(p=>({...p,open:false}))}
-            closeAfterTransition
-            BackdropComponent={Backdrop}
-            BackdropProps={{
-            timeout: 500,
-            }}
-        >
-            <Fade in={mod.open}>
-                <div className={classes.paper}>
-                    {props.data.isAdmin&&props.data.isAdmin.value?<AdminModalBody mod={mod} modOpen={modOpen} {...props} />:<ModalBody mod={mod} modOpen={modOpen} {...props} />}
+    if(props.data){
+        return (
+            <TopToolbar className={classes.topBar}>
+                <Modal
+                    className={classes.modal}
+                    open={mod.open}
+                    onClose={()=>modOpen(p=>({...p,open:false}))}
+                    closeAfterTransition
+                    BackdropComponent={Backdrop}
+                    BackdropProps={{
+                    timeout: 500,
+                    }}
+                >
+                    <Fade in={mod.open}>
+                        <div className={classes.paper}>
+                            {props.data.isAdmin&&props.data.isAdmin.value?<AdminModalBody mod={mod} modOpen={modOpen} {...props} />:<ModalBody mod={mod} modOpen={modOpen} {...props} />}
+                        </div>
+                    </Fade>
+                </Modal>
+                <div className={classes.buttons}>
+                    <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/works`)}>Update Work</Button>
+                    <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/orders`)}>Orders</Button>
+                    {
+                        props.data.supplier?<Button variant="outlined" color="primary" onClick={()=>props.history.push(`/suppliers/${props.match.params.id}/workOrders`)}>Work Orders</Button>:<span/>
+                    }
+                    <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/createOrder`)}>Create Order</Button>
+                    <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'multiOrder',open:true}))}>Verify Supplier</Button>
+                    <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspend',open:true}))}>Suspend/Ban</Button>
                 </div>
-            </Fade>
-        </Modal>
-        <div className={classes.buttons}>
-            <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/works`)}>Update Work</Button>
-            <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/orders`)}>Orders</Button>
-            {
-                props.data.supplier?<Button variant="outlined" color="primary" onClick={()=>props.history.push(`/suppliers/${props.match.params.id}/workOrders`)}>Work Orders</Button>:<span/>
-            }
-            <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/createOrder`)}>Create Order</Button>
-            <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'multiOrder',open:true}))}>Verify Supplier</Button>
-            <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspend',open:true}))}>Suspend/Ban</Button>
-        </div>
-        <EditButton {...props} />
-    </TopToolbar>
-)};
+                <EditButton {...props} />
+            </TopToolbar>
+        )
+    }
+    else{
+        return null
+    }
+};
 
 const AdminField = ({ source, record }) =>{
     if(!record.isAdmin||!record.isAdmin.value){
