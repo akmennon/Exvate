@@ -32,7 +32,7 @@ const ParamValues = (props) =>{
 }
 
 const Array = (props) =>{
-    if(props.record.options.options.length>1){
+    if(props.record.options.length>1){
         return (
             <ArrayField {...props} source="options.options">
                 <Datagrid rowClick={(e)=>{const val = JSON.parse(e);props.history.push(`/works/${val.workId}/show`)}}>
@@ -44,12 +44,10 @@ const Array = (props) =>{
     }
     else{
         const newProps = props
-        newProps.record.options.options[0].hidden = newProps.record.options.options[0].hidden.toString()
         console.log(newProps)
         return(
             <SimpleShowLayout {...newProps} >
-                <TextField source="options.options[0].hidden" label="Hidden"/>
-                <ArrayField {...newProps} source="options.options[0].params" label="Params">
+                <ArrayField {...newProps} source="options.params" label="Params">
                     <Datagrid expand={<ParamValues/>}>
                         <TextField source='title' label='Title'/>
                         <BooleanField source='tierType' label='Tier Type'/>

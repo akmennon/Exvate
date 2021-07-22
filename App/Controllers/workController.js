@@ -1,8 +1,9 @@
 const Work = require('../Models/work/work')
+const errorHandler = require('../Resolvers/errorHandler')
 
 /* Function to create a new Work */
 
-module.exports.create = (req,res) =>{
+module.exports.create = (req,res,next) =>{
     const body = req.body
     
     Work.createNew(body)
@@ -10,16 +11,16 @@ module.exports.create = (req,res) =>{
             res.json(work)
         })
         .catch(function(err){
-            console.log(err)
+            errorHandler(err,next)
         })
 }
 
 /* Function to show all works */
 
-module.exports.all = (req,res) =>{
+module.exports.all = (req,res,next) =>{
     const query = req.query
 
-    Work.all(query,res,req.user)
+    Work.all(query,req.user)
         .then((works)=>{
             if(works.count){
                 res.setHeader('full',works.count)
@@ -27,42 +28,41 @@ module.exports.all = (req,res) =>{
             res.json(works.works)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
 /* Function to display the entire details of a work */
 
-module.exports.detail = (req,res) =>{
+module.exports.detail = (req,res,next) =>{
     const id = req.params.id
     Work.findById(id).populate('options').populate({path:'category',select:'title'}).populate({path:'type',select:'title'}).populate('result')
         .then(function(work){
             res.json(work)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.searchAll = (req,res) =>{
+module.exports.searchAll = (req,res,next) =>{ //Highly unoptimized /Not a search at all
 
     Work.find({},'_id options title')
         .then((works)=>{
             res.json(works)
         })
         .catch((err)=>{
-            console.log(err)
-            res.json('Error fetching result')
+            errorHandler(err,next)
         })
 }
 
-module.exports.workEdit = (req,res) =>{
+module.exports.workEdit = (req,res,next) =>{
 
     Work.workEdit(req.body)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
-            res.json(err)
+            errorHandler(err,next)
         })
 }

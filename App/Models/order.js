@@ -1,13 +1,11 @@
 const mongoose = require('mongoose')
 const Result = require('./work/resultSubdoc')
-const validator = require('validator')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
 const Option = require('./work/optionSubdoc.js')
 
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
-const User = require('./user')
 
 const Schema = mongoose.Schema
 
@@ -280,6 +278,8 @@ const orderSchema = new Schema({
                             return true
                         case 'Refunded':
                             return true
+                        case 'Cancelled':
+                            return true
                         default:
                             return false
                     }
@@ -306,6 +306,8 @@ const orderSchema = new Schema({
                         case 'Finished':
                             return true
                         case 'Refunded':
+                            return true
+                        case 'Cancelled':
                             return true
                         default:
                             return false
@@ -480,6 +482,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     
     try{
         if(user.orders.includes(id)||user.isAdmin.value){
+            /* Lean should not be used */
             let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'}).lean()
             return Promise.resolve(mainOrder)
         }
@@ -528,7 +531,7 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
     try{
         const verifiedValues = pick(body,['values','supplier']) //Validation required (Pick)
 
-        let order = await Order.orderDetails(id,user)
+        let order = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'})
 
         //Verification is invalid for drafts or failed orders
         if(order.status=='Draft'||order.status == 'Failed'){
@@ -648,6 +651,9 @@ orderSchema.statics.refundComplete = async function(id,user){
         }
 
         order.paymentStatus.value = 'Refunded'
+        if(order.paymentStatus.supplierPayment=='Pending'){
+            order.paymentStatus.supplierPayment='Cancelled'
+        }
         order.paymentStatus.transaction.push({paymentType:'External',createdBy:user._id})
         order.completionVerified.push({verifiedBy:user._id})
         order = await order.save()
@@ -707,7 +713,8 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
     try{
 
         const order = await Order.findById(id)
-        if(type!='cancel'&&(!order.verified.value||(order.paymentStatus.value!='Completed'&&order.paymentStatus.value!='Contract'))){
+
+        if(type!='cancel'&&(!order.verified.value||(order.paymentStatus.value!='Completed'&&order.paymentStatus.value!='Contract'&&order.paymentStatus.value!='Finished'))){
             return Promise.reject({status:false,message:'Not an approved order',statusCode:403})
         }
 
@@ -721,6 +728,9 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                     }
                     if(order.status!='Transit'){
                         return Promise.reject({status:false,message:'Invalid order type',statusCode:403})
+                    }
+                    if(order.status=='Completed'){
+                        return Promise.reject({status:false,message:'Already Completed',statusCode:403})
                     }
                     const res = await Order.updateOne({_id:id,status:'Transit'},{$set:{'status':'Completed'}})
                     if(!res.nModified){
@@ -743,6 +753,9 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 if(order.status!='Active'){
                     return Promise.reject({status:false,message:'Not an active order',statusCode:403})
                 }
+                if(order.status=='Transit'){
+                    return Promise.reject({status:false,message:'Already Shipped',statusCode:403})
+                }
                 order.status = 'Transit'
                 order.shipmentDetails = details
                 await order.save()
@@ -754,7 +767,9 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 if(order.status!='Completed' || order.paymentStatus.supplierPayment!='Finished'){
                     return Promise.reject({status:false,message:'Not Completed/ Supplier payment pending',statusCode:403})
                 }
-                
+                if(order.status=='Finished'){
+                    return Promise.reject({status:false,message:'Already Finished',statusCode:403})
+                }
                 order.status = 'Finished'
                 order.completionVerified.push({verifiedAt:new Date(),verifiedBy:user._id})
                 User.supplierWorkComplete(order.supplier.assigned[0],order._id)
@@ -765,10 +780,25 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
             case 'cancel': {
 
                 if(order.status=='Completed'||order.status=='Transit'||order.status=='Finished'||order.paymentStatus.value=='Contract'){
-                    return Promise.reject({status:false,message:'Invalid : A completed or a finished order',statusCode:403})
+                    return Promise.reject({status:false,message:'Not applicable for the order',statusCode:403})
                 }
+                if(order.status=='Cancelled'){
+                    return Promise.reject({status:false,message:'Already Cancelled',statusCode:403})
+                }
+                if(order.paymentStatus.supplierPayment == 'Completed' || order.paymentStatus.supplierPayment == 'Contract' || order.paymentStatus.supplierPayment == 'Finished'){
+                    return Promise.reject({status:false,message:'Supplier Already paid',statusCode:403})
+                }
+
+                /* executed only when no payment is made */
+                if(order.status == 'Pending'){
+                    order.paymentStatus.value = 'Cancelled'
+                    order.completionVerified.push({verifiedBy:user._id})
+                }
+
+                order.paymentStatus.supplierPayment = 'Cancelled'
                 order.status = 'Cancelled'
                 order.cancelVerified.push({verifiedBy:user._id})
+
                 if(order.supplier.assigned[0]){
                     await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                     order.supplier.assigned = []
@@ -781,6 +811,9 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
 
                 if(order.paymentStatus.value!='Contract'){
                     return Promise.reject({status:false,message:'Not a contract',statusCode:403})
+                }
+                if(order.status=='Completed'||order.status=='Finished'||order.status=='Failed'){
+                    return Promise.reject({status:false,message:'Not applicable for the order',statusCode:403})
                 }
                 order.status = 'Failed'
                 order.completionVerified.push({verifiedBy:user._id})

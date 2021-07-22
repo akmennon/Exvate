@@ -360,7 +360,7 @@ const PostShowActions = (props) => {
                                 </Fragment>:<span/>
                             }
                             {
-                                props.record.paymentStatus.value==='Contract'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
+                                props.record.paymentStatus.value==='Contract'&&props.record.status!=='Completed'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('failed');setOpen(true)}}>Order Failed</Button>
                                 ):<span/>
                             }
@@ -375,7 +375,7 @@ const PostShowActions = (props) => {
                                 ):<span/>
                             }
                             {
-                                props.record.status==='Finished'&&props.record.paymentStatus.value==='Contract'?(
+                                props.record.status==='Completed'&&props.record.paymentStatus.value==='Contract'?(
                                     <Button color="primary" variant='outlined' onClick={() => {setType('contractFinished');setOpen(true)}}>Contract Payment Finished</Button>
                                 ):<span/>
                             }

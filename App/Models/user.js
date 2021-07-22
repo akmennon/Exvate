@@ -981,7 +981,7 @@ userSchema.statics.assignWork = async function(orderId,supplierId,type){
                 return Promise.reject({status:false,message:'Banned/Suspended supplier',statusCode:403})
             }
             if(!supplier.work.workOrder.includes(orderId)){
-                supplier.work.workOrder.push(orderId)
+                supplier.work.workOrder = [...new Set([...supplier.work.workOrder,orderId])]
                 await supplier.save()
             }
             return Promise.resolve(supplier)

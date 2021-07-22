@@ -34,60 +34,58 @@ const workSchema = new Schema({
 
 /* Function to create new work */  // Pending work //use pick on options and result
 
-workSchema.statics.createNew = (body) =>{
-    const options = body.options
-    const results = body.result
-    const workBody = pick(body,['title','type','category'])
+workSchema.statics.createNew = async (body) =>{
+    
+    try{
+        const options = body.options
+        const results = body.result
+        const workBody = pick(body,['title','type','category'])
 
-    const work = new Work(workBody)
+        const work = new Work(workBody)
 
-    options.workId=work._id
-    options.workTitle=work.title
-    results.workId=work._id
+        options.workId=work._id
+        options.workTitle=work.title
+        results.workId=work._id
 
-    const option = new Option(options)
-    const result = new Result(results)
+        const option = new Option(options)
+        const result = new Result(results)
 
-    /* result and option are saved first and added to the work to be saved */
-    return option.save()
-        .then(function(option){
-            work.options = option
-            return result.save()
-        })
-        .then(function(result){
-            work.result = result
-            return work.save()
-        })
-        .then(function(work){
-            return Promise.resolve(work)
-        })
-        .catch(function(err){
-            return Promise.reject(err)
-        })
+        /* result and option are saved first and added to the work to be saved */
+        await option.save()
+        work.options = option
+
+        await result.save()
+        work.result = result
+
+        await work.save()
+        return Promise.resolve({status:true,message:'Work Created Successfully'})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 workSchema.statics.workEdit = async (body) =>{
-    const options = body.options
-    const results = body.result
+    const options = body.options    //pick
+    const results = body.result     //pick
     const workBody = pick(body,['title','type','category','_id'])
 
     try{
-        await Option.findByIdAndUpdate(options._id,options)
+        await Option.updateOne({_id:options._id},{...options})
         await Result.updateOne({_id:results._id},{$set:{...results}})
-        await Work.updateOne({_id:workBody._id},{$set:{...workBody,options:options._id,result:results._id}})
+        const work = await Work.findOneAndUpdate({_id:workBody._id},{$set:{...workBody}},{new:true}).populate('type','title').populate('category','title')
 
-        return Promise.resolve('Work Updated')
+        return Promise.resolve(work)
     }
     catch(e){
-        console.log(e)
-        return Promise.reject('Error updating work')
+        return Promise.reject(e)
     }
 }
 
-workSchema.statics.all = async (query,res,user) =>{
+workSchema.statics.all = async (query,user) =>{
     try{
         if(!user){
-            const works = await Work.find({}).limit(10)
+            const works = await Work.find({}).limit(10) //remove once client frontend is updated
             return Promise.resolve({works})
         }
         else if(query.filter.q!=undefined){
@@ -110,8 +108,7 @@ workSchema.statics.all = async (query,res,user) =>{
         }
     }
     catch(e){
-        console.log(e)
-        return Promise.reject('Error fetching works')
+        return Promise.reject(e)
     }
 }
 
