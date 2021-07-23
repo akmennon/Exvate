@@ -1,8 +1,10 @@
 const Category = require('../Models/category')
+const errorHandler = require('../Resolvers/errorHandler')
+const Work = require('../Models/work/work')
 
 /* Create category */
 
-module.exports.create = (req,res) =>{
+module.exports.create = (req,res,next) =>{
     const body = req.body
     const user = req.user
 
@@ -11,13 +13,13 @@ module.exports.create = (req,res) =>{
             res.json(category)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
 /* Shows all categories */
 
-module.exports.all = (req,res) =>{
+module.exports.all = (req,res,next) =>{
     console.log(req.query)
     let query
     if(req.query.range){
@@ -27,7 +29,8 @@ module.exports.all = (req,res) =>{
         query.range = JSON.parse(query.range)
     }
 
-    Category.find().populate('type')
+    //use pagination
+    Category.find().populate('type') //Unreliable - kept so that category selection in work creation would work - should be changed
         .then(async function(categories){
             if(query){
                 const count = await Category.estimatedDocumentCount()
@@ -42,34 +45,37 @@ module.exports.all = (req,res) =>{
             res.json(categoriesAll.categories)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
 /* Edit category */
 
-module.exports.edit = (req,res) =>{
+module.exports.edit = (req,res,next) =>{
     const body = req.body
     const id = req.params.id
     const user = req.user._id
 
-    Category.editCat(id, body, user)
+    Category.editCat(id, body, user,Work)
         .then(function(category){
             res.json(category)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.details = (req,res) =>{
+module.exports.details = (req,res,next) =>{
     const id = req.params.id
     
     Category.findById(id)
         .then(function(category){
+            if(!category){
+                return Promise.reject({status:false,message:'Category not found',statusCode:404})
+            }
             res.json(category)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }

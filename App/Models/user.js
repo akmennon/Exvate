@@ -917,7 +917,8 @@ userSchema.statics.orderSuppliers = async function(workId){
     const User = this
 
     try{
-        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}},'perms.user.suspended.value':false,'perms.user.banned.value':false,'perms.supplier.suspended.value':false,'perms.supplier.banned.value':false,'isAdmin.value':{$exists:false}}).lean() //UNRELIABLE -  use projection
+        //Use projection and pagination
+        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}},'perms.user.suspended.value':false,'perms.user.banned.value':false,'perms.supplier.suspended.value':false,'perms.supplier.banned.value':false,'isAdmin.value':{$exists:false}}).lean()
         if(suppliers.length!==0){
             return Promise.resolve({suppliers})
         }

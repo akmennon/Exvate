@@ -13,14 +13,44 @@ const workSchema = new Schema({
         required:true
     },
     type:{
-        type:Schema.Types.ObjectId,
-        required:true,
-        ref:'Type'
+        _id:{
+            type:Schema.Types.ObjectId,
+            ref:'Type',
+            required:true
+        },
+        title:{
+            type:String,
+            maxlength:40,
+            minlength:2
+        },
+        hscode:{
+            type:String,
+            minlength:2,
+            maxlength:2
+        }
     },
     category:{
-        type:Schema.Types.ObjectId,
-        required:true,
-        ref:'Category'
+        _id:{
+            type:Schema.Types.ObjectId,
+            ref:'Category',
+            required:true
+        },
+        title:{
+            type:String,
+            maxlength:40,
+            minlength:2,
+            required:true
+        },
+        type:{
+            type:Schema.Types.ObjectId,
+            required:true,
+            ref:'Type'
+        },
+        hscode:{
+            type:String,
+            minlength:4,
+            maxlength:4
+        }
     },
     options:{
         type:Schema.Types.ObjectId,
@@ -34,12 +64,15 @@ const workSchema = new Schema({
 
 /* Function to create new work */  // Pending work //use pick on options and result
 
-workSchema.statics.createNew = async (body) =>{
+workSchema.statics.createNew = async function(body,Type,Category){
+    const Work = this
     
     try{
         const options = body.options
         const results = body.result
         const workBody = pick(body,['title','type','category'])
+        workBody.type = await Type.findById(workBody.type)
+        workBody.category = await Category.findById(workBody.category)
 
         const work = new Work(workBody)
 
@@ -58,14 +91,14 @@ workSchema.statics.createNew = async (body) =>{
         work.result = result
 
         await work.save()
-        return Promise.resolve({status:true,message:'Work Created Successfully'})
+        return Promise.resolve(work)
     }
     catch(e){
         return Promise.reject(e)
     }
 }
 
-workSchema.statics.workEdit = async (body) =>{
+workSchema.statics.workEdit = async function(body,Type,Category){
     const options = body.options    //pick
     const results = body.result     //pick
     const workBody = pick(body,['title','type','category','_id'])
@@ -73,8 +106,30 @@ workSchema.statics.workEdit = async (body) =>{
     try{
         await Option.updateOne({_id:options._id},{...options})
         await Result.updateOne({_id:results._id},{$set:{...results}})
-        const work = await Work.findOneAndUpdate({_id:workBody._id},{$set:{...workBody}},{new:true}).populate('type','title').populate('category','title')
+        const work = await Work.findById(workBody._id)
+        work.title = workBody.title
 
+        if(work.type._id.toString() !== workBody.type){
+            const type = await Type.findById(workBody.type)
+            if(type){
+                work.type = type
+            }
+            else{
+                return Promise.reject({status:false,message:'Type not found',statusCode:403})
+            }
+        }
+
+        if(work.category._id.toString() !== workBody.category){
+            const category = await Category.findById(workBody.category)
+            if(category){
+                work.category = category
+            }
+            else{
+                return Promise.reject({status:false,message:'Category not found',statusCode:403})
+            }
+        }
+
+        await work.save()
         return Promise.resolve(work)
     }
     catch(e){
@@ -85,7 +140,7 @@ workSchema.statics.workEdit = async (body) =>{
 workSchema.statics.all = async (query,user) =>{
     try{
         if(!user){
-            const works = await Work.find({}).limit(10) //remove once client frontend is updated
+            const works = await Work.find({}) //remove once client frontend is updated
             return Promise.resolve({works})
         }
         else if(query.filter.q!=undefined){
@@ -93,7 +148,7 @@ workSchema.statics.all = async (query,user) =>{
             query.sort = JSON.parse(query.sort)
             query.range = JSON.parse(query.range)
             
-            const works = await Work.find({title:{$regex:query.filter.q}}).populate('type','title').populate('category','title').skip(query.range[0]).limit(query.range[1]+1-query.range[0])
+            const works = await Work.find({title:{$regex:query.filter.q}}).skip(query.range[0]).limit(query.range[1]+1-query.range[0])
             const count = await Work.countDocuments({title:{$regex:query.filter.q}})
             return Promise.resolve({works,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
         }
@@ -102,7 +157,7 @@ workSchema.statics.all = async (query,user) =>{
             query.sort = JSON.parse(query.sort)
             query.range = JSON.parse(query.range)
 
-            const works = await Work.find().populate('type','title').populate('category','title').skip(query.range[0]).limit(query.range[1]+1-query.range[0])
+            const works = await Work.find().skip(query.range[0]).limit(query.range[1]+1-query.range[0])
             const count = await Work.countDocuments()
             return Promise.resolve({works,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
         }

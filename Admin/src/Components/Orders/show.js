@@ -406,6 +406,16 @@ const PostShowActions = (props) => {
     }
 };
 
+const ValueField = (props) =>{
+    console.log(props)
+    if(props.record.tierType){
+        return props.record.label||null
+    }
+    else{
+        return props.record.value
+    }
+}
+
 const OrderShow = (props) => { 
     const {record} = useShowController(props)
     useDispatch()(setOrder(record))
@@ -440,7 +450,7 @@ const OrderShow = (props) => {
             <ArrayField source="values.variables" label='Values'>
                 <Datagrid>
                     <TextField source='title' label='Title' />
-                    <TextField source='value' label='Price' />
+                    <ValueField source='value' label='Value' />
                     <TextField source='unit' label='Unit' />
                 </Datagrid>
             </ArrayField>

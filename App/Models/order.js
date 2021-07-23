@@ -45,6 +45,12 @@ const orderSchema = new Schema({
           },
           unit:{
               type:String
+          },
+          tierType:{
+              type:Boolean
+          },
+          label:{
+              type:String
           }
         }]
     },
@@ -444,6 +450,16 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue,user){
                 orderFinal.values.variables[index] = {title:ele.title},
                 orderFinal.values.variables[index].unit = ele.unit
                 orderFinal.values.variables[index].value = resultValue.values[index]
+                if(ele.tierType){
+                    orderFinal.values.variables[index].tierType = true
+                    const value = ele.values.find((elem)=>{
+                        return elem.value === resultValue.values[index]
+                    })
+                    orderFinal.values.variables[index].label = value.label
+                }
+                else{
+                    orderFinal.values.variables[index].tierType = false
+                }
             })
 
             /* since only one work is present */

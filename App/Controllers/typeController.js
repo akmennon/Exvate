@@ -1,8 +1,9 @@
 const Type = require('../Models/type')
-
+const Work = require('../Models/work/work')
+const errorHandler = require('../Resolvers/errorHandler')
 /* Creates a Type */
 
-module.exports.create = (req,res) =>{
+module.exports.create = (req,res,next) =>{
     const user = req.user
     const body = req.body
     
@@ -11,13 +12,13 @@ module.exports.create = (req,res) =>{
             res.json(type)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
 /* Show all types */
 
-module.exports.all = (req,res) =>{
+module.exports.all = (req,res,next) =>{
     console.log(req.query)
     let query
     if(req.query.filter){
@@ -27,7 +28,7 @@ module.exports.all = (req,res) =>{
         query.range = JSON.parse(query.range)
     }
     
-    Type.find()
+    Type.find() //unreliable - kept so that category type selection would work - should be changed
         .then(async function(types){
             if(query){
                 const count = await Type.estimatedDocumentCount()
@@ -42,11 +43,11 @@ module.exports.all = (req,res) =>{
             res.json(typesAll.types)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
-module.exports.details = (req,res) =>{
+module.exports.details = (req,res,next) =>{
     const id = req.params.id
     
     Type.findById(id)
@@ -54,22 +55,22 @@ module.exports.details = (req,res) =>{
             res.json(types)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
 /* Edit type */
 
-module.exports.edit = (req,res) =>{
+module.exports.edit = (req,res,next) =>{
     const user = req.user
     const body = req.body
     const id = req.params.id
 
-    Type.editType(id,body.title,body.hscode,user._id)
+    Type.editType(id,body.title,body.hscode,user._id,Work)
         .then(function(type){
             res.json(type)
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }

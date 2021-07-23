@@ -34,6 +34,10 @@ const SelectorInput = React.memo((props) =>{
             }
         })
         .then((response)=>{
+            response.data.forEach((catEle)=>{
+                catEle.title = catEle.title + ' - ' + catEle.hscode
+                return catEle
+            })
             setData(response.data)
         })
     },[res])

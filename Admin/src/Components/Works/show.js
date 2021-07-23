@@ -37,7 +37,6 @@ const Array = (props) =>{
             <ArrayField {...props} source="options.options">
                 <Datagrid rowClick={(e)=>{const val = JSON.parse(e);props.history.push(`/works/${val.workId}/show`)}}>
                     <TextField source='workTitle' label='Work Title'/>
-                    <TextField source='hidden' label='Hidden'/>
                 </Datagrid>
             </ArrayField>
         )

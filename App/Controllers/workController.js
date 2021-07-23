@@ -1,12 +1,14 @@
 const Work = require('../Models/work/work')
 const errorHandler = require('../Resolvers/errorHandler')
+const Type = require('../Models/type')
+const Category = require('../Models/category')
 
 /* Function to create a new Work */
 
 module.exports.create = (req,res,next) =>{
     const body = req.body
     
-    Work.createNew(body)
+    Work.createNew(body,Type,Category)
         .then(function(work){
             res.json(work)
         })
@@ -36,7 +38,7 @@ module.exports.all = (req,res,next) =>{
 
 module.exports.detail = (req,res,next) =>{
     const id = req.params.id
-    Work.findById(id).populate('options').populate({path:'category',select:'title'}).populate({path:'type',select:'title'}).populate('result')
+    Work.findById(id).populate('options').populate('result')
         .then(function(work){
             res.json(work)
         })
@@ -58,7 +60,7 @@ module.exports.searchAll = (req,res,next) =>{ //Highly unoptimized /Not a search
 
 module.exports.workEdit = (req,res,next) =>{
 
-    Work.workEdit(req.body)
+    Work.workEdit(req.body,Type,Category)
         .then((response)=>{
             res.json(response)
         })
