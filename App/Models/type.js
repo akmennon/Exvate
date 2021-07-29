@@ -51,7 +51,7 @@ typeSchema.statics.createType = async function(user,title,hscode){
 
 /* function to edit type */
 
-typeSchema.statics.editType = async function(id,title,hscode,user,Work){
+typeSchema.statics.editType = async function(id,title,hscode,user,Work,Category){
     const Type = this
 
     try{
@@ -59,7 +59,8 @@ typeSchema.statics.editType = async function(id,title,hscode,user,Work){
         if(!type){
             return Promise.reject({status:false,message:'Type not found',statusCode:404})
         }
-        await Work.updateMany({'type._id':id},{'type.title':title,'type.hscode':hscode})
+        await Category.updateMany({'type._id':id},{'type._id':id,'type.title':title,'type.hscode':hscode})
+        await Work.updateMany({'type._id':id},{'type._id':id,'type.title':title,'type.hscode':hscode})
         return Promise.resolve(type)
     }
     catch(e){

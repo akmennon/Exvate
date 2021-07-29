@@ -4,7 +4,7 @@ const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
-const generator = require('generate-password')
+// const generator = require('generate-password') - only for admin user creation
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
@@ -708,15 +708,23 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
     const User = this
 
     const reqParams = pick(body,['workId','options'])
-    console.log(reqParams)
     
     try{
         let user
+
         if(reqUser.isAdmin.value){
             user = await User.findById(id)
         }
         else{
             user = reqUser
+        }
+
+        if(user.isAdmin.value){
+            return Promise.reject({status:false,message:'The User is an admin',statusCode:403})
+        }
+
+        if(user.perms.user.suspended.value||user.perms.user.banned.value){
+            return Promise.reject({status:false,message:'The User is suspended or banned',statusCode:403})
         }
 
         const workIndex = user.work.workDetails.findIndex((element)=>{
@@ -1090,8 +1098,8 @@ userSchema.statics.suspend = async function (userId,body,admin){
         user.tokens = []
         if(body.action==='suspend'){
             if(body.target=='user'){
-                if(user.perms.user.suspended.value){
-                    return Promise.reject({status:false,message:'Already under suspension',statusCode:403})
+                if(user.perms.user.suspended.value||user.perms.user.banned.value){
+                    return Promise.reject({status:false,message:'Already under suspension/ban',statusCode:403})
                 }
                 user.perms.user.suspended = {...user.perms.user.suspended,value:true,duration:body.duration}
                 user.perms.user.suspended.details.push({doneBy:admin._id,reason:body.reason})
@@ -1103,8 +1111,8 @@ userSchema.statics.suspend = async function (userId,body,admin){
                 if(!user.supplier){
                     return Promise.reject({status:false,message:'Invalid action on user type',statusCode:400})
                 }
-                if(user.perms.supplier.suspended.value){
-                    return Promise.reject({status:false,message:'Already under suspension',statusCode:403})
+                if(user.perms.supplier.suspended.value||user.perms.supplier.banned.value){
+                    return Promise.reject({status:false,message:'Already under suspension/ban',statusCode:403})
                 }
                 user.perms.supplier.suspended = {...user.perms.supplier.suspended,value:true,duration:body.duration}
                 user.perms.supplier.suspended.details.push({doneBy:admin._id,reason:body.reason})
@@ -1161,6 +1169,65 @@ userSchema.statics.suspend = async function (userId,body,admin){
     catch(e){
         console.log(e)
         return Promise.reject(e)
+    }
+}
+
+userSchema.statics.suspendCancel = async function(userId,body,admin){
+    const User = this
+
+    try{
+        if(body.userType=='user'){
+            await User.updateOne({_id:userId},[
+                {
+                    $set:{
+                        'perms.user.suspended.details':{
+                            $concatArrays:[
+                                '$perms.user.suspended.details',
+                                {$cond:[{'$perms.user.suspended.value':true},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
+                            ]
+                        },
+                        'perms.user.banned.details':{
+                            $concatArrays:[
+                                '$perms.user.banned.details',
+                                {$cond:[{'$perms.user.banned.value':true},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
+                            ]
+                        },
+                        'perms.user.suspended.value':false,
+                        'perms.user.banned.value':false
+                    },
+                    $unset:'perms.user.suspended.duration'
+                }
+            ])
+        }
+        else if(body.userType=='supplier'){
+            await User.updateOne({_id:userId},[
+                {
+                    $set:{
+                        'perms.supplier.suspended.details':{
+                            $concatArrays:[
+                                '$perms.supplier.suspended.details',
+                                {$cond:[{'$perms.supplier.suspended.value':true},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
+                            ]
+                        },
+                        'perms.supplier.banned.details':{
+                            $concatArrays:[
+                                '$perms.supplier.banned.details',
+                                {$cond:[{'$perms.supplier.banned.value':true},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
+                            ]
+                        },
+                        'perms.supplier.suspended.value':false,
+                        'perms.supplier.banned.value':false
+                    },
+                    $unset:'perms.supplier.suspended.duration'
+                }
+            ])
+        }
+        else{
+            return Promise.reject({status:false,message:'Invalid attempt',statusCode:403})
+        }
+    }
+    catch(e){
+        return Promise.resolve(e)
     }
 }
 

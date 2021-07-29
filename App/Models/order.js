@@ -2,23 +2,62 @@ const mongoose = require('mongoose')
 const Result = require('./work/resultSubdoc')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
-const Option = require('./work/optionSubdoc.js')
+const Validator = require('validator')
 
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
+const Work = require('./work/work')
 
 const Schema = mongoose.Schema
 
 const orderSchema = new Schema({
     workId:{                                
-        type:Schema.Types.ObjectId,
-        required:true,
-        ref:'Work'
+        _id:{
+            type:Schema.Types.ObjectId,
+            required:true,
+            ref:'Work'
+        },
+        title:{
+            type:String,
+            maxlength:40,
+            minlength:2,
+            required:true
+        }
     },
     userId:{
-        type:Schema.Types.ObjectId,
-        required:true,
-        ref:'User'
+        _id:{
+            type:Schema.Types.ObjectId,
+            required:true,
+            ref:'User'
+        },
+        name:{
+            type:String,
+            required:true,
+            maxlength:30,
+            minlength:3
+        },
+        email:{
+            email:{
+                type:String,
+                required:true,
+                validate:{
+                    validator:function(value){
+                        return Validator.isEmail(value)
+                    },
+                    message:function(){
+                        return 'Invalid Email'
+                    }
+                }
+            },
+            confirmed:{
+                token:{             //Token for email confirmation
+                    type:String
+                },
+                value:{             //The value to verify that the email has been confimed
+                    type:Boolean
+                }
+            }
+        }
     },
     values:{
         price:{
@@ -380,8 +419,52 @@ const orderSchema = new Schema({
         }]
     },
     result:{
-        type:Schema.Types.ObjectId,
-        ref:'Result'
+        _id:{
+            type:Schema.Types.ObjectId,
+            ref:'Result',
+            required:true
+        },
+        values:[{
+            type:Number
+        }],
+        time:{
+            values:[{
+                type:Number
+            }],
+            calc:[{
+                method:{
+                    type:String
+                },
+                keys:[{type:Number}],
+                calcValues:[{type:Number}]  
+            }]
+        },
+        calc:[
+            {
+                method:{
+                    type:String
+                },
+                keys:[{type:Number}],
+                calcValues:[{type:Number}]
+            }
+        ],
+        sampleValues:{
+            available:{
+                type:Boolean
+            },
+            price:{
+                type:Number
+            },
+            time:{
+                type:Number
+            },
+            amount:{
+                type:Number
+            },
+            required:{
+                type:Boolean
+            }
+        }
     },
     verified:{
         value:{
@@ -411,13 +494,21 @@ const orderSchema = new Schema({
 })
 
 /* creates one or multiple orders */
-orderSchema.statics.createOrder = async function(orderValues,resultValue,user){
+orderSchema.statics.createOrder = async function(orderValues,user){
     const Order = this
 
     try{
-        const option = await Option.findOne({workId:orderValues[0].order.workId,userId:{$exists:false}}).lean()
+        const work = await Work.findById(orderValues[0].order.workId).lean()
+        const resultValue = work.result
+        resultValue.workId = work._id
+        const option = work.options
+
         const allOrders = []
-        await Promise.all(orderValues.map(async (orderValue)=>{
+
+        if(orderValues.length>3){
+            return Promise.reject({status:false,message:'Cannot place above 3 orders',statusCode:403})
+        }
+        await Promise.all(orderValues.map(async (orderValue)=>{ //make this into a bulkWrite
 
             let orderFinal,output
     
@@ -425,7 +516,7 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue,user){
                 and the values are saved to the db result
             */
 
-            if(resultValue.workId.toString() == orderValue.result.workId){
+            if(work._id.toString() == orderValue.result.workId){
                 resultValue.values = orderValue.result.values
                 resultValue.time.values = orderValue.result.time.values
             }
@@ -475,6 +566,8 @@ orderSchema.statics.createOrder = async function(orderValues,resultValue,user){
 
             order.result = savedResult
             order.status = 'Pending'
+            order.userId = user
+            order.workId = work
 
             /* Order is modelled with result and saved */
             const savedOrder = await order.save()
@@ -499,7 +592,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     try{
         if(user.orders.includes(id)||user.isAdmin.value){
             /* Lean should not be used */
-            let mainOrder = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'}).lean()
+            let mainOrder = await Order.findById(id).lean()
             return Promise.resolve(mainOrder)
         }
         else{
@@ -531,7 +624,7 @@ orderSchema.statics.listAll = async function(reqQuery){
         const limit = query.range[1]+1-query.range[0]
 
         /* Suborders are removed and orders are filtered by its status */
-        const order = await Order.find(filter).populate('workId','title').populate('userId','email').skip(query.range[0]).limit(limit).sort({createdAt:-1})
+        const order = await Order.find(filter).skip(query.range[0]).limit(limit).sort({createdAt:-1})
         const count = await Order.countDocuments(filter)
         return Promise.resolve({order,count,query})
     }
@@ -547,7 +640,7 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
     try{
         const verifiedValues = pick(body,['values','supplier']) //Validation required (Pick)
 
-        let order = await Order.findById(id).populate('result').populate({path:'workId',select:'title'}).populate({path:'userId',select:'name email'})
+        let order = await Order.findById(id)
 
         //Verification is invalid for drafts or failed orders
         if(order.status=='Draft'||order.status == 'Failed'){
@@ -608,7 +701,7 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
     const Order = this
 
     try{
-        const order = await Order.findById(id).populate({path:'userId',select:'email'})
+        const order = await Order.findById(id)
 
         if(order.status!='Pending'&&order.verified.value){
             return Promise.reject({status:false,message:'Not applicable for the order',statusCode:403})
@@ -686,12 +779,12 @@ orderSchema.statics.userAll = async function(id,user){
 
     try{
         if(user.isAdmin.value){
-            const orders = await Order.find({userId:id}).populate({path:'workId',select:'title'}).limit(20) //proper pagination required
+            const orders = await Order.find({'userId._id':id}).limit(20) //proper pagination required
             console.log(orders)
             return Promise.resolve(orders)
         }
         else{
-            const orders = await Order.find({userId:user.id}).limit(20)
+            const orders = await Order.find({'userId._id':user.id}).limit(20)
             console.log(orders)
             return Promise.resolve(orders)
         }

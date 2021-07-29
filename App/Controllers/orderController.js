@@ -1,5 +1,4 @@
 const Order = require('../Models/order')
-const Result = require('../Models/work/resultSubdoc')
 const errorHandler = require('../Resolvers/errorHandler')
 const User = require('../Models/user')
 
@@ -8,10 +7,7 @@ module.exports.create = async (req,res,next) =>{//use pick, Pending - different 
     const body = req.body
     const user = req.user
     
-    Result.findById(body.resultId).lean()//ResultId sent seperately from the frontend
-        .then((result)=>{
-            return Order.createOrder(body.orderData,result,user) //UNRELIABLE - Use pick here
-        })
+    Order.createOrder(body.orderData,user) //UNRELIABLE - Use pick here
         .then((result)=>{
             res.json(result)
         })

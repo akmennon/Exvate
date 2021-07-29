@@ -38,7 +38,7 @@ module.exports.all = (req,res,next) =>{
 
 module.exports.detail = (req,res,next) =>{
     const id = req.params.id
-    Work.findById(id).populate('options').populate('result')
+    Work.findById(id)
         .then(function(work){
             res.json(work)
         })

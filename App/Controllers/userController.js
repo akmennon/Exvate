@@ -314,7 +314,7 @@ module.exports.details = (req,res,next) =>{
         })
 }
 
-/* ADMIN - UNRELIABLE - CONFIRM USAGE - move to orders */
+/* ADMIN - UNRELIABLE */
 module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
 
@@ -322,7 +322,7 @@ module.exports.workOrders = (req,res,next) =>{
         res.status(401).send('Unauthorized')
     }
     else{
-        Order.find({'host.assigned.0':id}).populate({path:'workId',select:'title'}).sort({_id:-1}) //change to supplier - when changing orders
+        Order.find({'supplier.assigned.0':id}).sort({_id:-1}).lean()
             .then((orders)=>{
                 res.json(orders)
             })
@@ -364,6 +364,20 @@ module.exports.suspend = (req,res,next) =>{
     const body = req.body
 
     User.suspend(userId,body,admin)
+        .then((resp)=>{
+            res.json(resp)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.suspendCancel = (req,res,next) =>{
+    const admin = req.user
+    const userId = req.params.id
+    const body = req.body
+
+    User.suspendCancel(userId,body,admin)
         .then((resp)=>{
             res.json(resp)
         })

@@ -53,12 +53,119 @@ const workSchema = new Schema({
         }
     },
     options:{
-        type:Schema.Types.ObjectId,
-        ref:'Option'
+        _id:{
+            type:Schema.Types.ObjectId,
+            ref:'Option',
+            required:true
+        },
+        params:[{
+            optionType:{
+                type:String
+            },
+            tierType:{
+                type:Boolean,
+                default:false
+            },
+            unit:{
+                type:String
+            },
+            values:[{
+                min:{
+                    type:Number
+                },
+                max:{
+                    type:Number
+                },
+                value:{
+                    type:Number
+                },
+                label:{
+                    type:String
+                },
+                desc:{
+                    type:String
+                },
+                time:{
+                    type:Number
+                },
+                initial:{
+                    type:Boolean
+                },
+                amount:{
+                    type:Boolean
+                }
+            }],
+            title:{
+                type:String
+            },
+            desc:{
+                type:String
+            },
+            checkbox:{
+                value:{
+                    type:Boolean
+                },
+                trueValue:{
+                    value:{
+                        type:Number
+                    }
+                },
+                title:{
+                    type:String
+                },
+                desc:{
+                    type:String
+                }
+            }
+        }]
     },
     result:{
-        type:Schema.Types.ObjectId,
-        ref:'Result'
+        _id:{
+            type:Schema.Types.ObjectId,
+            ref:'Result',
+            required:true
+        },
+        values:[{
+            type:Number
+        }],
+        time:{
+            values:[{
+                type:Number
+            }],
+            calc:[{
+                method:{
+                    type:String
+                },
+                keys:[{type:Number}],
+                calcValues:[{type:Number}]  
+            }]
+        },
+        calc:[
+            {
+                method:{
+                    type:String
+                },
+                keys:[{type:Number}],
+                calcValues:[{type:Number}]
+            }
+        ],
+        sampleValues:{
+            available:{
+                type:Boolean
+            },
+            price:{
+                type:Number
+            },
+            time:{
+                type:Number
+            },
+            amount:{
+                type:Number
+            },
+            required:{
+                type:Boolean
+            }
+        }
     }
 })
 
@@ -104,10 +211,17 @@ workSchema.statics.workEdit = async function(body,Type,Category){
     const workBody = pick(body,['title','type','category','_id'])
 
     try{
-        await Option.updateOne({_id:options._id},{...options})
-        await Result.updateOne({_id:results._id},{$set:{...results}})
+        const savedOption = await Option.findOneAndUpdate({_id:options._id},{$set:{...options}},{runValidators:true,new:true})
+        const savedResult = await Result.findOneAndUpdate({_id:results._id},{$set:{...results}},{new:true,runValidators:true})
+
+        if(!savedOption||!savedResult){
+            return Promise.reject({status:false,message:'Category not found',statusCode:403})
+        }
+        
         const work = await Work.findById(workBody._id)
         work.title = workBody.title
+        work.option = savedOption
+        work.result = savedResult
 
         if(work.type._id.toString() !== workBody.type){
             const type = await Type.findById(workBody.type)

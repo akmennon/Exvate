@@ -1,5 +1,6 @@
 const Type = require('../Models/type')
 const Work = require('../Models/work/work')
+const Category = require('../Models/category')
 const errorHandler = require('../Resolvers/errorHandler')
 /* Creates a Type */
 
@@ -66,7 +67,7 @@ module.exports.edit = (req,res,next) =>{
     const body = req.body
     const id = req.params.id
 
-    Type.editType(id,body.title,body.hscode,user._id,Work)
+    Type.editType(id,body.title,body.hscode,user._id,Work,Category)
         .then(function(type){
             res.json(type)
         })
