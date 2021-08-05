@@ -72,9 +72,14 @@ const useStyles = makeStyles(theme=>({
 )
 
 const handleClick = (type,params,id,modOpen) =>{
+    const token = sessionStorage.getItem('token')
     switch(type){
         case 'suspend':
-            axios.post(`/users/${id}/suspend`,params)
+            axios.post(`/users/${id}/suspend`,params,{
+                headers:{
+                    'x-admin':token
+                }
+            })
             .then((res)=>{
                 console.log(res)
                 modOpen(p=>({...p,open:false}))
@@ -84,7 +89,6 @@ const handleClick = (type,params,id,modOpen) =>{
             })
         break;
         case 'verify':
-            const token = sessionStorage.getItem('token')
             axios.post(`/users/${id}/verifySupplier`,params,{
                 headers:{
                     'x-admin':token
@@ -98,6 +102,21 @@ const handleClick = (type,params,id,modOpen) =>{
                 console.log(err)
             })
         break;
+        case 'suspendCancel':
+            axios.post(`/users/${id}/suspendCancel`,params,{
+                headers:{
+                    'x-admin':token
+                }
+            })
+            .then((res)=>{
+                console.log(res)
+                modOpen(p=>({...p,open:false}))
+            })
+            .catch((err)=>{
+                console.log(err)
+                modOpen(p=>({...p,open:false}))
+            })
+        break;
         default:
         console.log('error handling click')
     }
@@ -107,6 +126,7 @@ const ModalBody = (props) =>{
     const classes = useStyles()
     const [data,setData] = useState({workCount:props.data.perms.supplier.multipleWorks.workCount||1,verified:props.data.perms.supplier.verified||false})
     const [suspend,setSuspend] = useState({action:'suspend',duration:Date.now(),target:'user',reason:'',email:'',password:''})
+    const [suspendCancel,setSuspendCancel] = useState({target:'supplier',email:'',password:''})
 
     if(props.mod.type === 'multiOrder'){
         console.log(data)
@@ -231,6 +251,45 @@ const ModalBody = (props) =>{
             </div>
         )
     }
+    else if(props.mod.type === 'suspendCancel'){
+        return (
+            <div className={classes.suspendContainer}>
+                <div className={classes.verifySelect}>
+                    <Typography>Target :</Typography>
+                    <div className={classes.select}>
+                        <Select
+                        value={suspendCancel.target}
+                        onChange={(e)=>{setSuspendCancel(p=>({...p,target:e.target.value}))}}
+                        variant="outlined"
+                        >
+                            {props.data.supplier?<MenuItem value={'supplier'}>Supplier</MenuItem>:<span/>}
+                            <MenuItem value={'user'}>User</MenuItem>
+                        </Select>
+                    </div>
+                </div>
+                <div>
+                    <Typography id="auth-modal-title">Authentication</Typography>
+                    <TextField1
+                        label="email"
+                        type="email"
+                        variant='outlined'
+                        onChange={(e)=>{setSuspendCancel(cred=>({...cred,email:e.target.value}))}}
+                        value={suspendCancel.email}
+                    />
+                    <TextField1
+                        label="password"
+                        type="password"
+                        variant='outlined'
+                        onChange={(e)=>{setSuspendCancel(cred=>({...cred,password:e.target.value}))}}
+                        value={suspendCancel.password}
+                    />
+                </div>
+                <div className={classes.verifySelectButton}>
+                    <Button variant="contained" color="primary" onClick={()=>handleClick('suspendCancel',suspendCancel,props.match.params.id,props.modOpen)}>Confirm</Button>
+                </div>
+            </div>
+        )
+    }
 }
 
 const AdminModalBody = (props) =>{
@@ -317,6 +376,9 @@ const UserShowActions = (props) => {
                     <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/createOrder`)}>Create Order</Button>
                     <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'multiOrder',open:true}))}>Verify Supplier</Button>
                     <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspend',open:true}))}>Suspend/Ban</Button>
+                    {
+                        props.data.perms.user.suspended.value||props.data.perms.user.banned.value||props.data.perms.supplier.suspended.value||props.data.perms.supplier.banned.value?<Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspendCancel',open:true}))}>Suspend Cancel</Button>:<span/>
+                    }
                 </div>
                 <EditButton {...props} />
             </TopToolbar>
@@ -330,7 +392,7 @@ const UserShowActions = (props) => {
 const AdminField = ({ source, record }) =>{
     if(!record.isAdmin||!record.isAdmin.value){
         return (
-            <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
                 <span style={{'fontSize':12,opacity:0.6}}>isAdmin</span>
                 <Clear/>
             </div>
@@ -338,9 +400,47 @@ const AdminField = ({ source, record }) =>{
     }
     else{
         return (
-            <div style={{display:'flex',justifyContent:'center',flexDirection:'column'}}>
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
                 <span style={{'fontSize':12,opacity:0.6}}>isAdmin</span>
                 <Check/>
+            </div>
+        )
+    }
+}
+
+const SuspensionBoolean = (props) =>{
+    if(props.record.perms.user.suspended.value||props.record.perms.user.banned.value){
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
+                <span style={{'fontSize':12,opacity:0.6}}>Suspended/Banned</span>
+                <Check/>
+            </div>
+        )
+    }
+    else{
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
+                <span style={{'fontSize':12,opacity:0.6}}>Suspended/Banned</span>
+                <Clear/>
+            </div>
+        )
+    }
+}
+
+const SupplierSuspended = (props) =>{
+    if(props.record.perms.supplier.suspended.value||props.record.perms.supplier.banned.value){
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
+                <span style={{'fontSize':12,opacity:0.6}}>Supplier suspended</span>
+                <Check/>
+            </div>
+        )
+    }
+    else{
+        return (
+            <div style={{display:'flex',justifyContent:'center',flexDirection:'column',marginBottom:6}}>
+                <span style={{'fontSize':12,opacity:0.6}}>Supplier suspended</span>
+                <Clear/>
             </div>
         )
     }
@@ -357,6 +457,8 @@ const UserShow = (props) => {
             <BooleanField source='email.confirmed.value' label='Email Verified' emptyText="false"/>
             <TextField source='supplier' label='Supplier' />
             <AdminField source='isAdmin.value' label='Admin' />
+            <SuspensionBoolean/>
+            <SupplierSuspended/>
         </SimpleShowLayout>
     </Show>
 )};

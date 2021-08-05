@@ -12,6 +12,16 @@ const MobileField = ({ source, record=[] }) =>{
     }
 }
 
+const SuspensionBoolean = (props) =>{
+    if(props.record.perms.user.suspended.value||props.record.perms.user.banned.value){
+        props.record.suspended = true
+    }
+    else{
+        props.record.suspended = false
+    }
+    return <BooleanField {...props} source='suspended'/>
+}
+
 const usersList = props => (
    <List {...props} filters={<UserFilter />}>
        <Datagrid rowClick="show">
@@ -20,6 +30,7 @@ const usersList = props => (
            <MobileField source="mobile" label="Mobile"/>
            <BooleanField source="supplier" label="Supplier" />
            <TextField source="userType" label="Type" />
+           <SuspensionBoolean label='Suspended'/>
            <EditButton/>
        </Datagrid>
    </List>

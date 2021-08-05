@@ -1176,58 +1176,69 @@ userSchema.statics.suspendCancel = async function(userId,body,admin){
     const User = this
 
     try{
-        if(body.userType=='user'){
-            await User.updateOne({_id:userId},[
+        let result
+        if(body.target=='user'){
+            result = await User.updateOne({_id:userId},[
                 {
                     $set:{
                         'perms.user.suspended.details':{
                             $concatArrays:[
                                 '$perms.user.suspended.details',
-                                {$cond:[{'$perms.user.suspended.value':true},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
+                                {$cond:[{$eq:['$perms.user.suspended.value',true]},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
                             ]
                         },
                         'perms.user.banned.details':{
                             $concatArrays:[
                                 '$perms.user.banned.details',
-                                {$cond:[{'$perms.user.banned.value':true},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
+                                {$cond:[{$eq:['$perms.user.banned.value',true]},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
                             ]
                         },
                         'perms.user.suspended.value':false,
                         'perms.user.banned.value':false
-                    },
-                    $unset:'perms.user.suspended.duration'
+                    }
+                },
+                {
+                    $unset:['perms.user.suspended.duration']
                 }
             ])
         }
-        else if(body.userType=='supplier'){
-            await User.updateOne({_id:userId},[
+        else if(body.target=='supplier'){
+            result = await User.updateOne({_id:userId},[
                 {
                     $set:{
                         'perms.supplier.suspended.details':{
                             $concatArrays:[
                                 '$perms.supplier.suspended.details',
-                                {$cond:[{'$perms.supplier.suspended.value':true},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
+                                {$cond:[{$eq:['$perms.supplier.suspended.value',true]},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
                             ]
                         },
                         'perms.supplier.banned.details':{
                             $concatArrays:[
                                 '$perms.supplier.banned.details',
-                                {$cond:[{'$perms.supplier.banned.value':true},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
+                                {$cond:[{$eq:['$perms.supplier.banned.value',true]},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
                             ]
                         },
                         'perms.supplier.suspended.value':false,
                         'perms.supplier.banned.value':false
-                    },
-                    $unset:'perms.supplier.suspended.duration'
+                    }
+                },{
+                    $unset:['perms.supplier.suspended.duration']
                 }
             ])
         }
         else{
             return Promise.reject({status:false,message:'Invalid attempt',statusCode:403})
         }
+
+        if(result.nModified){
+            return Promise.resolve({status:true,message:'User updated successfully'})
+        }
+        else{
+            return Promise.reject({status:false,message:'Error updating suspension',statusCode:403})
+        }
     }
     catch(e){
-        return Promise.resolve(e)
+        return Promise.reject(e)
     }
 }
 
