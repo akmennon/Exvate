@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,Fragment } from "react";
 import { Show, SimpleShowLayout, TextField, DateField, Datagrid, ArrayField, EditButton, TopToolbar, useShowController } from 'react-admin';
 import Button from '@material-ui/core/Button';
 import { makeStyles } from '@material-ui/core/styles'
@@ -8,7 +8,6 @@ import Fade from '@material-ui/core/Fade';
 import TextField1 from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography'
 import axios from '../../config/Axios'
-import { Fragment } from "react";
 import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
 import { useDispatch } from "react-redux";
@@ -59,8 +58,9 @@ const PostShowActions = (props) => {
     const [open,setOpen] = useState(false)
     const [type,setType] = useState('Confirm')
     const [cred,setCred] = useState({email:'',password:''})
-    const [paymentDetails,setPaymentDetails] = useState({type:'Advance',deadline:''})
+    const [paymentDetails,setPaymentDetails] = useState({type:'LC',deadline:'',advancePercent:0})
     const [shippingDetails,setShippingDetails] = useState({shipmentType:'Cargo',consignmentId:'',incoterm:'',serviceProvider:'',statusLink:'',port:'',CHA:''})
+    const [charges,setCharges] = useState({chargeType:'Shipping',otherDetails:'',entity:'',entityName:'',price:0,contactName:'',contactNumber:'',transactionId:'',paymentDate:'',paymentMethod:''})
     const token = sessionStorage.getItem('token')
 
     const handleClick = (orderId='',type,email='',pass='',props={},payment) =>{
@@ -173,6 +173,26 @@ const PostShowActions = (props) => {
                     console.log(e)
                 })
             break;
+            case 'charges':
+                let newcharges = {}
+                for (let x in charges) {
+                    if(charges[x] !== ''){
+                        newcharges[x] = charges[x]
+                    }
+                }
+                axios.post(`/orders/${orderId}/addCharges`,{email,password:pass,details:newcharges},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
+                .then((response)=>{
+                    console.log(response.data)
+                    setOpen(false)
+                })
+                .catch((e)=>{
+                    console.log(e)
+                })
+            break;
             default:
                 console.log('wrong entry')
         }
@@ -208,9 +228,25 @@ const PostShowActions = (props) => {
                                                 >
                                                     <MenuItem value={"Advance"}>Advance</MenuItem>
                                                     <MenuItem value={"LC"}>LC</MenuItem>
+                                                    <MenuItem value={"Advance/LC"}>Advance/LC</MenuItem>
                                                 </Select>
                                             </div>
                                         </div>
+                                        {
+                                            paymentDetails.type==='Advance/LC'?
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>Advance Percentage :</Typography>
+                                                <TextField1
+                                                    value={paymentDetails.advancePercent}
+                                                    type='number'
+                                                    className={styles.textField}
+                                                    InputLabelProps={{
+                                                    shrink: true,
+                                                    }}
+                                                    onChange={(e)=>{const val = e.target.value;setPaymentDetails(p=>({...p,advancePercent:val}))}}
+                                                />
+                                            </div>:<span/>
+                                        }
                                         <form className={styles.container} noValidate>
                                             <Typography>Deadline :</Typography>
                                             <TextField1
@@ -318,6 +354,136 @@ const PostShowActions = (props) => {
                                             />
                                         </div>
                                     </Fragment>
+                                ):
+                                type==='charges'?(
+                                    <Fragment>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Charge Type :</Typography>
+                                            <div className={styles.select}>
+                                                <Select
+                                                value={charges.chargeType}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,chargeType:val}))}}
+                                                label="Charge"
+                                                >
+                                                    <MenuItem value={"Shipping"}>Shipping</MenuItem>
+                                                    <MenuItem value={"Inspection"}>Inspection</MenuItem>
+                                                    <MenuItem value={"Insurance"}>Insurance</MenuItem>
+                                                    <MenuItem value={"Other"}>Other</MenuItem>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        {
+                                            charges.chargeType==='Other'?(
+                                                <div className={styles.paymentSelect}>
+                                                    <Typography>Details :</Typography>
+                                                    <TextField1
+                                                        value={charges.otherDetails}
+                                                        className={styles.textField}
+                                                        InputLabelProps={{
+                                                        shrink: true,
+                                                        }}
+                                                        onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,otherDetails:val}))}}
+                                                    />
+                                                </div>
+                                            ):<span/>
+                                        }
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Entity :</Typography>
+                                            <div className={styles.select}>
+                                                <Select
+                                                value={charges.entity}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,entity:val}))}}
+                                                label="Entity"
+                                                >
+                                                    <MenuItem value={"Bank"}>Bank</MenuItem>
+                                                    <MenuItem value={"Company"}>Company</MenuItem>
+                                                    <MenuItem value={"Individual"}>Individual</MenuItem>
+                                                    <MenuItem value={"Gov"}>Gov</MenuItem>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Entity Name :</Typography>
+                                            <TextField1
+                                                value={charges.entityName}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,entityName:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Price :</Typography>
+                                            <TextField1
+                                                value={charges.serviceProvider}
+                                                className={styles.textField}
+                                                type='number'
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,price:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Contact Name :</Typography>
+                                            <TextField1
+                                                value={charges.contactName}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,contactName:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Contact Number :</Typography>
+                                            <TextField1
+                                                value={charges.contactNumber}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,contactNumber:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Transaction Id :</Typography>
+                                            <TextField1
+                                                value={charges.transactionId}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,transactionId:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Payment Date :</Typography>
+                                            <TextField1
+                                                type='date'
+                                                value={charges.paymentDate}
+                                                className={styles.textField}
+                                                InputLabelProps={{
+                                                shrink: true,
+                                                }}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,paymentDate:val}))}}
+                                            />
+                                        </div>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Payment Method :</Typography>
+                                            <div className={styles.select}>
+                                                <Select
+                                                value={charges.paymentMethod}
+                                                onChange={(e)=>{const val = e.target.value;setCharges(p=>({...p,paymentMethod:val}))}}
+                                                label="Payment Method"
+                                                >
+                                                    <MenuItem value={"Online Transfer"}>Online Transfer</MenuItem>
+                                                    <MenuItem value={"Cash Payment"}>Cash Payment</MenuItem>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                    </Fragment>
                                 ):<span/>
                             }
                             <div>
@@ -361,12 +527,18 @@ const PostShowActions = (props) => {
                             }
                             {
                                 props.record.paymentStatus.value==='Contract'&&props.record.status!=='Completed'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
-                                    <Button color="primary" variant='outlined' onClick={() => {setType('failed');setOpen(true)}}>Order Failed</Button>
+                                    <Fragment>
+                                        <Button color="primary" variant='outlined' onClick={() => {setType('failed');setOpen(true)}}>Order Failed</Button>
+                                        <Button color="primary" variant='outlined' onClick={() => {setType('charges');setOpen(true)}}>Add Charges</Button>
+                                    </Fragment>
                                 ):<span/>
                             }
                             {
                                 props.record.paymentStatus.value==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Completed'&&props.record.status!=='Finished'?(
-                                    <Button color="primary" variant='outlined' onClick={() => {setType('cancel');setOpen(true)}}>Cancel</Button>
+                                    <Fragment>
+                                        <Button color="primary" variant='outlined' onClick={() => {setType('cancel');setOpen(true)}}>Cancel</Button>
+                                        <Button color="primary" variant='outlined' onClick={() => {setType('charges');setOpen(true)}}>Add Charges</Button>
+                                    </Fragment>
                                 ):<span/>
                             }
                             {
@@ -393,6 +565,11 @@ const PostShowActions = (props) => {
                                     </Fragment>
                                 ):<span/>
                             }
+                            {
+                                props.record.paymentStatus.value==='Completed'||props.record.paymentStatus.value==='Contract'?
+                                    <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/${props.match.params.id}/charges`)}>Charges</Button>
+                                :<span/>
+                            }
                         </div>):
                         <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/suppliers/${props.record._id}`)}>Verify</Button>
                     }
@@ -418,7 +595,15 @@ const ValueField = (props) =>{
 
 const OrderShow = (props) => { 
     const {record} = useShowController(props)
-    useDispatch()(setOrder(record))
+    const dispatch = useDispatch()
+    
+    if(record){
+        dispatch(setOrder(record))
+    }
+    else{
+        props.history.replace('/orders')
+    }
+
     return (
     <Show actions={<PostShowActions {...props} record={record} />} {...props}>
         <SimpleShowLayout>
@@ -447,6 +632,16 @@ const OrderShow = (props) => {
             <TextField source='paymentStatus.supplierAmount' label='Supplier Cost'/>
             <TextField source='values.price' label='Price' />
             <TextField source='values.time' label='Time' />
+            {
+                record.pl&&record.pl.advancePercent?(
+                    <SimpleShowLayout>
+                        <TextField source='pl.currentPL' label='PL - Current' />
+                        <TextField source='pl.totalPL' label='PL - Total' />
+                        <TextField source='pl.currentPayment' label='Current Payment' />
+                        <TextField source='pl.advancePercent' label='Advance percent' />
+                    </SimpleShowLayout>
+                ):<span/>
+            }
             <ArrayField source="values.variables" label='Values'>
                 <Datagrid>
                     <TextField source='title' label='Title' />

@@ -76,6 +76,8 @@ router.post('/admin/orders/:id/refund',admin.authAdminSign,adminLevel(1),orders.
 router.post('/admin/orders/:id/samples',admin.authAdminSign,adminLevel(1),orders.samples)
 router.post('/admin/orders/supplierPayment/:id',admin.authAdminSign,adminLevel(1),orders.supplierPayment)
 router.post('/admin/orders/:id/contractFinished',admin.authAdminSign,adminLevel(1),orders.contractFinished)
+router.post('/admin/orders/:id/addCharges',admin.authAdminSign,adminLevel(1),orders.orderCharges)
+router.post('/admin/orders/:id/removeCharges',admin.authAdminToken,adminLevel(1),orders.removeCharges)
 router.get('/admin/token',users.adminToken)
 router.post('/admin/logout',users.adminLogout)
 router.get('/categories/all',categories.all)

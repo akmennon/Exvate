@@ -7,6 +7,7 @@ import UserOrders from './Users/orders'
 import CreateOrder from './Users/createOrder'
 import workOrders from './Users/workOrders'
 import updateWork from './Users/updateWork'
+import orderCharges from './Orders/orderCharges'
 
 const exportArray = [
     <Route exact path="/orders/suppliers/:id" component={Suppliers} />,
@@ -15,6 +16,7 @@ const exportArray = [
     <Route exact path="/users/:id/orders" component={UserOrders}/>,
     <Route exact path="/users/:id/createOrder" component={CreateOrder}/>,
     <Route exact path="/users/:id/updateWork/:workId" component={updateWork}/>,
-    <Route exact path="/suppliers/:id/workOrders" component={workOrders}/>
+    <Route exact path="/suppliers/:id/workOrders" component={workOrders}/>,
+    <Route exact path="/orders/:id/charges" component={orderCharges}/>
 ];
 export default exportArray

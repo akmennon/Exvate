@@ -113,12 +113,22 @@ const supplierModal = ({ reset, confirm, setParams, params, classes, props ,cred
                                 onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, type: val })) }}
                                 label="Payment"
                             >
-                                <MenuItem value={"Advance"}>Advance</MenuItem>
                                 <MenuItem value={"LC"}>LC</MenuItem>
+                                <MenuItem value={"Advance/LC"}>Advance/LC</MenuItem>
+                                <MenuItem value={"Advance"}>Advance</MenuItem>
                             </Select>
                         </div>
                     </div>
                 </Fragment>
+                {
+                    <TextField
+                        label="AdvancePercent"
+                        type="number"
+                        variant='outlined'
+                        onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, advancePercent: val })) }}
+                        value={paymentDetails.advancePercent}
+                    />
+                }
                 <Typography>Authentication</Typography>
                 <TextField
                     label="email"

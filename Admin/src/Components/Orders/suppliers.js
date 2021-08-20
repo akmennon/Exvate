@@ -181,7 +181,7 @@ function SuppliersList(props) {
     const [open, setOpen] = useState(false)
     const [order, setOrder] = useState({})
     const [cred,setCred] = useState({email:'',password:''})
-    const [paymentDetails,setPaymentDetails] = useState({type:'Advance',supplierId:'',statusPayment:''})
+    const [paymentDetails,setPaymentDetails] = useState({type:'LC',supplierId:'',statusPayment:'',advancePercent:0})
     const refresh = useRefresh()
 
     useEffect(()=>{

@@ -418,6 +418,117 @@ const orderSchema = new Schema({
             }
         }]
     },
+    pl:{
+        currentPL:{
+            type:Number
+        },
+        totalPL:{
+            type:Number
+        },
+        currentPayment:{
+            type:Number
+        },
+        advancePercent:{
+            type:Number
+        },
+        charges:[
+            {
+                chargeType:{
+                    type:String,
+                    validate:{
+                        validator:function(val){
+                            switch(val){
+                                case 'Shipping':
+                                    return true
+                                case 'Insurance':
+                                    return true
+                                case 'Inspection':
+                                    return true
+                                case 'Other':
+                                    return true
+                                default:
+                                    return false
+                            }
+                        },
+                        message:function(){
+                            return 'Invalid charge type'
+                        }
+                    }
+                },
+                otherDetails:{
+                    type:String,
+                    maxlength:40
+                },
+                entity:{
+                    type:String,
+                    validate:{
+                        validator:function(val){
+                            switch(val){
+                                case 'Bank':
+                                    return true
+                                case 'Company':
+                                    return true
+                                case 'Gov':
+                                    return true
+                                default:
+                                    return false
+                            }
+                        },
+                        message:function(){
+                            return 'Invalid entity type'
+                        }
+                    }
+                },
+                entityName:{
+                    type:String,
+                    maxlength:40
+                },
+                price:{
+                    type:Number,
+                    min:1,
+                },
+                contactName:{
+                    type:String,
+                    maxlength:40
+                },
+                contactNumber:{
+                    type:String,
+                    minlength:6,
+                    maxlength:20
+                },
+                transactionId:{
+                    type:String,
+                    maxlength:120,
+                    minlength:3
+                },
+                paymentDate:{
+                    type:Date
+                },
+                paymentMethod:{
+                    type:String,
+                    validate:{
+                        validator:function(val){
+                            switch(val){
+                                case 'Online Transfer':
+                                    return true
+                                case 'Cash Payment':
+                                    return true
+                                default:
+                                    return false
+                            }
+                        },
+                        message:function(){
+                            return 'Invalid entity type'
+                        }
+                    }  
+                },
+                createdAt:{
+                    type:Date,
+                    default:Date.now
+                }
+            }
+        ]
+    },
     result:{
         _id:{
             type:Schema.Types.ObjectId,
@@ -722,10 +833,36 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
         const deadline = new Date(details.deadline)
 
         if(details.type=='LC'){
-            await Order.updateOne({_id:id},{'paymentStatus.value':'Contract',status:'Active',deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
+            const pl = {
+                currentPL:0,
+                currentPayment:0,
+                totalPL:order.values.price
+            }
+
+            await Order.updateOne({_id:id},{'paymentStatus.value':'Contract',status:'Active',pl,deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
+        }
+        else if (details.type=='Advance'){
+            const pl = {
+                currentPL:0,
+                currentPayment:order.values.price,
+                totalPL:order.values.price
+            }
+
+            await Order.updateOne({_id:id},{'paymentStatus.value':'Completed',status:'Active',pl,deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
         else{
-            await Order.updateOne({_id:id},{'paymentStatus.value':'Completed',status:'Active',deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
+            if(details.advancePercent<=0||details.advancePercent>95){
+                return Promise.reject({status:false,message:'Invalid input for advance',statusCode:403})
+            }
+
+            const pl = {
+                currentPayment:(Number(details.advancePercent)*order.values.price)/100,
+                totalPL:order.values.price,
+                advancePercent:details.advancePercent
+            }
+            pl.currentPL = pl.currentPayment
+            
+            await Order.updateOne({_id:id},{'paymentStatus.value':'Contract',status:'Active',pl,deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
 
         const mailData = {
@@ -973,13 +1110,12 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
     }
 }
 
-/* LAST - check how the supplier workComplete in this messes up the orderFns */
-orderSchema.statics.contractFinished = async (id,user,User) => {
+orderSchema.statics.contractFinished = async function(id,user,User){
 
     try{
         /* Checks if supplier is payment is also by contract, if it is. It is completed as well */
         const order = await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},[{$set:{'paymentStatus.value':'Finished','paymentStatus.supplierPayment':{$cond:[{$eq:['Contract','$paymentStatus.supplierPayment']},'Finished','$paymentStatus.supplierPayment']},'paymentStatus.transaction':{$concatArrays:['$paymentStatus.transaction',[{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}]]}}}],{new:true})
-        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id) //Last 
+        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
         if(res.nModified==0){
             return Promise.reject({status:false,message:'Invalid update action',statusCode:403})
         }
@@ -990,6 +1126,87 @@ orderSchema.statics.contractFinished = async (id,user,User) => {
     catch(e){
         console.log(e)
         return Promise.reject({status:false,message:'Error updating',statusCode:403})
+    }
+}
+
+orderSchema.statics.orderCharges = async function(id,details){
+    const Order = this
+
+    try{
+        const order = await Order.findById(id)
+
+        order.pl.charges.push(details)
+        order.pl.currentPL = order.pl.currentPL - details.price
+        order.pl.totalPL = order.pl.totalPL - details.price
+
+        await order.save()
+        return Promise.resolve(order)
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+orderSchema.statics.removeCharges = async function(id,chargeId){
+    const Order = this
+
+    try{
+        const order = await Order.updateOne({_id:id},[    
+            {
+                $set:{
+                    'chargePrice':{
+                        $reduce:{
+                            input:'$pl.charges',
+                            initialValue:0,
+                            in:{
+                                $cond:[
+                                    {
+                                        $eq:[
+                                            '$$this._id',{
+                                                $toObjectId:chargeId
+                                            }
+                                        ]
+                                    },
+                                    '$$this.price',
+                                    '$$value'
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $set:{
+                    'pl.totalPL':{
+                        $add:['$pl.totalPL','$chargePrice']
+                    },
+                    'pl.currentPL':{
+                        $add:['$pl.currentPL','$chargePrice']
+                    },
+                    'pl.charges':{
+                        $filter:{
+                            input:'$pl.charges',
+                            as:'charge',
+                            cond:{
+                                $ne:['$$charge._id',{ $toObjectId:chargeId }]
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $unset:['chargePrice']
+            }
+        ])
+        if(order.nModified!=0){
+            return Promise.resolve({status:true,message:'Charge removed successfully',statusCode:200})
+        }
+        else{
+            return Promise.reject({status:false,message:'Unsuccessful',statusCode:400})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
     }
 }
 

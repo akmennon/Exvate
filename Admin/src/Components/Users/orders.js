@@ -71,7 +71,7 @@ const UserOrders = (props) => {
             <Title title="Orders" />
             <CardContent>
                 <div style={{height:500,width:"100%"}}>
-                    <DataGrid rows={data} columns={columns} />
+                    <DataGrid rows={data} columns={columns} isRowSelectable={false} />
                 </div>
             </CardContent>
         </Card>

@@ -204,3 +204,29 @@ module.exports.contractFinished = (req,res,next) =>{
             errorHandler(e,next)
         })
 }
+
+module.exports.orderCharges = (req,res,next) =>{
+    const id = req.params.id
+    const details = req.body.details
+
+    Order.orderCharges(id,details)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.removeCharges = (req,res,next) =>{
+    const id = req.params.id
+    const chargeId = req.body.id
+    
+    Order.removeCharges(id,chargeId)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
