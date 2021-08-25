@@ -368,12 +368,13 @@ const PostShowActions = (props) => {
                                                     <MenuItem value={"Shipping"}>Shipping</MenuItem>
                                                     <MenuItem value={"Inspection"}>Inspection</MenuItem>
                                                     <MenuItem value={"Insurance"}>Insurance</MenuItem>
+                                                    <MenuItem value={"Return"}>Return</MenuItem>
                                                     <MenuItem value={"Other"}>Other</MenuItem>
                                                 </Select>
                                             </div>
                                         </div>
                                         {
-                                            charges.chargeType==='Other'?(
+                                            charges.chargeType==='Other'||charges.chargeType==='Return'?(
                                                 <div className={styles.paymentSelect}>
                                                     <Typography>Details :</Typography>
                                                     <TextField1

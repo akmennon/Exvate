@@ -121,13 +121,60 @@ const supplierModal = ({ reset, confirm, setParams, params, classes, props ,cred
                     </div>
                 </Fragment>
                 {
-                    <TextField
-                        label="AdvancePercent"
-                        type="number"
-                        variant='outlined'
-                        onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, advancePercent: val })) }}
-                        value={paymentDetails.advancePercent}
-                    />
+                    (()=>{
+                        if(paymentDetails.type==='Advance/LC'){
+                            return (
+                                <div style={{display:'flex',flexDirection:'column',justifyContent:'center'}}>
+                                    <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                        <Typography>Advance Percent :</Typography>
+                                        <TextField
+                                            label="Advance Percent"
+                                            type="number"
+                                            variant='outlined'
+                                            style={{width:300,marginBottom:10}}
+                                            onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, advancePercent: val })) }}
+                                            value={paymentDetails.advancePercent}
+                                        />
+                                    </div >
+                                    <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                        <Typography>Transaction Id :</Typography>
+                                        <TextField
+                                            label="Transaction Id"
+                                            variant='outlined'
+                                            style={{width:300,marginBottom:10}}
+                                            onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, transactionId: val })) }}
+                                            value={paymentDetails.transactionId}
+                                        />
+                                    </div>
+                                    <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                        <Typography>Payment Date :</Typography>
+                                        <TextField
+                                            type="date"
+                                            variant='outlined'
+                                            style={{width:300,marginBottom:10}}
+                                            onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, paymentDate: val })) }}
+                                            value={paymentDetails.paymentDate}
+                                        />
+                                    </div>
+                                    <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                        <Typography>Payment Method :</Typography>
+                                        <Select
+                                            value={paymentDetails.paymentMethod}
+                                            style={{width:300,marginBottom:10}}
+                                            variant='outlined'
+                                            onChange={(e) => { const val = e.target.value; setPaymentDetails(p => ({ ...p, paymentMethod: val })) }}
+                                        >
+                                            <MenuItem value={"Online Transfer"}>Online</MenuItem>
+                                            <MenuItem value={"Cash Payment"}>Cash</MenuItem>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )
+                        }
+                        else{
+                            return null
+                        }
+                    })()
                 }
                 <Typography>Authentication</Typography>
                 <TextField

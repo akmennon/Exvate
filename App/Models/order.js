@@ -366,6 +366,9 @@ const orderSchema = new Schema({
         supplierAmount:{
             type:Number
         },
+        supplierAmountPaid:{
+            type:Number
+        },
         transaction:[{
             info:{
                 type:String,
@@ -373,6 +376,8 @@ const orderSchema = new Schema({
                     validator:function(value){
                         switch(value){
                             case 'Advance':
+                                return true
+                            case 'Advance/LC':
                                 return true
                             case 'LC':
                                 return true
@@ -415,6 +420,11 @@ const orderSchema = new Schema({
             createdBy:{
                 type:Schema.Types.ObjectId,
                 ref:'User'
+            },
+            advancePercent:{
+                type:Number,
+                min:1,
+                max:99
             }
         }]
     },
@@ -443,6 +453,10 @@ const orderSchema = new Schema({
                                 case 'Insurance':
                                     return true
                                 case 'Inspection':
+                                    return true
+                                case 'Sourcing':
+                                    return true
+                                case 'Return':
                                     return true
                                 case 'Other':
                                     return true
@@ -513,12 +527,14 @@ const orderSchema = new Schema({
                                     return true
                                 case 'Cash Payment':
                                     return true
+                                case 'LC':
+                                    return true
                                 default:
                                     return false
                             }
                         },
                         message:function(){
-                            return 'Invalid entity type'
+                            return 'Invalid payment method'
                         }
                     }  
                 },
@@ -1016,6 +1032,7 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 if(order.status=='Finished'){
                     return Promise.reject({status:false,message:'Already Finished',statusCode:403})
                 }
+                order.pl.currentPL = order.pl.totalPL
                 order.status = 'Finished'
                 order.completionVerified.push({verifiedAt:new Date(),verifiedBy:user._id})
                 User.supplierWorkComplete(order.supplier.assigned[0],order._id)
@@ -1063,6 +1080,7 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 }
                 order.status = 'Failed'
                 order.completionVerified.push({verifiedBy:user._id})
+                order.pl.totalPL = order.pl.currentPL
                 if(order.supplier.assigned[0]){
                     await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                     order.supplier.assigned = []
@@ -1087,18 +1105,78 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
     console.log(details)
 
     try{
-        const order = await Order.findById(id)
+        const order = details.type=='Advance/LC'||details.statusPayment=='Finished'? await Order.findById(id).populate('supplier.assigned') : await Order.findById(id)
+
         if(order.paymentStatus.value!=='Completed'&&order.paymentStatus.value!=='Contract'&&order.paymentStatus.value!=='Finished'){
             return Promise.reject({status:false,message:'Not available for this order',statusCode:403})
         }
 
         if(details.statusPayment!='Finished'){
-            order.paymentStatus.supplierPayment = details.type=='LC'?'Contract':'Completed'
-            order.paymentStatus.transaction.push({info:details.type,status:'Successful',paymentType:details.type,method:'Admin Created',createdBy:user._id})
+            order.paymentStatus.supplierPayment = details.type=='LC'||details.type=='Advance/LC'?'Contract':'Completed'
+            let transactionDetails;
+            if(details.type=='Advance/LC'){
+                details.advancePercent = Number(details.advancePercent)
+                if(details.advancePercent<1||details.advancePercent>99){
+                    return Promise.reject({status:false,message:'Invalid advance percentage',statusCode:403})
+                }
+
+                transactionDetails = {
+                    info:details.type,
+                    status:'Successful',
+                    paymentType:details.type,
+                    method:'Admin Created',
+                    createdBy:user._id,
+                    advancePercent:details.advancePercent
+                }
+                const paidAmount = ((details.advancePercent/100) * order.paymentStatus.supplierAmount)
+                order.paymentStatus.supplierAmountPaid = paidAmount
+                order.pl.currentPL = order.pl.currentPL - paidAmount
+                order.pl.totalPL = order.pl.totalPL - paidAmount
+                order.pl.charges.push(
+                    {
+                        chargeType:'Sourcing',
+                        entity:'Company',
+                        entityName:order.supplier.assigned[0].companyDetails.name||'Company Name', //temporary until company details are needed to be a supplier
+                        price:paidAmount,
+                        contactName:order.supplier.assigned[0].name,
+                        contactNumber:order.supplier.assigned[0].mobile,
+                        transactionId:details.transactionId,
+                        paymentDate:details.paymentDate,
+                        paymentMethod:details.paymentMethod
+                    }
+                )
+            }
+            else{
+                transactionDetails = {
+                    info:details.type,
+                    status:'Successful',
+                    paymentType:details.type,
+                    method:'Admin Created',
+                    createdBy:user._id
+                }
+            }
+            order.paymentStatus.transaction.push(transactionDetails)
             await order.save()
         }
         else{
             order.paymentStatus.supplierPayment = 'Finished'
+            
+            const paidAmount = order.paymentStatus.supplierAmountPaid ? order.paymentStatus.supplierAmount - order.paymentStatus.supplierAmountPaid : order.paymentStatus.supplierAmount
+            order.pl.currentPL = order.pl.currentPL - paidAmount
+            order.pl.totalPL = order.pl.totalPL - paidAmount
+            order.paymentStatus.supplierAmountPaid = order.paymentStatus.supplierAmount
+            order.pl.charges.push({
+                chargeType:'Sourcing',
+                entity:'Company',
+                entityName:order.supplier.assigned[0].companyDetails.name||'Company Name', //temporary until company details are needed to be a supplier
+                price:paidAmount,
+                contactName:order.supplier.assigned[0].name,
+                contactNumber:order.supplier.assigned[0].mobile,
+                transactionId:'LC Id',
+                paymentDate:Date.now(),
+                paymentMethod:'LC'
+            })
+
             order.paymentStatus.transaction.push({info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id})
             await order.save()
             await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
@@ -1135,9 +1213,24 @@ orderSchema.statics.orderCharges = async function(id,details){
     try{
         const order = await Order.findById(id)
 
-        order.pl.charges.push(details)
-        order.pl.currentPL = order.pl.currentPL - details.price
-        order.pl.totalPL = order.pl.totalPL - details.price
+        details.price = Number(details.price)
+
+        if(details.chargeType!='Return'){
+            if(details.chargeType=='Other'&&!details.otherDetails){
+                return Promise.reject({status:false,message:'Invalid request',statusCode:403})
+            }
+            order.pl.charges.push(details)
+            order.pl.currentPL = order.pl.currentPL - details.price
+            order.pl.totalPL = order.pl.totalPL - details.price
+        }
+        else{
+            if(!details.otherDetails){
+                return Promise.reject({status:false,message:'Invalid request',statusCode:403})
+            }
+            order.pl.charges.push(details)
+            order.pl.currentPL = order.pl.currentPL + details.price
+            order.pl.totalPL = order.pl.totalPL + details.price
+        }
 
         await order.save()
         return Promise.resolve(order)

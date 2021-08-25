@@ -129,6 +129,45 @@ const userSchema = new Schema({
             }
         }
     },
+    companyDetails:{
+        name:{
+            type:String,
+            minlength:3,
+            maxlength:60
+        },
+        officeAddress:{
+            building:{
+                type:String,
+                maxlength:32,
+                minlength:2
+            },
+            street:{
+                type:String,
+                maxlength:32,
+                minlength:2
+            },
+            city:{
+                type:String,
+                maxlength:30,
+                minlength:2
+            },
+            state:{
+                type:String,
+                maxlength:30,
+                minlength:2
+            },
+            country:{
+                type:String,
+                maxlength:30,
+                minlength:2
+            },
+            pin:{
+                type:String,
+                maxlength:30,
+                minlength:2
+            }
+        }
+    },
     userType:{                              // To assign the user type
         type:String,
         required:true,
