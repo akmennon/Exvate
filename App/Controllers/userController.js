@@ -399,3 +399,17 @@ module.exports.supplierVerify = (req,res,next) =>{
             errorHandler(err,next)
         })
 }
+
+module.exports.changeSampleLimit = (req,res,next) =>{
+    const admin = req.user
+    const userId = req.params.id
+    const body = req.body
+
+    User.changeSampleLimit(userId,body,admin)
+        .then((resp)=>{
+            res.json(resp)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}

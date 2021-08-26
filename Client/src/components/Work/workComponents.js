@@ -89,13 +89,13 @@ class WorkComponents extends React.Component{
         }
 
         /* created order is sent for ordering  */
-        else if(e.target.name==='order'&&this.props.user._id){
+        else if((e.target.name==='order'||e.target.name==='sample')&&this.props.user._id){
 
-            const multiOrder = this.state.multiOrder.map((ele)=>{
+            const multiOrder = e.target.name==='order'? this.state.multiOrder.map((ele)=>{
                 /* userId is saved to each element, since each is an order */
                 ele.subOrders.userId=this.props.user._id
                 return {order:ele.subOrders,result:ele.result}
-            })
+            }) : {id:this.props.work._id,orderType:'sample'}
 
             const redirect = () =>{
                 this.props.parent.history.push(`/orderPreview/${this.props.work._id}`)
@@ -216,6 +216,7 @@ class WorkComponents extends React.Component{
                 }
                 <p>{this.state.totalPrice?`Total Price - ${this.state.totalPrice}`:<span/>}</p>
                 <p>{this.state.status?`${this.state.errMessage}`:<span/>}</p>
+                <button onClick={this.handleClick} name='sample'>Request Sample</button>
                 <button onClick={this.handleClick} name='price'>Check Price</button>
                 <button onClick={this.handleClick} name='order'>Order</button>
                 <button onClick={()=>this.setState((prevState)=> {return {orders:prevState.orders+1}})} name='Add'>Add</button>

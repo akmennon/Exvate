@@ -610,6 +610,7 @@ const OrderShow = (props) => {
         <SimpleShowLayout>
             <TextField source="workId.title" label='Work'/>
             <TextField source="userId.name" label='User' />
+            <TextField source='type' label='Order Type' />
             <DateField source='createdAt' label='Ordered On' />
             {
                 (()=>{

@@ -78,6 +78,7 @@ router.post('/admin/orders/supplierPayment/:id',admin.authAdminSign,adminLevel(1
 router.post('/admin/orders/:id/contractFinished',admin.authAdminSign,adminLevel(1),orders.contractFinished)
 router.post('/admin/orders/:id/addCharges',admin.authAdminSign,adminLevel(1),orders.orderCharges)
 router.post('/admin/orders/:id/removeCharges',admin.authAdminToken,adminLevel(1),orders.removeCharges)
+router.post('/admin/users/:id/sampleLimit',admin.authAdminToken,adminLevel(1),users.changeSampleLimit)
 router.get('/admin/token',users.adminToken)
 router.post('/admin/logout',users.adminLogout)
 router.get('/categories/all',categories.all)

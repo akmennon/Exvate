@@ -117,6 +117,21 @@ const handleClick = (type,params,id,modOpen) =>{
                 modOpen(p=>({...p,open:false}))
             })
         break;
+        case 'sample':
+            axios.post(`/users/${id}/sampleLimit`,params,{
+                headers:{
+                    'x-admin':token
+                }
+            })
+            .then((res)=>{
+                console.log(res)
+                modOpen(p=>({...p,open:false}))
+            })
+            .catch((err)=>{
+                console.log(err)
+                modOpen(p=>({...p,open:false}))
+            })
+        break;
         default:
         console.log('error handling click')
     }
@@ -127,6 +142,7 @@ const ModalBody = (props) =>{
     const [data,setData] = useState({workCount:props.data.perms.supplier.multipleWorks.workCount||1,verified:props.data.perms.supplier.verified||false})
     const [suspend,setSuspend] = useState({action:'suspend',duration:Date.now(),target:'user',reason:'',email:'',password:''})
     const [suspendCancel,setSuspendCancel] = useState({target:'supplier',email:'',password:''})
+    const [sample,setSample] = useState({limit:props.data.perms.user.sample.max,clear:false})
 
     if(props.mod.type === 'multiOrder'){
         console.log(data)
@@ -290,6 +306,40 @@ const ModalBody = (props) =>{
             </div>
         )
     }
+    else if(props.mod.type === 'sample'){
+        return (
+            <div className={classes.suspendContainer}>
+                <div className={classes.verifySelect}>
+                    <Typography>Sample Limit :</Typography>
+                    <div className={classes.select}>
+                        <TextField1
+                            label="Sample Limit"
+                            type="number"
+                            variant='outlined'
+                            onChange={(e)=>{setSample(p=>({...p,limit:e.target.value}))}}
+                            value={sample.limit}
+                        />
+                    </div>
+                </div>
+                <div className={classes.verifySelect}>
+                    <Typography>Clear Sample list :</Typography>
+                    <div className={classes.select}>
+                        <Select
+                            value={sample.clear}
+                            onChange={(e)=>{setSample(p=>({...p,clear:e.target.value}))}}
+                            variant="outlined"
+                            >
+                                <MenuItem value={false}>False</MenuItem>
+                                <MenuItem value={true}>True</MenuItem>
+                        </Select>
+                    </div>
+                </div>
+                <div className={classes.verifySelectButton}>
+                    <Button variant="contained" color="primary" onClick={()=>handleClick('sample',sample,props.match.params.id,props.modOpen)}>Confirm</Button>
+                </div>
+            </div>
+        )
+    }
 }
 
 const AdminModalBody = (props) =>{
@@ -376,6 +426,7 @@ const UserShowActions = (props) => {
                     <Button variant="outlined" color="primary" onClick={()=>props.history.push(`/users/${props.match.params.id}/createOrder`)}>Create Order</Button>
                     <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'multiOrder',open:true}))}>Verify Supplier</Button>
                     <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspend',open:true}))}>Suspend/Ban</Button>
+                    <Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'sample',open:true}))}>Sample</Button>
                     {
                         props.data.perms.user.suspended.value||props.data.perms.user.banned.value||props.data.perms.supplier.suspended.value||props.data.perms.supplier.banned.value?<Button variant="outlined" color="primary" onClick={()=>modOpen(p=>({...p,type:'suspendCancel',open:true}))}>Suspend Cancel</Button>:<span/>
                     }

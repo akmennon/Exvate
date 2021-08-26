@@ -229,6 +229,10 @@ const userSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:'Order'
     }],
+    sampleOrders:[{
+        type:Schema.Types.ObjectId,
+        ref:'Order'
+    }],
     notifications:[{
         type:Schema.Types.ObjectId,
         ref:'Notification'
@@ -238,6 +242,14 @@ const userSchema = new Schema({
             verified:{
                 type:Schema.Types.ObjectId,
                 ref:'User'
+            },
+            sample:{
+                max:{
+                    type:Number,
+                    default:3,
+                    min:1,
+                    max:10
+                }
             },
             suspended:{
                 value:{
@@ -1308,6 +1320,32 @@ userSchema.statics.supplierWorkComplete = async function (userId,orderId){
         }
         const res = await User.updateOne({_id:userId},{$addToSet:{'work.workHistory':orderId},$pull:{'work.workOrder':orderId}})
         return Promise.resolve(res)
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+userSchema.statics.changeSampleLimit = async function (userId,body){
+    const User = this
+
+    try{
+        if(!userId){
+            return Promise.reject({status:false,message:'No supplier to complete work',statusCode:404})
+        }
+        let res;
+        if(body.clear){
+            res = await User.updateOne({_id:userId},{$set:{'perms.user.sample.max':Number(body.limit),'sampleOrders':[]}})
+        }
+        else{
+            res = await User.updateOne({_id:userId},{$set:{'perms.user.sample.max':Number(body.limit)}})
+        }
+        if(res.nModified==0){
+            return Promise.reject({status:false,message:'Unable to update',statusCode:500})
+        }
+        else{
+            return Promise.resolve({status:true,message:'Sample parameters updated successfully'})
+        }
     }
     catch(e){
         return Promise.reject(e)
