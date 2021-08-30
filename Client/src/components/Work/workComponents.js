@@ -2,7 +2,7 @@ import React from 'react'
 import TierSlider from './tierSlider'
 import RangeSlider from './rangeSlider'
 import {connect} from 'react-redux'
-import {orderInitial,resultInitial} from './workFns'
+import {resultInitial} from './workFns'
 import {startsetOrder} from '../../action/orderAction'
 import calcResult from '../resolvers/calcResult'
 
@@ -81,7 +81,6 @@ class WorkComponents extends React.Component{
                     this.setState({totalPrice:resultValue.price,time:resultValue.time})
                 }
 
-
             }
             else{
                 console.log('error')
@@ -91,11 +90,7 @@ class WorkComponents extends React.Component{
         /* created order is sent for ordering  */
         else if((e.target.name==='order'||e.target.name==='sample')&&this.props.user._id){
 
-            const multiOrder = e.target.name==='order'? this.state.multiOrder.map((ele)=>{
-                /* userId is saved to each element, since each is an order */
-                ele.subOrders.userId=this.props.user._id
-                return {order:ele.subOrders,result:ele.result}
-            }) : {id:this.props.work._id,orderType:'sample'}
+            const multiOrder = e.target.name==='order'? this.state.multiOrder: {orderType:'sample',result:this.state.multiOrder[0].result}
 
             const redirect = () =>{
                 this.props.parent.history.push(`/orderPreview/${this.props.work._id}`)
@@ -115,7 +110,7 @@ class WorkComponents extends React.Component{
     addValue = async (values,params,orderNumber) =>{
         if(this.state.multiOrder[orderNumber]===undefined){
             this.setState((prevState)=>{
-                prevState.multiOrder[orderNumber]={result:{},subOrders:{}}
+                prevState.multiOrder[orderNumber]={result:{}}
                 return {
                     multiOrder:prevState.multiOrder
                 }
@@ -131,17 +126,11 @@ class WorkComponents extends React.Component{
                 /* Initiates the result (for calculation) */
                 prevState.result = resultInitial(values)
 
-                /* Initiates the order structure and suborders (for ordering) */
-                prevState.subOrders = orderInitial(values,this.props.user._id,params)   
-
                 return {
-                    result:prevState.result,
-                    subOrders:prevState.subOrders
+                    result:prevState.result
                 }
             }
             else{
-                /* according to the index, order.variable's values are changed */
-                prevState.subOrders.values.variables[values.index]={value:values.value,title:params.title,unit:params.unit}
 
                 /* time and value changes for the result are saved acc. to the index */
                 prevState.result.values[values.index]=values.value
@@ -149,8 +138,7 @@ class WorkComponents extends React.Component{
 
                 /* changed result and orders are saved */
                 return {
-                    result:prevState.result,
-                    subOrders:prevState.subOrders
+                    result:prevState.result
                 }
             }
         })

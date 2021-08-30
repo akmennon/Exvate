@@ -530,7 +530,6 @@ const PostShowActions = (props) => {
                                 props.record.paymentStatus.value==='Contract'&&props.record.status!=='Completed'&&props.record.status!=='Failed'&&props.record.status!=='Finished'?(
                                     <Fragment>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('failed');setOpen(true)}}>Order Failed</Button>
-                                        <Button color="primary" variant='outlined' onClick={() => {setType('charges');setOpen(true)}}>Add Charges</Button>
                                     </Fragment>
                                 ):<span/>
                             }
@@ -538,7 +537,6 @@ const PostShowActions = (props) => {
                                 props.record.paymentStatus.value==='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Completed'&&props.record.status!=='Finished'?(
                                     <Fragment>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('cancel');setOpen(true)}}>Cancel</Button>
-                                        <Button color="primary" variant='outlined' onClick={() => {setType('charges');setOpen(true)}}>Add Charges</Button>
                                     </Fragment>
                                 ):<span/>
                             }
@@ -571,6 +569,7 @@ const PostShowActions = (props) => {
                                     <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/${props.match.params.id}/charges`)}>Charges</Button>
                                 :<span/>
                             }
+                            <Button color="primary" variant='outlined' onClick={() => {setType('charges');setOpen(true)}}>Add Charges</Button>
                         </div>):
                         <Button color="primary" variant='outlined' onClick={() => props.history.push(`/orders/suppliers/${props.record._id}`)}>Verify</Button>
                     }
@@ -610,7 +609,8 @@ const OrderShow = (props) => {
         <SimpleShowLayout>
             <TextField source="workId.title" label='Work'/>
             <TextField source="userId.name" label='User' />
-            <TextField source='type' label='Order Type' />
+            <TextField source="userId.email.email" label='User' />
+            <TextField source='orderType' label='Type' />
             <DateField source='createdAt' label='Ordered On' />
             {
                 (()=>{
@@ -635,12 +635,14 @@ const OrderShow = (props) => {
             <TextField source='values.price' label='Price' />
             <TextField source='values.time' label='Time' />
             {
-                record.pl&&record.pl.advancePercent?(
+                record.pl&&record.pl.totalPL!==undefined?(
                     <SimpleShowLayout>
                         <TextField source='pl.currentPL' label='PL - Current' />
                         <TextField source='pl.totalPL' label='PL - Total' />
                         <TextField source='pl.currentPayment' label='Current Payment' />
-                        <TextField source='pl.advancePercent' label='Advance percent' />
+                        {
+                            record.pl.advancePercent? <TextField source='pl.advancePercent' label='Advance percent' /> : <span/>
+                        }
                     </SimpleShowLayout>
                 ):<span/>
             }

@@ -20,6 +20,7 @@ const orderList = props => (
            <TextField source="workId.title" label="Work"/>
            <TextField source="userId.email.email" label="User"/>
            <TextField source="status" />
+           <TextField source="orderType" label="Type"/>
            <TextField source="paymentStatus.value" label="Payment Status"/>
            <TextField source="paymentStatus.supplierPayment" label="Supplier Payment"/>
            <TextField source="incoterm" label="ICO"/>

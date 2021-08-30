@@ -149,22 +149,9 @@ const workSchema = new Schema({
                 calcValues:[{type:Number}]
             }
         ],
-        sampleValues:{
-            available:{
-                type:Boolean
-            },
-            price:{
-                type:Number
-            },
-            time:{
-                type:Number
-            },
-            amount:{
-                type:Number
-            },
-            required:{
-                type:Boolean
-            }
+        sampleAvailable:{
+            type:Boolean,
+            default:true
         }
     }
 })

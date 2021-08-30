@@ -6,8 +6,9 @@ const User = require('../Models/user')
 module.exports.create = async (req,res,next) =>{//use pick, Pending - different inputs than from socket - req.body = {orders:[orders],result:resultId}
     const body = req.body
     const user = req.user
+    const id = req.params.id
     
-    Order.createOrder(body.orderData,user) //UNRELIABLE - Use pick here
+    Order.createOrder(body.orderData,id,user) //UNRELIABLE - Use pick here
         .then((result)=>{
             res.json(result)
         })
@@ -66,7 +67,7 @@ module.exports.paymentConfirm = (req,res,next) =>{
         .then((response)=>{
             res.json(response)
         })
-        .catch((e)=>{
+        .catch((err)=>{
             errorHandler(err,next)
         })
 }
@@ -79,7 +80,7 @@ module.exports.completeOrder = (req,res,next) =>{
         .then((response)=>{
             res.json(response)
         })
-        .catch((e)=>{
+        .catch((err)=>{
             errorHandler(err,next)
         })
 }
@@ -92,7 +93,7 @@ module.exports.cancelOrder = (req,res,next) =>{
         .then((response)=>{
             res.json(response)
         })
-        .catch((e)=>{
+        .catch((err)=>{
             errorHandler(err,next)
         })
 }
@@ -105,7 +106,7 @@ module.exports.refundOrder = (req,res,next) =>{
         .then((response)=>{
             res.json(response)
         })
-        .catch((e)=>{
+        .catch((err)=>{
             errorHandler(err,next)
         })
 }

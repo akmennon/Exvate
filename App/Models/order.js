@@ -7,6 +7,7 @@ const Validator = require('validator')
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
 const Work = require('./work/work')
+const { detail } = require('../Controllers/workController')
 
 const Schema = mongoose.Schema
 
@@ -57,6 +58,10 @@ const orderSchema = new Schema({
                     type:Boolean
                 }
             }
+        },
+        mobile:{
+            type:String,
+            maxlength:20
         }
     },
     values:{
@@ -139,7 +144,7 @@ const orderSchema = new Schema({
         type:Schema.Types.ObjectId,
         ref:'User'
     },
-    type:{
+    orderType:{
         type:String,
         validate:{
             validator:function(value){
@@ -149,13 +154,14 @@ const orderSchema = new Schema({
                     case 'Sample':
                         return true
                     default:
-                        return 'Order'
+                        return false
                 }
             },
             message:function(){
                 return 'Invalid order type'
             }
-        }
+        },
+        default:'Order'
     },
     incoterm:{
         type:String,
@@ -548,8 +554,7 @@ const orderSchema = new Schema({
     result:{
         _id:{
             type:Schema.Types.ObjectId,
-            ref:'Result',
-            required:true
+            ref:'Result'
         },
         values:[{
             type:Number
@@ -574,11 +579,7 @@ const orderSchema = new Schema({
                 keys:[{type:Number}],
                 calcValues:[{type:Number}]
             }
-        ],
-        sampleAvailable:{
-            type:Boolean,
-            default:true
-        }
+        ]
     },
     verified:{
         value:{
@@ -608,57 +609,47 @@ const orderSchema = new Schema({
 })
 
 /* creates one or multiple orders */
-orderSchema.statics.createOrder = async function(orderValues,user){
+orderSchema.statics.createOrder = async function(orderValues,id,user){
     const Order = this
 
     try{
-        const work = await Work.findById(orderValues[0].order.workId).lean()
+        const work = await Work.findById(id).lean()
         const resultValue = work.result
         resultValue.workId = work._id
         const option = work.options
 
-        const allOrders = []
+        let allOrders = orderValues.orderType=='sample'?{}:[]
 
-        if(orderValues.length>3){
-            return Promise.reject({status:false,message:'Cannot place above 3 orders',statusCode:403})
-        }
-        await Promise.all(orderValues.map(async (orderValue)=>{ //make this into a bulkWrite
+        if(orderValues.orderType&&orderValues.orderType=='sample'){
 
-            let orderFinal,output
-    
-            /* workIds of frontend result and db result is matched
-                and the values are saved to the db result
-            */
-
-            if(work._id.toString() == orderValue.result.workId){
-                resultValue.values = orderValue.result.values
-                resultValue.time.values = orderValue.result.time.values
-            }
-            else{
+            if(work._id.toString() != orderValues.result.workId){
                 return Promise.reject({status:false,message:'Error creating order'})
             }
-    
-            output = calcResult(resultValue,output) /*[{workId:"",price:1,time:1,amount:1}]*/
-    
-            let value
 
-            orderFinal = {
-                userId:orderValue.order.userId,
-                workId:orderValue.order.workId,
+            if(user.sampleOrders.includes(id)){
+                return Promise.reject({status:false,message:'Already ordered a sample',statusCode:403})
+            }
+            
+            if((user.sampleOrders.length+1)>user.perms.user.sample.max){
+                return Promise.reject({status:false,message:'Sample limit reached',statusCode:403})
+            }
+
+            let orderFinal = {
+                userId:user._id,
+                workId:id,
                 values:{
                     variables:[]
                 }
             }
 
-            /* Variables are chosen from the backend and not from the frontend */
             option.params.map((ele,index)=>{
                 orderFinal.values.variables[index] = {title:ele.title},
                 orderFinal.values.variables[index].unit = ele.unit
-                orderFinal.values.variables[index].value = resultValue.values[index]
+                orderFinal.values.variables[index].value = orderValues.result.values[index]
                 if(ele.tierType){
                     orderFinal.values.variables[index].tierType = true
                     const value = ele.values.find((elem)=>{
-                        return elem.value === resultValue.values[index]
+                        return elem.value === orderValues.result.values[index]
                     })
                     orderFinal.values.variables[index].label = value.label
                 }
@@ -667,33 +658,95 @@ orderSchema.statics.createOrder = async function(orderValues,user){
                 }
             })
 
-            /* since only one work is present */
-            value = pick(output[0],['time','price'])
-            orderFinal.values = {...orderFinal.values,...value}
+            orderFinal.values = {...orderFinal.values,price:1,time:1}
 
             const order = new Order(orderFinal)
 
-            /* Result is modelled and saved */
-            delete resultValue._id
-            const result = new Result({...resultValue,orderId:order._id})
-            const savedResult = await result.save()
-
-            order.result = savedResult
             order.status = 'Pending'
             order.userId = user
             order.workId = work
+            order.orderType = 'Sample'
 
             /* Order is modelled with result and saved */
-            const savedOrder = await order.save()
-            allOrders.push(savedOrder._id)
-        }))
+            allOrders = await order.save()
+            user.sampleOrders.push(id)
+            await user.save()
+        }
+        else{
+            if(orderValues.length>3){
+                return Promise.reject({status:false,message:'Cannot place above 3 orders',statusCode:403})
+            }
+            await Promise.all(orderValues.map(async (orderValue)=>{ //make this into a bulkWrite
+        
+                /* workIds of frontend result and db result is matched
+                    and the values are saved to the db result
+                */
+    
+                if(work._id.toString() == orderValue.result.workId){
+                    resultValue.values = orderValue.result.values
+                    resultValue.time.values = orderValue.result.time.values
+                }
+                else{
+                    return Promise.reject({status:false,message:'Error creating order',statusCode:403})
+                }
+        
+                let output = calcResult(resultValue) /*[{workId:"",price:1,time:1,amount:1}]*/
+    
+                let orderFinal = {
+                    userId:user._id,
+                    workId:id,
+                    orderType:'Order',
+                    values:{
+                        variables:[]
+                    }
+                }
+    
+                /* Variables are chosen from the backend and not from the frontend */
+                option.params.map((ele,index)=>{
+                    orderFinal.values.variables[index] = {title:ele.title},
+                    orderFinal.values.variables[index].unit = ele.unit
+                    orderFinal.values.variables[index].value = resultValue.values[index]
+                    if(ele.tierType){
+                        orderFinal.values.variables[index].tierType = true
+                        const value = ele.values.find((elem)=>{
+                            return elem.value === resultValue.values[index]
+                        })
+                        orderFinal.values.variables[index].label = value.label
+                    }
+                    else{
+                        orderFinal.values.variables[index].tierType = false
+                    }
+                })
+    
+                /* since only one work is present */
+                let value = pick(output[0],['time','price'])
+                orderFinal.values = {...orderFinal.values,...value}
+    
+                const order = new Order(orderFinal)
+    
+                /* Result is modelled and saved */
+                delete resultValue._id
+                const result = new Result({...resultValue,orderId:order._id})
+                const savedResult = await result.save()
+    
+                order.result = savedResult
+                order.status = 'Pending'
+                order.userId = user
+                order.workId = work
+    
+                /* Order is modelled with result and saved */
+                const savedOrder = await order.save()
+                allOrders.push(savedOrder._id)
+            }))
 
-        await user.saveOrder(allOrders)
+            await user.saveOrder(allOrders)
+        }
+
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error creating order')
+        return Promise.reject(e)
     }
 }
 
@@ -788,6 +841,44 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
             }
         }
 
+        let text
+
+        if(order.orderType=='Sample'){
+            if(order.values.price==0){
+                text = 'Your sample order has been processed and will be dispatched shortly'
+                order.paymentStatus.value = 'Completed'
+                order.status = 'Active'
+                order.pl = {
+                    currentPL:0,
+                    currentPayment:0,
+                    totalPL:0
+                }
+                const now = new Date()
+                order.deadline = now.setDate(now.getDate()+3*7)
+                order.paymentStatus.transaction = {
+                    paymentType:'No payment',
+                    createdBy:user._id,
+                    createdAt:new Date()
+                }
+                if(order.paymentStatus.supplierPayment==0){
+                    order.paymentStatus.supplierPayment = 'Completed'
+                    order.paymentStatus.transaction.push({
+                        info:'details.type',
+                        status:'Successful',
+                        paymentType:'Supplier payment',
+                        method:'Admin Created',
+                        createdBy:user._id
+                    })
+                }
+            }
+            else{
+                text = 'The sampling price has been updated and is ready for payment'
+            }
+        }
+        else{
+            text = order.values.price>90000?`The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`:`The order prices have been updated and is ready for payment. Please use the website to make payment`
+        }
+
         order = await order.save()
 
         /*if(order.verified.value){
@@ -799,7 +890,7 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
             from: '"Sourceo" <ajaydragonballz@gmail.com>',
             to: order.userId.email.email, // list of receivers
             subject: "Order Verified",
-            text: order.values.price>90000?`The order prices have been updated and is ready for payment. The Bank details shall be provided shortly`:`The order prices have been updated and is ready for payment. Please use the website to make payment`
+            text: text
             /*html: "<b>Hello world?</b>"*/ // html body
         }
         const mail = await sendMail(mailData)
@@ -821,9 +912,13 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
             return Promise.reject({status:false,message:'Not applicable for the order',statusCode:403})
         }
 
+        if(order.orderType=='Sample'&&details.type!='Advance'){
+            return Promise.reject({status:false,message:'Invalid sample payment option',statusCode:403})
+        }
+
         const date = new Date()
         
-        if(order.validTill.getTime()<date.getTime()){
+        if(order.validTill.getTime()<date.getTime()&&order.orderType!='Sample'){
             return Promise.reject({status:false,message:'Order validity passed. Order needs to be validated again before confirmation',statusCode:403})
         }
 
@@ -846,14 +941,14 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
         }
         else if (details.type=='Advance'){
             const pl = {
-                currentPL:0,
+                currentPL:order.values.price,
                 currentPayment:order.values.price,
                 totalPL:order.values.price
             }
 
             await Order.updateOne({_id:id},{'paymentStatus.value':'Completed',status:'Active',pl,deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
-        else{
+        else if(details.type=='Advance/LC'){
             if(details.advancePercent<=0||details.advancePercent>95){
                 return Promise.reject({status:false,message:'Invalid input for advance',statusCode:403})
             }
@@ -867,6 +962,9 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
             
             await Order.updateOne({_id:id},{'paymentStatus.value':'Contract',status:'Active',pl,deadline:deadline,$push:{'paymentStatus.transaction':transaction}})
         }
+        else{
+            return Promise.reject({status:false,message:'Error payment option',statusCode:422})
+        }
 
         const mailData = {
             from: '"Sourceo" <ajaydragonballz@gmail.com>',
@@ -876,7 +974,7 @@ orderSchema.statics.paymentConfirm = async function({id,user,details}){
         }
 
         await sendMail(mailData)
-        return Promise.resolve({status:true,message:'Payment has been confirmed'})
+        return Promise.resolve({status:true,message:'Payment has been confirmed. The order shall be made to be shipped shortly.'})
     }
     catch(e){
         console.log(e)
@@ -892,17 +990,18 @@ orderSchema.statics.refundComplete = async function(id,user){
         let order = await Order.findById(id)
 
         if(!order.verified.value||order.paymentStatus.value!='Completed'){
-            return Promise.reject('Order not applicable for a refund')
+            return Promise.reject({status:false,message:'Order not applicable for a refund',statusCode:403})
         }
 
         if(order.status!='Cancelled'&&order.cancelVerified.length!=0){
-            return Promise.reject('Order not cancelled for a refund')
+            return Promise.reject({status:false,message:'Order not cancelled for a refund',statusCode:403})
         }
 
         order.paymentStatus.value = 'Refunded'
         if(order.paymentStatus.supplierPayment=='Pending'){
             order.paymentStatus.supplierPayment='Cancelled'
         }
+        
         order.paymentStatus.transaction.push({paymentType:'External',createdBy:user._id})
         order.completionVerified.push({verifiedBy:user._id})
         order = await order.save()
@@ -910,7 +1009,7 @@ orderSchema.statics.refundComplete = async function(id,user){
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error acknowleging refund')
+        return Promise.reject(e)
     }
 }
 
@@ -1005,6 +1104,12 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 if(order.status=='Transit'){
                     return Promise.reject({status:false,message:'Already Shipped',statusCode:403})
                 }
+
+                for(const x in details){
+                    if(!details[x]){
+                        delete details[x]
+                    }
+                }
                 order.status = 'Transit'
                 order.shipmentDetails = details
                 await order.save()
@@ -1045,7 +1150,14 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                     order.completionVerified.push({verifiedBy:user._id})
                 }
 
-                order.paymentStatus.supplierPayment = 'Cancelled'
+                if(!order.orderType=='Sample'||order.paymentStatus.supplierAmount!=0){
+                    order.paymentStatus.supplierPayment = 'Cancelled'
+                }
+
+                if(order.orderType=='Sample'){
+                    await User.updateOne({_id:order.userId._id},{$pull:{'sampleOrders':order._id}})
+                }
+
                 order.status = 'Cancelled'
                 order.cancelVerified.push({verifiedBy:user._id})
 
@@ -1098,6 +1210,10 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
             return Promise.reject({status:false,message:'Not available for this order',statusCode:403})
         }
 
+        if(order.orderType=='Sample'&&details.statusPayment!='Finished'&&details.type!='Advance'){
+            return Promise.reject({status:false,message:'Payment of this type not supported',statusCode:403})
+        }
+
         if(details.statusPayment!='Finished'){
             order.paymentStatus.supplierPayment = details.type=='LC'||details.type=='Advance/LC'?'Contract':'Completed'
             let transactionDetails;
@@ -1137,7 +1253,7 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
                 transactionDetails = {
                     info:details.type,
                     status:'Successful',
-                    paymentType:details.type,
+                    paymentType:'Supplier payment',
                     method:'Admin Created',
                     createdBy:user._id
                 }
@@ -1146,7 +1262,6 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
             await order.save()
         }
         else{
-            order.paymentStatus.supplierPayment = 'Finished'
             
             const paidAmount = order.paymentStatus.supplierAmountPaid ? order.paymentStatus.supplierAmount - order.paymentStatus.supplierAmountPaid : order.paymentStatus.supplierAmount
             order.pl.currentPL = order.pl.currentPL - paidAmount
@@ -1161,10 +1276,12 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
                 contactNumber:order.supplier.assigned[0].mobile,
                 transactionId:'LC Id',
                 paymentDate:Date.now(),
-                paymentMethod:'LC'
+                paymentMethod:order.paymentStatus.supplierPayment=='Contract'?'LC':'Online Transfer'
             })
 
-            order.paymentStatus.transaction.push({info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id})
+            order.paymentStatus.supplierPayment = 'Finished'
+
+            order.paymentStatus.transaction.push({info:'Finished',status:'Successful',method:'Admin Created',paymentType:'Supplier payment',createdBy:user._id})
             await order.save()
             await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
         }

@@ -17,7 +17,8 @@ class OrderPreview extends React.Component{
             orderData:this.props.order,
             resultId:this.props.work.result._id
         }
-        axios.post(`/order`,data,
+        console.log(data)
+        axios.post(`/order/${this.props.match.params.id}`,data,
         {
             headers:{
                 'x-auth':token
@@ -25,7 +26,6 @@ class OrderPreview extends React.Component{
         })
         .then((response)=>{
             console.log(response.data)
-            //close socket here
             this.props.history.push('/orderConfirm')
         })
         .catch((err)=>{
