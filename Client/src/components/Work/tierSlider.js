@@ -33,7 +33,7 @@ class TierSlider extends React.Component{
                 values:prevState.values
             }
         })
-        this.props.handleValues(this.state.values,this.props.params,this.props.orderNumber)
+        this.props.handleValues(this.state.values,this.props.params)
     }
 
     /* DidMount and DidUpdate used together to obtain the initial values of each component*/
@@ -43,7 +43,7 @@ class TierSlider extends React.Component{
                 const values = this.state.values        
                 values.value=this.state.initial.value
                 values.time=this.state.initial.time
-                this.props.handleValues(values,this.props.params,this.props.orderNumber)
+                this.props.handleValues(values,this.props.params)
         }
 
     componentDidUpdate(){
@@ -52,7 +52,7 @@ class TierSlider extends React.Component{
                 const values = this.state.values
                 values.value=this.state.initial.value
                 values.time=this.state.initial.time
-                this.props.handleValues(values,this.props.params,this.props.orderNumber)
+                this.props.handleValues(values,this.props.params)
             })
         }
     }

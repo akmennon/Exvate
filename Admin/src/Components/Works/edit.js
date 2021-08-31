@@ -217,6 +217,7 @@ const WorkEdit = (props) => {
                     </ArrayInput>
                 </FormTab>
                 <FormTab label="Result">
+                    <BooleanInput source='result.sampleAvailable' label='Sample Available' initialValue={true}/>
                     <ArrayInput source="result.time.calc" label="Time Calc">
                         <SimpleFormIterator>
                             <SelectInput source="method" label="Calculation method" choices={[

@@ -37,7 +37,7 @@ module.exports.login = (req,res,next) =>{
         })
         .then(function(token){
             res.setHeader('x-auth',token) // sends token as a header
-            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email'])})
+            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email','address'])})
         })
         .catch(function(err){
             errorHandler(err,next)

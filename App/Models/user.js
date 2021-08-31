@@ -744,7 +744,7 @@ userSchema.methods.saveOrder = async function(order){
     const user = this
 
     try{
-        user.orders = [...new Set([...user.orders,...order])]
+        user.orders = [...new Set([...user.orders,order])]
         await user.save()
         return Promise.resolve({status:true,message:'Order Saved'})
     }

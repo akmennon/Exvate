@@ -35,7 +35,7 @@ class RangeSlider extends React.Component{
                 values:prevState.values
             }
         },()=>{
-            this.props.handleValues(this.state.values,this.props.params,this.props.orderNumber)
+            this.props.handleValues(this.state.values,this.props.params)
         })
     }
 
@@ -45,13 +45,13 @@ class RangeSlider extends React.Component{
     componentDidUpdate(){
         if(!this.state.call){
             this.setState({call:true},()=>{
-                this.props.handleValues(this.state.values,this.props.params,this.props.orderNumber)
+                this.props.handleValues(this.state.values,this.props.params)
             })
         }
     }
 
     componentDidMount(){
-            this.props.handleValues(this.state.values,this.props.params,this.props.orderNumber)
+            this.props.handleValues(this.state.values,this.props.params)
         }
 
     render(){

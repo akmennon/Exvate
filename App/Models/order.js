@@ -7,7 +7,6 @@ const Validator = require('validator')
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
 const Work = require('./work/work')
-const { detail } = require('../Controllers/workController')
 
 const Schema = mongoose.Schema
 
@@ -505,7 +504,7 @@ const orderSchema = new Schema({
                 },
                 price:{
                     type:Number,
-                    min:1,
+                    min:0
                 },
                 contactName:{
                     type:String,
@@ -622,8 +621,12 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
 
         if(orderValues.orderType&&orderValues.orderType=='sample'){
 
+            if(work.result.sampleAvailable==false){
+                return Promise.reject({status:false,message:'Sampling not available',statusCode:403})
+            }
+
             if(work._id.toString() != orderValues.result.workId){
-                return Promise.reject({status:false,message:'Error creating order'})
+                return Promise.reject({status:false,message:'Error creating order',statusCode:500})
             }
 
             if(user.sampleOrders.includes(id)){
@@ -673,73 +676,67 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             await user.save()
         }
         else{
-            if(orderValues.length>3){
-                return Promise.reject({status:false,message:'Cannot place above 3 orders',statusCode:403})
-            }
-            await Promise.all(orderValues.map(async (orderValue)=>{ //make this into a bulkWrite
-        
-                /* workIds of frontend result and db result is matched
+            
+            /* workIds of frontend result and db result is matched
                     and the values are saved to the db result
-                */
+             */
     
-                if(work._id.toString() == orderValue.result.workId){
-                    resultValue.values = orderValue.result.values
-                    resultValue.time.values = orderValue.result.time.values
+            if(work._id.toString() == orderValues.result.workId){
+                resultValue.values = orderValues.result.values
+                resultValue.time.values = orderValues.result.time.values
+            }
+            else{
+                return Promise.reject({status:false,message:'Error creating order',statusCode:403})
+            }
+    
+            let output = calcResult(resultValue) /*[{workId:"",price:1,time:1,amount:1}]*/
+
+            let orderFinal = {
+                userId:user._id,
+                workId:id,
+                orderType:'Order',
+                values:{
+                    variables:[]
+                }
+            }
+
+            /* Variables are chosen from the backend and not from the frontend */
+            option.params.map((ele,index)=>{
+                orderFinal.values.variables[index] = {title:ele.title},
+                orderFinal.values.variables[index].unit = ele.unit
+                orderFinal.values.variables[index].value = resultValue.values[index]
+                if(ele.tierType){
+                    orderFinal.values.variables[index].tierType = true
+                    const value = ele.values.find((elem)=>{
+                        return elem.value === resultValue.values[index]
+                    })
+                    orderFinal.values.variables[index].label = value.label
                 }
                 else{
-                    return Promise.reject({status:false,message:'Error creating order',statusCode:403})
+                    orderFinal.values.variables[index].tierType = false
                 }
-        
-                let output = calcResult(resultValue) /*[{workId:"",price:1,time:1,amount:1}]*/
-    
-                let orderFinal = {
-                    userId:user._id,
-                    workId:id,
-                    orderType:'Order',
-                    values:{
-                        variables:[]
-                    }
-                }
-    
-                /* Variables are chosen from the backend and not from the frontend */
-                option.params.map((ele,index)=>{
-                    orderFinal.values.variables[index] = {title:ele.title},
-                    orderFinal.values.variables[index].unit = ele.unit
-                    orderFinal.values.variables[index].value = resultValue.values[index]
-                    if(ele.tierType){
-                        orderFinal.values.variables[index].tierType = true
-                        const value = ele.values.find((elem)=>{
-                            return elem.value === resultValue.values[index]
-                        })
-                        orderFinal.values.variables[index].label = value.label
-                    }
-                    else{
-                        orderFinal.values.variables[index].tierType = false
-                    }
-                })
-    
-                /* since only one work is present */
-                let value = pick(output[0],['time','price'])
-                orderFinal.values = {...orderFinal.values,...value}
-    
-                const order = new Order(orderFinal)
-    
-                /* Result is modelled and saved */
-                delete resultValue._id
-                const result = new Result({...resultValue,orderId:order._id})
-                const savedResult = await result.save()
-    
-                order.result = savedResult
-                order.status = 'Pending'
-                order.userId = user
-                order.workId = work
-    
-                /* Order is modelled with result and saved */
-                const savedOrder = await order.save()
-                allOrders.push(savedOrder._id)
-            }))
+            })
 
-            await user.saveOrder(allOrders)
+            /* since only one work is present */
+            let value = pick(output[0],['time','price'])
+            orderFinal.values = {...orderFinal.values,...value}
+
+            const order = new Order(orderFinal)
+
+            /* Result is modelled and saved */
+            delete resultValue._id
+            const result = new Result({...resultValue,orderId:order._id})
+            const savedResult = await result.save()
+
+            order.result = savedResult
+            order.status = 'Pending'
+            order.userId = user
+            order.workId = work
+
+            /* Order is modelled with result and saved */
+            const savedOrder = await order.save()
+
+            await user.saveOrder(savedOrder)
         }
 
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
@@ -1001,7 +998,7 @@ orderSchema.statics.refundComplete = async function(id,user){
         if(order.paymentStatus.supplierPayment=='Pending'){
             order.paymentStatus.supplierPayment='Cancelled'
         }
-        
+
         order.paymentStatus.transaction.push({paymentType:'External',createdBy:user._id})
         order.completionVerified.push({verifiedBy:user._id})
         order = await order.save()
@@ -1105,7 +1102,7 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                     return Promise.reject({status:false,message:'Already Shipped',statusCode:403})
                 }
 
-                for(const x in details){
+                for(const x in details){ //removal of unwanted inputs -- to be moved to validation of inputs
                     if(!details[x]){
                         delete details[x]
                     }

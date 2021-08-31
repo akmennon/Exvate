@@ -18,6 +18,7 @@ import OrderConfirm from '../components/Order/orderConfirm'
 import Dashboard from '../components/Host/dashboard'
 import HostSignUp from '../components/Host/signup'
 import Orders from '../components/User/order'
+import OrderAddress from '../components/Order/orderAddress'
 
 let NavRoute = function({component:Component,path,exact}){  //Custom route with navbar
     return(
@@ -69,6 +70,7 @@ class Router extends React.Component{
                     <NavRoute path="/" component={Home} exact={true}/>
                     <NavRoute path="/work/:id" component={Work} exact={true}/>
                     <NavRoute path="/orderPreview/:id" component={OrderPreivew} exact={true}/>
+                    <NavRoute path="/orderAddress/:id" component={OrderAddress} exact={true}/>
                     <NavRoute path="/user/cart" component={Orders} />
                     <Route path="/orderConfirm" component={OrderConfirm} exact={true}/>
                     <Route path="/user/signup" component={Register} />
@@ -77,8 +79,8 @@ class Router extends React.Component{
                     <Route path="/user/confirmForgot/:token" component={ConfirmForgot} />
                     <Route path="/user/confirmSign/:token" component={ConfirmSign}/>
                     <Route path="/user/resendEmail" component={ResendEmail}/>
-                    <Route path="/host/dashboard" component={Dashboard}/>
-                    <Route path="/host/signup" component={HostSignUp} />
+                    <Route path="/supplier/dashboard" component={Dashboard}/>
+                    <Route path="/supplier/signup" component={HostSignUp} />
                 </Switch>
             </BrowserRouter>
         )
