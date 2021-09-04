@@ -47,7 +47,7 @@ module.exports.login = (req,res,next) =>{
 /* Show user account details (values gotten from middleware) */
 
 module.exports.account = (req,res) =>{
-    let sendUser = pick(req.user,['userType','_id','name','supplier','email.email'])
+    let sendUser = pick(req.user,['userType','_id','name','supplier','email.email','address'])
     res.json(sendUser)
 }
 
@@ -408,6 +408,19 @@ module.exports.changeSampleLimit = (req,res,next) =>{
     User.changeSampleLimit(userId,body,admin)
         .then((resp)=>{
             res.json(resp)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.addAddress = (req,res,next) =>{
+    const user = req.user
+    const address = req.body
+
+    user.addAddress(address)
+        .then((response)=>{
+            res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)

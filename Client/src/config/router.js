@@ -19,6 +19,8 @@ import Dashboard from '../components/Host/dashboard'
 import HostSignUp from '../components/Host/signup'
 import Orders from '../components/User/order'
 import OrderAddress from '../components/Order/orderAddress'
+import Addaddress from '../components/User/addAddress'
+import AllAddresses from '../components/User/allAddress'
 
 let NavRoute = function({component:Component,path,exact}){  //Custom route with navbar
     return(
@@ -81,6 +83,8 @@ class Router extends React.Component{
                     <Route path="/user/resendEmail" component={ResendEmail}/>
                     <Route path="/supplier/dashboard" component={Dashboard}/>
                     <Route path="/supplier/signup" component={HostSignUp} />
+                    <Route path="/user/addAddress" component={Addaddress} />
+                    <Route path="/user/address" component={AllAddresses} />
                 </Switch>
             </BrowserRouter>
         )

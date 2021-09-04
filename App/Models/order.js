@@ -97,7 +97,7 @@ const orderSchema = new Schema({
           }
         }]
     },
-    address:[{
+    address:{
         building:{
             type:String,
             maxlength:32,
@@ -128,7 +128,7 @@ const orderSchema = new Schema({
             maxlength:30,
             minlength:2
         }
-    }],
+    },
     supplier:{
         assigned:[{
             type:Schema.Types.ObjectId,
@@ -617,8 +617,6 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
         resultValue.workId = work._id
         const option = work.options
 
-        let allOrders = orderValues.orderType=='sample'?{}:[]
-
         if(orderValues.orderType&&orderValues.orderType=='sample'){
 
             if(work.result.sampleAvailable==false){
@@ -669,9 +667,12 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             order.userId = user
             order.workId = work
             order.orderType = 'Sample'
+            order.address = user.address.find((ele)=>{
+                return ele._id = orderValues.address
+            })
 
             /* Order is modelled with result and saved */
-            allOrders = await order.save()
+            await order.save()
             user.sampleOrders.push(id)
             await user.save()
         }
@@ -732,6 +733,9 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             order.status = 'Pending'
             order.userId = user
             order.workId = work
+            order.address = user.address.find((ele)=>{
+                return ele._id = orderValues.address
+            })
 
             /* Order is modelled with result and saved */
             const savedOrder = await order.save()

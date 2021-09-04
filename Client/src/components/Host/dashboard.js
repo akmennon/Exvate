@@ -119,7 +119,7 @@ function MiniDrawer() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap>
-            Host
+            Supplier
           </Typography>
         </Toolbar>
       </AppBar>

@@ -11,6 +11,10 @@ import SearchIcon from '@material-ui/icons/Search';
 import { startRemoveUser } from '../../action/userAction';
 import { connect } from 'react-redux'
 import ShoppingCartIcon from '@material-ui/icons/ShoppingCart';
+import Avatar from '@material-ui/core/Avatar';
+import Menu from '@material-ui/core/Menu'
+import MenuItem from '@material-ui/core/MenuItem';
+import Fade from '@material-ui/core/Fade';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -91,6 +95,9 @@ const useStyles = makeStyles((theme) => ({
     transition: theme.transitions.create('width'),
     color:'black',
     width: '100%',
+  },
+  menu:{
+    marginTop:theme.spacing(5)
   }
 }));
 
@@ -108,12 +115,12 @@ const handleClick = (e,props) =>{
         props.dispatch(startRemoveUser(token,redirect))
       }
     break;
-    case 'host':
-      if(props.user.host){
-        props.route.history.push('/host/dashboard')
+    case 'supplier':
+      if(props.user.supplier){
+        props.route.history.push('/supplier/dashboard')
       }
       else{
-        console.log('not a host')
+        console.log('not a supplier')
       }
     break;
     case 'cart':
@@ -127,6 +134,9 @@ const handleClick = (e,props) =>{
     case 'home':
       props.route.history.push('/')
       break;
+    case 'address':
+      props.route.history.push('/user/address')
+      break;
     default:
       console.log('fix navbar switch')
   }
@@ -134,6 +144,16 @@ const handleClick = (e,props) =>{
 
 function ButtonAppBar(props) {
   const classes = useStyles();
+  const [anchorEl, setAnchorEl] = React.useState(null);
+  const open = Boolean(anchorEl);
+
+  const handleClickMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
   return (
     <div className={classes.root}>
@@ -166,11 +186,28 @@ function ButtonAppBar(props) {
               <ShoppingCartIcon />
             </IconButton>
             {
-              props.user.host?
-              <Button onClick={()=>{handleClick("host",props)}} className={classes.button} color="inherit" >Host</Button>:
+              props.user.supplier?
+              <Button onClick={()=>{handleClick("supplier",props)}} className={classes.button} color="inherit" >Supplier</Button>:
               <div/>
             }
-            <Button onClick={()=>{handleClick("logButton",props)}} className={classes.button} color="inherit" >{props.user._id?'Logout':'Login'}</Button>
+            {
+              !props.user._id?<Button onClick={()=>{handleClick("logButton",props)}} className={classes.button} color="inherit" >Login</Button>:
+              <div>
+                <Avatar onClick={handleClickMenu}>{props.user.name[0]}</Avatar>
+                <Menu
+                  id="fade-menu"
+                  anchorEl={anchorEl}
+                  keepMounted
+                  open={open}
+                  onClose={handleClose}
+                  TransitionComponent={Fade}
+                  className={classes.menu}
+                >
+                  <MenuItem onClick={()=>{handleClose();handleClick('address',props)}}>Your Addresses</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('logButton',props)}}>Logout</MenuItem>
+                </Menu>
+              </div>
+            }
           </div>
         </Toolbar>
         <div className={classes.searchGroup}>

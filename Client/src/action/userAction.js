@@ -4,6 +4,10 @@ export const setUser = (user) =>{
     return {type:'SET_USER',payload:user}
 }
 
+export const setAddress = (address) =>{
+    return {type:'ADD_ADDRESS',payload:address}
+}
+
 export const removeUser = () =>{
     return {type:'REMOVE_USER'}
 }
@@ -69,6 +73,25 @@ export const startRemoveUser = (token,redirect) =>{ //logout action
                 dispatch(removeUser())
                 redirect()
             }
+        })
+        .catch((err)=>{
+            console.log(err)
+        })
+    })
+}
+
+export const startAddAddress = (address,redirect) =>{
+    return((dispatch)=>{
+        const token = localStorage.getItem('x-auth')
+        axios.post('/user/addAddress/',address,{
+            headers:{
+                'x-auth':token
+            }
+        })
+        .then((response)=>{
+            console.log(response)
+            dispatch(setAddress(response.data))
+            redirect()
         })
         .catch((err)=>{
             console.log(err)

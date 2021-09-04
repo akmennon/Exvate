@@ -1,6 +1,5 @@
 import React from 'react'
 import { Button } from '@material-ui/core'
-import axios from '../../config/axios'
 import {connect} from 'react-redux'
 
 /* shows the preview of the order from the backend response */
@@ -12,28 +11,11 @@ class OrderPreview extends React.Component{
     }
 
     handleClick(){//Orders with the given params
-        const token = localStorage.getItem('x-auth')
-        const data = {
-            orderData:this.props.order,
-            resultId:this.props.work.result._id
-        }
-        console.log(data)
-        axios.post(`/order/${this.props.match.params.id}`,data,
-        {
-            headers:{
-                'x-auth':token
-            }
-        })
-        .then((response)=>{
-            console.log(response.data)
-            this.props.history.push('/orderConfirm')
-        })
-        .catch((err)=>{
-            console.log(err)
-        })
+        this.props.history.push(`/orderAddress/${this.props.match.params.id}`)
     }
 
     render(){
+        console.log(this.props.user)
         if(this.props.order===undefined){
             this.props.history.replace(`/work/${this.props.match.params.id}`)
         }
@@ -54,7 +36,8 @@ class OrderPreview extends React.Component{
 const mapStateToProps = (state) =>{
     return {
         order:state.order,
-        work:state.work
+        work:state.work,
+        user:state.user
     }
 }
 

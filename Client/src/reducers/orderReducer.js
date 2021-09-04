@@ -1,9 +1,9 @@
-const orderReducer = (state=[],action) =>{
+const orderReducer = (state={},action) =>{
     switch(action.type){
         case 'SET_ORDER':
             return action.payload
         case 'REMOVE_ORDER':
-            return []
+            return {}
         default:
             return state
     }

@@ -39,6 +39,7 @@ router.post('/user/resendRegisterMail',users.resendRegisterMail)
 router.get('/user/confirmSign/:token',users.confirmSignupEmail)
 router.get('/user/forgotCheck',users.forgotCheck)
 router.post('/user/confirmForgot/:token',users.confirmChangePassword)
+router.post('/user/addAddress',authUser,users.addAddress)
 router.get('/supplier/:id/workOrders',authUser,users.workOrders)
 router.get('/supplier/orders/:orderId/cancel',authUser,users.supplierCancel)/* Add suspension if cancelled during active order */
 router.get('/supplier/orders/:orderId/complete',authUser,orders.completeOrder)

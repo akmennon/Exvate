@@ -1352,6 +1352,23 @@ userSchema.statics.changeSampleLimit = async function (userId,body){
     }
 }
 
+userSchema.methods.addAddress = async function (address) {
+    const user = this
+
+    try{
+        if(user.address.length>=10){
+            return Promise.reject({status:false,message:'Address limit reached',statusCode:403})
+        }
+        const newAddress = pick(address,['building','street','city','state','country','pin'])
+        user.address.push(newAddress)
+        await user.save()
+        return Promise.resolve(user.address[user.address.length-1])
+    }
+    catch(e){
+        return Promise.reject({status:false,message:'Error adding address',statusCode:500})
+    }
+}
+
 const User = mongoose.model('User',userSchema)
 
 module.exports = User
