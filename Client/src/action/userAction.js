@@ -8,6 +8,10 @@ export const setAddress = (address) =>{
     return {type:'ADD_ADDRESS',payload:address}
 }
 
+export const removeAddress = (addressId) =>{
+    return {type:'REMOVE_ADDRESS',payload:addressId}
+}
+
 export const removeUser = () =>{
     return {type:'REMOVE_USER'}
 }

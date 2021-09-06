@@ -84,7 +84,7 @@ class Router extends React.Component{
                     <Route path="/supplier/dashboard" component={Dashboard}/>
                     <Route path="/supplier/signup" component={HostSignUp} />
                     <Route path="/user/addAddress" component={Addaddress} />
-                    <Route path="/user/address" component={AllAddresses} />
+                    <NavRoute path="/user/address" component={AllAddresses} />
                 </Switch>
             </BrowserRouter>
         )

@@ -1369,6 +1369,22 @@ userSchema.methods.addAddress = async function (address) {
     }
 }
 
+userSchema.methods.removeAddress = async function (addressId) {
+    const user = this
+
+    try{
+        if(user.address.length==0||!user.address.find(ele=>ele._id==addressId)){
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:403})
+        }
+        user.address = user.address.filter((ele)=>ele._id!=addressId)
+        await user.save()
+        return Promise.resolve({status:true,message:'Address successfully removed'})
+    }
+    catch(e){
+        return Promise.reject({status:false,message:'Error adding address',statusCode:500})
+    }
+}
+
 const User = mongoose.model('User',userSchema)
 
 module.exports = User

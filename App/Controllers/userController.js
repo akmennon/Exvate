@@ -426,3 +426,16 @@ module.exports.addAddress = (req,res,next) =>{
             errorHandler(err,next)
         })
 }
+
+module.exports.removeAddress = (req,res,next) =>{
+    const user = req.user
+    const addressId = req.params.id
+
+    user.removeAddress(addressId)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}

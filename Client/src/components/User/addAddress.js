@@ -18,7 +18,7 @@ const handleClick = (address,props,dispatch,order) =>{
         props.history.goBack()
     }:
     () =>{
-        props.history.replace(`/`)
+        props.history.replace(`/user/address`)
     }
     dispatch(startAddAddress(address,redirect))
 }

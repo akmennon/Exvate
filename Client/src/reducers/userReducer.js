@@ -3,8 +3,11 @@ const userReducer = (state={},action) =>{
         case 'SET_USER':
             return action.payload
         case 'ADD_ADDRESS':
-            console.log(action.payload)
             state.address.push(action.payload)
+            return state
+        case 'REMOVE_ADDRESS':
+            console.log(state)
+            state.address = state.address.filter(ele=>ele._id!==action.payload)
             return state
         case 'REMOVE_USER':
             return {}
