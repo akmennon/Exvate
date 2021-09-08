@@ -439,3 +439,28 @@ module.exports.removeAddress = (req,res,next) =>{
             errorHandler(err,next)
         })
 }
+
+module.exports.companyDetails = (req,res,next) =>{
+    const user = req.user
+
+    user.getCompanyDetails()
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changeCompanyDetails = (req,res,next) =>{
+    const user = req.user
+    const details = req.body
+
+    user.changeCompanyDetails(details)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}

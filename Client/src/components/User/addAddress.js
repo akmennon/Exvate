@@ -14,7 +14,7 @@ const handleChange = (ev,setInputState) =>{
 }
 
 const handleClick = (address,props,dispatch,order) =>{
-    const redirect = order.result? () =>{
+    const redirect = order&&order.result? () =>{
         props.history.goBack()
     }:
     () =>{
@@ -26,7 +26,7 @@ const handleClick = (address,props,dispatch,order) =>{
 export default function AddAddress (props) {
     const [inputState,setInputState] = useState({})
     const dispatch = useDispatch()
-    const order = useSelector((state)=>state.order)
+    const order = useSelector((state)=>state.order.newOrder)
     const user = useSelector((state)=>state.user)
     console.log(user)
 
@@ -34,6 +34,7 @@ export default function AddAddress (props) {
         <div>
             <h1>Add address</h1>
             <div style={{display:'flex',flexDirection:'column',width:300,rowGap:30}}>
+                <Textfield variant='outlined' label='Name' name='name' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Textfield variant='outlined' label='Building' name='building' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Textfield variant='outlined' label='Street' name='street' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Textfield variant='outlined' label='City' name='city' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>

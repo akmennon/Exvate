@@ -129,6 +129,43 @@ const orderSchema = new Schema({
             minlength:2
         }
     },
+    billingAddress:{
+        name:{
+            type:String,
+            maxlength:40,
+            minlength:3
+        },
+        building:{
+            type:String,
+            maxlength:32,
+            minlength:2
+        },
+        street:{
+            type:String,
+            maxlength:32,
+            minlength:2
+        },
+        city:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        state:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        country:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        },
+        pin:{
+            type:String,
+            maxlength:30,
+            minlength:2
+        }
+    },
     supplier:{
         assigned:[{
             type:Schema.Types.ObjectId,
@@ -671,6 +708,21 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
                 return ele._id = orderValues.address
             })
 
+            if(orderValues.billingAddress){
+                const billingAddress = pick(orderValues.billingAddress,['name','building','street','city','state','country','pin'])
+                for(const x in billingAddress){
+                    if(!x){
+                        return Promise.reject({status:false,message:'Invalid input',statusCode:403})
+                    }
+                }
+                order.billingAddress = billingAddress
+            }
+            else{
+                order.billingAddress = user.address.find((ele)=>{
+                    return ele._id = orderValues.address
+                })
+            }
+
             /* Order is modelled with result and saved */
             await order.save()
             user.sampleOrders.push(id)
@@ -736,6 +788,21 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             order.address = user.address.find((ele)=>{
                 return ele._id = orderValues.address
             })
+
+            if(orderValues.billingAddress){
+                const billingAddress = pick(orderValues.billingAddress,['name','building','street','city','state','country','pin'])
+                for(const x in billingAddress){
+                    if(!x){
+                        return Promise.reject({status:false,message:'Invalid input',statusCode:403})
+                    }
+                }
+                order.billingAddress = billingAddress
+            }
+            else{
+                order.billingAddress = user.address.find((ele)=>{
+                    return ele._id = orderValues.address
+                })
+            }
 
             /* Order is modelled with result and saved */
             const savedOrder = await order.save()
@@ -1019,19 +1086,19 @@ orderSchema.statics.userAll = async function(id,user){
 
     try{
         if(user.isAdmin.value){
-            const orders = await Order.find({'userId._id':id}).limit(20) //proper pagination required
+            const orders = await Order.find({'userId._id':id}).sort({createdAt:-1}).limit(20).lean() //proper pagination required
             console.log(orders)
             return Promise.resolve(orders)
         }
         else{
-            const orders = await Order.find({'userId._id':user.id}).limit(20)
+            const orders = await Order.find({'userId._id':user.id}).sort({createdAt:-1}).limit(20).lean()
             console.log(orders)
             return Promise.resolve(orders)
         }
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error fetching orders')
+        return Promise.reject(e)
     }
 }
 
@@ -1046,7 +1113,7 @@ orderSchema.statics.dashBoard = async function(user){
     }
     catch(e){
         console.log(e)
-        return Promise.reject('Error fetching dashboard')
+        return Promise.reject(e)
     }
 }
 

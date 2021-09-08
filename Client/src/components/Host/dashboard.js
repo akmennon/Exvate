@@ -19,6 +19,7 @@ import InboxIcon from '@material-ui/icons/MoveToInbox';
 import MailIcon from '@material-ui/icons/Mail';
 import {connect} from 'react-redux'
 import DataTable from './dataGrid'
+import Button from '@material-ui/core/Button';
 
 const drawerWidth = 240;
 
@@ -82,9 +83,14 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
     padding: theme.spacing(3),
   },
+  title: {
+    display:'block',
+    cursor:'pointer',
+    marginRight:theme.spacing(4)
+  }
 }));
 
-function MiniDrawer() {
+function MiniDrawer(props) {
   const classes = useStyles();
   const theme = useTheme();
   const [open, setOpen] = useState(false);
@@ -118,8 +124,8 @@ function MiniDrawer() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap>
-            Supplier
+          <Typography variant="h6" onClick={()=>{props.history.push('/')}} className={classes.title}>
+            Exvate
           </Typography>
         </Toolbar>
       </AppBar>

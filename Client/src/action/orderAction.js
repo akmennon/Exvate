@@ -4,6 +4,11 @@ export const setOrder = (payload) => {
     return {type:'SET_ORDER',payload:payload}
 }
 
+export const setFinishedOrder = (payload) => {
+    console.log(payload)
+    return {type:'SET_FINISHED_ORDER',payload:payload}
+}
+
 export const removeOrder = () =>{
     return {type:'REMOVE_ORDER'}
 }

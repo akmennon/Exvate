@@ -68,6 +68,11 @@ const userSchema = new Schema({
         }
     },
     address:[{
+        name:{
+            type:String,
+            maxlength:40,
+            minlength:3
+        },
         building:{
             type:String,
             maxlength:32,
@@ -136,6 +141,11 @@ const userSchema = new Schema({
             maxlength:60
         },
         officeAddress:{
+            name:{
+                type:String,
+                maxlength:40,
+                minlength:3
+            },
             building:{
                 type:String,
                 maxlength:32,
@@ -166,6 +176,26 @@ const userSchema = new Schema({
                 maxlength:30,
                 minlength:2
             }
+        },
+        position:{
+            type:String,
+            maxlength:50,
+            minlength:4
+        },
+        phone:{
+            type:String,
+            minlength:4,
+            maxlength:20
+        },
+        website:{
+            type:String,
+            minlength:4,
+            maxlength:50
+        },
+        taxId:{
+            type:String,
+            minlength:3,
+            maxlength:100
         }
     },
     userType:{                              // To assign the user type
@@ -1359,7 +1389,7 @@ userSchema.methods.addAddress = async function (address) {
         if(user.address.length>=10){
             return Promise.reject({status:false,message:'Address limit reached',statusCode:403})
         }
-        const newAddress = pick(address,['building','street','city','state','country','pin'])
+        const newAddress = pick(address,['name','building','street','city','state','country','pin'])
         user.address.push(newAddress)
         await user.save()
         return Promise.resolve(user.address[user.address.length-1])
@@ -1379,6 +1409,32 @@ userSchema.methods.removeAddress = async function (addressId) {
         user.address = user.address.filter((ele)=>ele._id!=addressId)
         await user.save()
         return Promise.resolve({status:true,message:'Address successfully removed'})
+    }
+    catch(e){
+        return Promise.reject({status:false,message:'Error adding address',statusCode:500})
+    }
+}
+
+userSchema.methods.getCompanyDetails = async function () {
+    const user = this
+
+    try{
+        if(!user.companyDetails||!user.companyDetails.name){
+            return Promise.reject({status:false,message:'No details available',statusCode:404})
+        }
+        return Promise.resolve(user.companyDetails)
+    }
+    catch(e){
+        return Promise.reject({status:false,message:'Error adding address',statusCode:500})
+    }
+}
+
+userSchema.methods.changeCompanyDetails = async function (details) {
+    const user = this
+
+    try{
+        
+        return Promise.resolve(user.companyDetails)
     }
     catch(e){
         return Promise.reject({status:false,message:'Error adding address',statusCode:500})

@@ -1,5 +1,8 @@
 import React from 'react'
 import axios from '../../config/axios'
+import {connect} from 'react-redux'
+import {setFinishedOrder} from '../../action/orderAction'
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 /* display all the orders of a user */
 
@@ -7,8 +10,11 @@ class Orders extends React.Component {
     constructor(props){
         super(props)
         this.state={
-            orders:[]
+            orders:[],
+            status:'loading'
         }
+
+        this.handleClick = this.handleClick.bind(this)
     }
 
     componentDidMount(){
@@ -23,27 +29,48 @@ class Orders extends React.Component {
             }
         })
             .then((response)=>{
-                console.log(response.data)
                 this.setState({orders:response.data})
             })
             .catch((err)=>{
                 console.log(err)
+                this.setState({status:'failed'})
             })
     }
 
+    handleClick(orderIndex){
+        this.props.dispatch(setFinishedOrder(this.state.orders[orderIndex]))
+        this.props.history.push(`/user/orderPage/${this.state.orders[orderIndex]._id}`)
+    }
+
     render(){
-        return(
-            <div>
-                {
-                    this.state.orders.map((order)=>{
-                        return (
-                            <p key={order._id}>{order.status}</p>
-                        )
-                    })
-                }
-            </div>
-        )
+        if(this.state.orders.length){
+            return(
+                <div>
+                    {
+                        this.state.orders.map((order,orderIndex)=>{
+                            return (
+                                <p key={order._id} onClick={()=>{this.handleClick(orderIndex)}} >{order.status}</p>
+                            )
+                        })
+                    }
+                </div>
+            )
+        }
+        else if(this.state.status==='loading'){
+            return(
+                <div>
+                    <CircularProgress />
+                </div>
+            )
+        }
+        else{
+            return(
+                <div>
+                    <h3>Error Fetching data.Please retry by refreshing the page</h3>
+                </div>
+            )
+        }
     }
 }
 
-export default Orders
+export default connect()(Orders)

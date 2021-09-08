@@ -35,7 +35,7 @@ class OrderPreview extends React.Component{
 
 const mapStateToProps = (state) =>{
     return {
-        order:state.order,
+        order:state.order.newOrder,
         work:state.work,
         user:state.user
     }

@@ -89,6 +89,7 @@ router.get('/works/all',works.all)
 router.get('/works/:id',works.detail)
 router.post('/order/:id',authUser,orders.create)
 router.get('/order/:id',authUser,orders.details)
+router.get('/user/companyDetails',authUser,users.companyDetails)
 
 /* PENDING */
 /*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/

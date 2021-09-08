@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import { makeStyles, fade } from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
@@ -137,6 +137,9 @@ const handleClick = (e,props) =>{
     case 'address':
       props.route.history.push('/user/address')
       break;
+    case 'editProfile':
+      props.route.history.push('/user/editProfile')
+      break;
     default:
       console.log('fix navbar switch')
   }
@@ -144,7 +147,8 @@ const handleClick = (e,props) =>{
 
 function ButtonAppBar(props) {
   const classes = useStyles();
-  const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [searchValue,setSearchValue] = useState('')
   const open = Boolean(anchorEl);
 
   const handleClickMenu = (event) => {
@@ -162,8 +166,8 @@ function ButtonAppBar(props) {
           <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu">
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" onClick={()=>{handleClick('home',props)}} className={classes.title}>
-            Sourceo
+          <Typography variant="h6" onClick={()=>{setSearchValue('');handleClick('home',props)}} className={classes.title}>
+            Exvate
           </Typography>
           <div className={classes.searchNButtons}>
             <div className={classes.searchFull}>
@@ -178,6 +182,15 @@ function ButtonAppBar(props) {
                     input: classes.inputInput,
                   }}
                   inputProps={{ 'aria-label': 'search' }}
+                  value={searchValue}
+                  onChange={(ev)=>{
+                    ev.persist()
+                    setSearchValue(ev.target.value)
+                  }}
+                  onKeyUp={(ev)=>{
+                    if(ev.key==='Enter')
+                    props.route.history.push(`/search/${searchValue}`)
+                  }}
                 />
               </div>
             </div>
@@ -203,28 +216,14 @@ function ButtonAppBar(props) {
                   TransitionComponent={Fade}
                   className={classes.menu}
                 >
-                  <MenuItem onClick={()=>{handleClose();handleClick('address',props)}}>Your Addresses</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('address',props)}}>Addresses</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('editProfile',props)}}>Edit profile</MenuItem>
                   <MenuItem onClick={()=>{handleClose();handleClick('logButton',props)}}>Logout</MenuItem>
                 </Menu>
               </div>
             }
           </div>
         </Toolbar>
-        <div className={classes.searchGroup}>
-            <div className={classes.search1}>
-              <div className={classes.searchIcon}>
-                <SearchIcon />
-              </div>
-              <InputBase
-                placeholder="Search…"
-                classes={{
-                  root: classes.inputRoot,
-                  input: classes.inputInput,
-                }}
-                inputProps={{ 'aria-label': 'search' }}
-              />
-            </div>
-          </div>
       </AppBar>
     </div>
   );
