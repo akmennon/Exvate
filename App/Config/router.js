@@ -32,6 +32,7 @@ const adminLevel = require('../Middlewares/adminLevel')
 router.post('/user/signup',users.create)
 router.post('/user/login',users.login)
 router.get('/user/account',authUser,users.account)
+router.get('/user/profile',authUser,users.profile)
 router.get('/user/logout',authUser,users.logout)
 router.get('/user/logout',authUser,users.logoutAll)
 router.post('/user/forgotPassword',users.forgotPassword)
@@ -90,6 +91,8 @@ router.get('/works/:id',works.detail)
 router.post('/order/:id',authUser,orders.create)
 router.get('/order/:id',authUser,orders.details)
 router.get('/user/companyDetails',authUser,users.companyDetails)
+router.post('/user/companyDetails',authUser,users.changeCompanyDetails)
+router.post('/user/changePassword',authUser,users.changePassword)
 
 /* PENDING */
 /*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/

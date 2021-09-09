@@ -34,13 +34,13 @@ export default function AddAddress (props) {
         <div>
             <h1>Add address</h1>
             <div style={{display:'flex',flexDirection:'column',width:300,rowGap:30}}>
-                <Textfield variant='outlined' label='Name' name='name' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='Building' name='building' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='Street' name='street' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='City' name='city' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='State' name='state' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='Country' name='country' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Textfield variant='outlined' label='Pin' name='pin' onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='Name' name='name' value={inputState.name} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='Building' name='building' value={inputState.building} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='Street' name='street' value={inputState.street} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='City' name='city' value={inputState.city} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='State' name='state' value={inputState.state} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='Country' name='country' value={inputState.country} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
+                <Textfield variant='outlined' label='Pin' name='pin' value={inputState.pin} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Button style={{width:100}} color='primary' variant="contained" onClick={()=>{handleClick(inputState,props,dispatch,order)}}>Confirm</Button>
             </div>
         </div>

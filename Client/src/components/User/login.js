@@ -94,7 +94,7 @@ const SignIn = (props) => {
             password: auth.password
         }
         const redirect = () =>{
-            props.history.goBack()
+            props.history.replace('/')
         }
         dispatch(startSetUser(loginData,redirect,setAuth))
     }
@@ -133,32 +133,32 @@ const SignIn = (props) => {
             </Typography>
             <form className={classes.form} onSubmit={handleSubmit} noValidate>
                 <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email Address"
-                name="email"
-                onChange={(e)=>handleClick(e)}
-                autoComplete="email"
+                    variant="outlined"
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="email"
+                    label="Email Address"
+                    name="email"
+                    onChange={(e)=>handleClick(e)}
+                    autoComplete="email"
                 />
                 <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                value={auth.password}
-                onChange={(e)=>{handleClick(e)}}
-                type="password"
-                id="password"
-                autoComplete="current-password"
+                    variant="outlined"
+                    margin="normal"
+                    required
+                    fullWidth
+                    name="password"
+                    label="Password"
+                    value={auth.password}
+                    onChange={(e)=>{handleClick(e)}}
+                    type="password"
+                    id="password"
+                    autoComplete="current-password"
                 />
                 <FormControlLabel
-                control={<Checkbox value="remember" color="primary" />}
-                label="Remember me"
+                    control={<Checkbox value="remember" color="primary" />}
+                    label="Remember me"
                 />
                 {
                     auth.resendMail?(
@@ -167,9 +167,9 @@ const SignIn = (props) => {
                                 Email not verified, resend?
                             </Typography>
                             <Button
-                            onClick={()=>resendMail(auth,setAuth)}
-                            variant="contained"
-                            className={classes.submit}
+                                onClick={()=>resendMail(auth,setAuth)}
+                                variant="contained"
+                                className={classes.submit}
                             >
                             Resend
                             </Button>
@@ -177,11 +177,11 @@ const SignIn = (props) => {
                     ):<span/>
                 }
                 <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                className={classes.submit}
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    className={classes.submit}
                 >
                 Sign In
                 </Button>

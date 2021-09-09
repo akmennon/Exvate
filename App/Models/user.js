@@ -407,7 +407,7 @@ userSchema.pre('save',function(next){
 
     /* To check for the forgot Token and to hash the password when the user updates password */
 
-    else if(user.forgotToken.token&&user.isDirectModified('password')){ // checks if the password has been modified and if password reset token exists
+    else if(user.isDirectModified('password')){ // checks if the password has been modified and if password reset token exists
         bcryptjs.genSalt(14)
             .then(function(salt){
                 bcryptjs.hash(user.password,salt)
@@ -986,7 +986,7 @@ userSchema.statics.forgotCheck = async function(token){
 
     try{
         const user = await User.findOne({'forgotToken.token':token},"_id forgotToken").lean()
-        if(user.isAdmin.value){
+        if(user.isAdmin&&user.isAdmin.value){
             return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
         if(user&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
@@ -1433,11 +1433,58 @@ userSchema.methods.changeCompanyDetails = async function (details) {
     const user = this
 
     try{
-        
+        const companyDetails = pick(details,['name','position','phone','website','taxId'])
+        companyDetails.officeAddress = pick(details.officeAddress,['building','street','city','state','country','pin'])
+
+        for (const x in companyDetails){
+            if(!companyDetails[x]){
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+            }
+        }
+
+        for (const x in companyDetails.officeAddress){
+            if(!companyDetails.officeAddress[x]){
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+            }
+        }
+
+        user.companyDetails = companyDetails
+        await user.save()
         return Promise.resolve(user.companyDetails)
     }
     catch(e){
         return Promise.reject({status:false,message:'Error adding address',statusCode:500})
+    }
+}
+
+userSchema.methods.changePassword = async function (password,token){
+    const user = this
+
+    try{
+        const passwordDetails = pick(password,['oldPassword','newPassword','confirmPassword'])
+
+        for(const x in passwordDetails){
+            if(!passwordDetails[x]){
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+            }
+        }
+
+        if(passwordDetails.newPassword!=passwordDetails.confirmPassword){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
+        }
+
+        const result = await bcryptjs.compare(passwordDetails.oldPassword,user.password)
+
+        if(!result){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
+        }
+
+        user.set('password',passwordDetails.newPassword)    //LAST - remove other tokens than the one that is used for this request
+        await user.save()
+        return Promise.resolve({status:true,message:'Password changed successfully'})
+    }
+    catch(e){
+        return Promise.reject(e)
     }
 }
 

@@ -88,13 +88,13 @@ export default function OrderAddress (props){
                         {
                             !checked?(
                                 <div style={{display:'flex',flexDirection:'column', rowGap:10}}>
-                                    <TextField label="Name" onChange={handleChange} name='name' variant="outlined" />
-                                    <TextField label="Building" onChange={handleChange} name='building' variant="outlined" />
-                                    <TextField label="Street" onChange={handleChange} name='street' variant="outlined" />
-                                    <TextField label="City" onChange={handleChange} name='city' variant="outlined" />
-                                    <TextField label="State" onChange={handleChange} name='state' variant="outlined" />
-                                    <TextField label="Country" onChange={handleChange} name='country' variant="outlined" />
-                                    <TextField label="Pin" onChange={handleChange} name='pin' variant="outlined" />
+                                    <TextField label="Name" onChange={handleChange} name='name' value={billingAddress.name} variant="outlined" />
+                                    <TextField label="Building" onChange={handleChange} name='building' value={billingAddress.building} variant="outlined" />
+                                    <TextField label="Street" onChange={handleChange} name='street' value={billingAddress.street} variant="outlined" />
+                                    <TextField label="City" onChange={handleChange} name='city' value={billingAddress.city} variant="outlined" />
+                                    <TextField label="State" onChange={handleChange} name='state' value={billingAddress.state} variant="outlined" />
+                                    <TextField label="Country" onChange={handleChange} name='country' value={billingAddress.country} variant="outlined" />
+                                    <TextField label="Pin" onChange={handleChange} name='pin' value={billingAddress.pin} variant="outlined" />
                                 </div>
                             ):<span/>
                         }

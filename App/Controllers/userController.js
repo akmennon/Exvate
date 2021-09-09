@@ -51,6 +51,10 @@ module.exports.account = (req,res) =>{
     res.json(sendUser)
 }
 
+module.exports.profile = (req,res) =>{
+    res.json(req.user)
+}
+
 /* User logout */
 
 module.exports.logout = (req,res) =>{
@@ -457,6 +461,20 @@ module.exports.changeCompanyDetails = (req,res,next) =>{
     const details = req.body
 
     user.changeCompanyDetails(details)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changePassword = (req,res,next) =>{
+    const user = req.user
+    const passwordDetails = req.body
+    const token = req.header('x-auth')
+
+    user.changePassword(passwordDetails,token)
         .then((response)=>{
             res.json(response)
         })

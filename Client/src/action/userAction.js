@@ -45,16 +45,12 @@ export const startTokenSetUser = (token,redirect) =>{   //token login action
             }
         })
             .then((response)=>{
-                if(response.data.hasOwnProperty('errors')){
-                    console.log(response.data.errors)
-                }
-                else{
-                    console.log(response.data)
-                    dispatch(setUser(response.data))
-                    redirect()
-                }
+                console.log(response.data)
+                dispatch(setUser(response.data))
+                redirect()
             })
             .catch((err)=>{
+                dispatch(removeUser())
                 console.log(err)
             })
     })
@@ -69,14 +65,9 @@ export const startRemoveUser = (token,redirect) =>{ //logout action
             }
         })
         .then((response)=>{
-            if(response.data.hasOwnProperty('errors')){
-                console.log('error -',response.data.message)
-            }
-            else{
-                localStorage.removeItem('x-auth')
-                dispatch(removeUser())
-                redirect()
-            }
+            localStorage.removeItem('x-auth')
+            dispatch(removeUser())
+            redirect()
         })
         .catch((err)=>{
             console.log(err)
