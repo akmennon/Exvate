@@ -8,6 +8,7 @@ const sendMail = require('../Resolvers/sendMail')
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
+const size = require('lodash/size')
 
 const Schema = mongoose.Schema
 
@@ -146,11 +147,6 @@ const userSchema = new Schema({
                 maxlength:40,
                 minlength:3
             },
-            building:{
-                type:String,
-                maxlength:32,
-                minlength:2
-            },
             street:{
                 type:String,
                 maxlength:32,
@@ -191,11 +187,6 @@ const userSchema = new Schema({
             type:String,
             minlength:4,
             maxlength:50
-        },
-        taxId:{
-            type:String,
-            minlength:3,
-            maxlength:100
         }
     },
     userType:{                              // To assign the user type
@@ -476,6 +467,9 @@ userSchema.statics.findByCredentials = async function(email,password){
         if(!user){
             return Promise.reject({message:'Invalid email or password',statusCode:401})
         }
+        else if(user.isAdmin&&user.isAdmin.value){
+            return Promise.reject({status:false,message:'Invalid Usertype',statusCode:401})
+        }
         else if(!user.email.confirmed.value){
             //Admin created user work
             /*if(user.adminCreated){
@@ -528,7 +522,7 @@ userSchema.statics.findByEmail = function(email){
 
 /* Finds the user for whom the login token belongs to */
 
-userSchema.statics.findByToken = function(token){
+userSchema.statics.findByToken = function(token,path){
     const User = this
 
     return User.findOne({'tokens.token':token})
@@ -549,6 +543,9 @@ userSchema.statics.findByToken = function(token){
                     }
                 }
                 else{
+                    if(path=='/user/logout'){
+                        return Promise.resolve({status:true,message:`Successfully logged out`})
+                    }
                     return Promise.reject({status:false,message:`Unauthorized`,statusCode:401})
                 }
             })
@@ -629,26 +626,80 @@ userSchema.methods.generateToken = function(){
 
 /* confirms the email when the link from the verification email is followed */
 
-userSchema.statics.confirmEmail = function(token){
+userSchema.statics.confirmEmail = async function(token,body){
     const User = this
 
-    return User.findOne({'email.confirmed.token':token})
-                .then(function(user){
-                    if(!user){
-                        return Promise.reject({status:false,message:'User not found',statusCode:404})
-                    }
-                    if(user.email.confirmed.value){
-                        return Promise.reject({status:false,message:'User already verified',statusCode:401})
-                    }
-                    user.email.confirmed.value = true
-                    return user.save()
-                })
-                .then(function(user){
-                    return Promise.resolve({status:true,message:'Email confirmed successfully'})
-                })
-                .catch(function(err){
-                    return Promise.reject(err)
-                })
+    try{
+        const user = await User.findOne({'email.confirmed.token':token})
+
+        if(!user){
+            return Promise.reject({status:false,message:'User not found',statusCode:404})
+        }
+
+        if(user.email.confirmed.value){
+            return Promise.reject({status:false,message:'User already verified',statusCode:401})
+        }
+
+        if(body.userType=='buyer'){
+            
+            const companyDetails = pick(body,['country','state','companyName','city','street','userType','phone','pin'])
+
+            for(const x in companyDetails){
+                if(!companyDetails[x]){
+                    return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+                }
+            }
+
+            user.companyDetails = {
+                name:companyDetails.companyName,
+                phone:companyDetails.phone,
+                officeAddress:{
+                    street:companyDetails.street,
+                    city:companyDetails.city,
+                    state:companyDetails.state,
+                    country:companyDetails.country,
+                    pin:companyDetails.pin,
+                    name:user.name
+                }
+            }
+
+        }
+        else if(body.userType=='supplier'||body.userType=='both'){
+
+            const companyDetails = pick(body,['country','state','companyName','city','street','userType','phone','website','pin','position'])
+
+            for(const x in companyDetails){
+                if(!companyDetails[x]){
+                    return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+                }
+            }
+
+            user.companyDetails = {
+                name:companyDetails.companyName,
+                position:companyDetails.position,
+                phone:companyDetails.phone,
+                website:companyDetails.website,
+                officeAddress:{
+                    street:companyDetails.street,
+                    city:companyDetails.city,
+                    state:companyDetails.state,
+                    country:companyDetails.country,
+                    pin:companyDetails.pin,
+                    name:user.name
+                }
+            }
+
+            user.supplier = true
+            user.userType = 'Supplier'
+        }
+
+        user.email.confirmed.value = true
+        await user.save()
+        return Promise.resolve({status:true,message:'Email confirmed successfully'})
+    }
+    catch(e){
+        return Promise.reject(err)
+    }
 }
 
 /* To confirm the change in password from the email and also update the new password */
@@ -1470,7 +1521,7 @@ userSchema.methods.changePassword = async function (password,token){
         }
 
         if(passwordDetails.newPassword!=passwordDetails.confirmPassword){
-            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
+            return Promise.reject({status:false,message:"Password doesn't match",statusCode:403})
         }
 
         const result = await bcryptjs.compare(passwordDetails.oldPassword,user.password)
@@ -1480,8 +1531,97 @@ userSchema.methods.changePassword = async function (password,token){
         }
 
         user.set('password',passwordDetails.newPassword)    //LAST - remove other tokens than the one that is used for this request
+        user.tokens = user.tokens.filter((tokenData)=>{
+            return tokenData.token.toString() == token
+        })
         await user.save()
         return Promise.resolve({status:true,message:'Password changed successfully'})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+userSchema.methods.changeName = async function (body){
+    const user = this
+
+    try{
+        if(!body.name){
+            return Promise.reject({status:false,message:'Invalid input',statusCode:403})
+        }
+        user.name = body.name
+        await user.save()
+        return Promise.resolve({status:true,message:'Name changed successfully'})
+    }
+    catch(e){
+        return Promise.resolve(e)
+    }
+}
+
+userSchema.methods.logOut = async function (token){
+    const user = this
+
+    try{
+        user.tokens = user.tokens.filter((ele)=>{
+            return ele.token != token
+        })
+    
+        await user.save()
+        return Promise.resolve({status:true,message:'Successfully removed'})
+
+    }
+    catch(e){
+        return Promise.resolve(e)
+    }
+}
+
+userSchema.methods.changeCompanyDetails = async function (body){
+    const user = this
+
+    try{
+        const companyDetails = pick(body,['name','position','phone','website','taxId'])
+        companyDetails.officeAddress = pick(body.officeAddress,['name','building','street','city','state','country','pin'])
+
+        if(size(companyDetails)!=6||size(companyDetails.officeAddress)!=7){
+            return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+        }
+
+        for(const x in companyDetails){
+            if(!companyDetails[x]){
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+            }
+        }
+
+        for(const x in companyDetails.officeAddress){
+            if(!companyDetails.officeAddress[x]){
+                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+            }
+        }
+
+        user.companyDetails = companyDetails
+        await user.save()
+        return Promise.resolve({status:true,message:'Successfully changed company details'})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+userSchema.methods.sendProfile = async function (body){
+    const user = this
+
+    try{
+        if(!body.password){
+            return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+        }
+
+        const result = await bcryptjs.compare(body.password,user.password)
+
+        if(!result){
+            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
+        }
+
+        return Promise.resolve(user) //pick
     }
     catch(e){
         return Promise.reject(e)

@@ -22,7 +22,7 @@ export default function EditPassword (props){
     const handleSubmit = () =>{
         const token = localStorage.getItem('x-auth')
         console.log(passwordDetails)
-        axios.post('/user/changePassword',passwordDetails,{
+        axios.post('/user/editProfile/changePassword',passwordDetails,{
             headers:{
                 'x-auth':token
             }
@@ -37,7 +37,7 @@ export default function EditPassword (props){
     }
 
     if(!profile.email){
-        props.history.replace('/user/editProfile')
+        props.history.replace('/user/editProfilePassword')
         return <CircularProgress/>
     }
     else{

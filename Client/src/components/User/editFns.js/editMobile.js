@@ -7,7 +7,7 @@ export default function EditMobile (props){
     console.log(profile)
 
     if(!profile.email){
-        props.history.replace('/user/editProfile')
+        props.history.replace('/user/editProfilePassword')
         return <CircularProgress/>
     }
     else{

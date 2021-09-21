@@ -51,21 +51,33 @@ module.exports.account = (req,res) =>{
     res.json(sendUser)
 }
 
-module.exports.profile = (req,res) =>{
-    res.json(req.user)
+module.exports.profile = (req,res,next) =>{
+    const user = req.user
+    const body = req.body
+
+    user.sendProfile(body)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
 }
 
 /* User logout */
 
-module.exports.logout = (req,res) =>{
+module.exports.logout = (req,res,next) =>{
+    const user = req.user
+    const token = req.header('x-auth')
 
     /* removes the login token */
-    User.findByIdAndUpdate(req.user._id,{$pull:{tokens:{token:req.token}}}) 
+    console.log('loggedout')
+    user.logOut(token)
         .then(function(){
             res.json({status:true,message:'Successfully logged out'})
         })
         .catch(function(err){
-            res.json(err)
+            errorHandler(err,next)
         })
 }
 
@@ -126,7 +138,7 @@ module.exports.resendRegisterMail = (req,res,next) =>{
 module.exports.confirmSignupEmail = (req,res,next) =>{
     const token = req.params.token
 
-    User.confirmEmail(token)
+    User.confirmEmail(token,req.body)
         .then(function(response){
             res.json(response)
         })
@@ -475,6 +487,32 @@ module.exports.changePassword = (req,res,next) =>{
     const token = req.header('x-auth')
 
     user.changePassword(passwordDetails,token)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changeName = (req,res,next) =>{
+    const user = req.user
+    const body = req.body
+
+    user.changeName(body)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changeCompanyDetails = (req,res,next) =>{
+    const user = req.user
+    const body = req.body
+
+    user.changeCompanyDetails(body)
         .then((response)=>{
             res.json(response)
         })

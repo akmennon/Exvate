@@ -27,6 +27,7 @@ import SearchWork from '../components/Work/searchWork'
 import AddCompanyDetails from '../components/User/addCompanyDetails'
 import AddMobile from '../components/User/addMobile'
 import EditFns from '../components/User/editProfileFns'
+import EditProfilePassword from '../components/User/editProfilePassword'
 
 let NavRoute = function({component:Component,path,exact}){  //Custom route with navbar
     return(
@@ -90,6 +91,7 @@ class Router extends React.Component{
                     <Route path="/supplier/dashboard" component={Dashboard}/>
                     <Route path="/supplier/signup" component={HostSignUp} />
                     <Route path="/user/addAddress" component={Addaddress} />
+                    <Route path="/user/editProfilePassword" component={EditProfilePassword} />
                     <NavRoute path="/user/address" component={AllAddresses} />
                     <NavRoute path="/user/orderPage/:id" component={OrderPage} />
                     <NavRoute path="/user/editProfile" component={EditProfile} />

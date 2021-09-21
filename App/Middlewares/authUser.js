@@ -10,11 +10,19 @@ const authUser = (req,res,next) =>{
         res.status(401).end('Token not available')
     }
     else{
-        User.findByToken(token)
-        .then(function(user){
-            req.user=user
-            req.token=token
-            next()
+        User.findByToken(token,req.path)
+        .then(function(response){
+            if(response.status){    //Used to logout if the token is already removed
+                res.json(response)
+            }
+            else{
+                if(!response.mobile){
+                    errorHandler({status:false,message:'Incomplete Signup',statusCode:401})
+                }
+                req.user=response
+                req.token=token
+                next()
+            }
         })
         .catch(function(err){
             errorHandler(err,next)

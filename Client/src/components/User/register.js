@@ -12,6 +12,7 @@ class Register extends React.Component{
             password:'',
             email:'',
             message:'',
+            confirmPassword:'',
             data:{},
             status:true,
             loading:false
@@ -27,7 +28,8 @@ class Register extends React.Component{
             password:this.state.password,
             email:{
                 email:this.state.email
-            }
+            },
+            confirmPassword:this.state.confirmPassword
         }
         this.setState({loading:true})
         setTimeout(()=>{
@@ -39,7 +41,7 @@ class Register extends React.Component{
                 this.setState({data:res.data,status:true,loading:false})
             })
             .catch((err)=>{
-                this.setState({name:'',password:'',email:'',message:errMsg(err,'Error Registering'),status:false,loading:false})
+                this.setState({name:'',password:'',email:'',confirmPassword:'',message:errMsg(err,'Error Registering'),status:false,loading:false})
             })
     }
 
@@ -78,6 +80,9 @@ class Register extends React.Component{
 
                     <label htmlFor='password'>Password </label>
                     <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick} value={this.state.password}/>
+
+                    <label htmlFor='confirmPassword'>Confirm Password </label>
+                    <input type='password' id='confirmPassword' name='confirmPassword' placeholder='Confirm Password' onChange={this.handleClick} value={this.state.confirmPassword}/>
 
                     <button type='submit'>Register {this.state.loading?<p>O</p>:<span/>}</button>
                 </form>

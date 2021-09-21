@@ -24,11 +24,17 @@ const handleClick = (address,props,dispatch,order) =>{
 }
 
 export default function AddAddress (props) {
-    const [inputState,setInputState] = useState({})
+    const [inputState,setInputState] = useState({
+        name:'',
+        building:'',
+        street:'',
+        city:'',
+        state:'',
+        country:'',
+        pin:''
+    })
     const dispatch = useDispatch()
     const order = useSelector((state)=>state.order.newOrder)
-    const user = useSelector((state)=>state.user)
-    console.log(user)
 
     return(
         <div>

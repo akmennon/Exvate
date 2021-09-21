@@ -138,7 +138,7 @@ const handleClick = (e,props) =>{
       props.route.history.push('/user/address')
       break;
     case 'editProfile':
-      props.route.history.push('/user/editProfile')
+      props.route.history.push('/user/editProfilePassword')
       break;
     default:
       console.log('fix navbar switch')
