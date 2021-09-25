@@ -1,4 +1,4 @@
-import React,{useState,Fragment} from 'react' 
+import React,{useState,Fragment, useEffect} from 'react' 
 import axios from '../../config/axios'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import TextField from '@material-ui/core/TextField'
@@ -12,20 +12,71 @@ import Switch from '@material-ui/core/Switch';
 import PhoneInput,{isPossiblePhoneNumber} from 'react-phone-number-input'
 import 'react-phone-number-input/style.css'
 import Button from '@material-ui/core/Button'
+import Backdrop from '@mui/material/Backdrop';
+import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
+import Fade from '@mui/material/Fade';
+import Typography from '@mui/material/Typography';
+import {useDispatch} from 'react-redux'
+import {startTokenSetUser} from '../../action/userAction'
 
 /* Component that confirms the email of the user */
 
 function ConfirmSign (props) {
-    const [state,setState] = useState({call:false,loading:false,data:{}})
-    const [form,setForm] = useState({country:'',state:'',companyName:'',city:'',street:'',userType:'buyer',phone:undefined,website:'',pin:'',position:''})
+    const [state,setState] = useState({call:false,loading:false})
+    const [form,setForm] = useState({country:'',state:'',companyName:'',city:'',street:'',userType:'buyer',phone:undefined,website:'',pin:'',position:'',otp:''})
     const [disabled,setWebsiteDisabled] = useState(false)
+    const [open,setOpen] = useState(false)
+    const [resendCountdown,setResendCountdown] = useState(60)
+    const [intervalId,setIntervalId] = useState('')
+    const dispatch = useDispatch()
+
+    useEffect(()=>{
+        console.log(intervalId)
+        if(resendCountdown===0){
+            clearInterval(intervalId)
+            setIntervalId('')
+        }
+    },[intervalId,resendCountdown])
+
+    const confirmOTP = () =>{
+        if(!intervalId){
+            setResendCountdown(59)
+            axios.post(`/user/sendOtp/${props.match.params.token}`,{mobile:form.phone})
+            .then((response)=>{
+                setOpen(true)
+                const intId = setInterval(()=>{
+                    setResendCountdown((prev)=>{
+                        if(prev){
+                            return prev-1
+                        }
+                        else{
+                            return prev
+                        }
+                    })
+                },1000)
+                setIntervalId(intId)
+            })
+            .catch((err)=>{
+                console.log(err)
+            })
+        }
+        else{
+            setOpen(true)
+        }
+    }
 
     const handleSubmit = () =>{
-        axios.post(`/user/confirmSign/${props.match.params.token}`,form)
+        if(form.otp&&form.otp.length===6){
+            axios.post(`/user/confirmSign/${props.match.params.token}`,form)
             .then((response)=>{
                 console.log(response)
-                if(response.data.status){
-                    setState({call:true,loading:false,data:response.data})
+                if(response.data.status&&response.data.payload.token){
+                    if(response.data.payload.token){
+                        localStorage.setItem('x-auth',response.data.payload.token)
+                    }
+                    setOpen(false)
+                    setState({call:true,loading:false})
                 }
                 else{
                     setState({loading:false})
@@ -35,12 +86,65 @@ function ConfirmSign (props) {
                 console.log(err)
                 setState({...state,loading:false})
             })
+        }
+        else{
+            console.log('Otp error')
+        }
     }
+
+
+const style = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    border: '2px solid #000',
+    boxShadow: 24,
+    p: 4,
+  };
 
     if(!state.loading){
         if(!state.call){
             return(
                 <div style={{display:'flex',flexDirection:'column',width:500,rowGap:20,margin:20}}>
+                    <Modal
+                        aria-labelledby="transition-modal-title"
+                        aria-describedby="transition-modal-description"
+                        open={open}
+                        onClose={()=>{setOpen(false)}}
+                        closeAfterTransition
+                        BackdropComponent={Backdrop}
+                        BackdropProps={{
+                        timeout: 500,
+                        }}
+                    >
+                        <Fade in={open}>
+                            <Box sx={style}>
+                                <Typography variant="h6" component="h2">
+                                    Mobile OTP Verification
+                                </Typography>
+                                <Typography id="transition-modal-description" sx={{ mt: 2 }}>
+                                    Please enter the six digit code sent to your mobile number
+                                </Typography>
+                                <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                    <Typography>Code</Typography>
+                                    <TextField
+                                        value={form.otp}
+                                        onChange={(e)=>{e.persist();setForm({...form,otp:e.target.value})}}
+                                        variant='outlined'
+                                        color='primary'
+                                        label='OTP'
+                                    />
+                                    <Button disabled={resendCountdown===0||resendCountdown===60?false:true} onClick={()=>{setResendCountdown(59);confirmOTP()}}>Resend{resendCountdown>0&&resendCountdown!==60?` ${resendCountdown}`:null} </Button>
+                                </div>
+                                <div style={{display:'flex',justifyContent:'flex-end',margin:10}}>
+                                    <Button color='primary' variant='contained' onClick={handleSubmit}>Confirm</Button>
+                                </div>
+                            </Box>
+                        </Fade>
+                    </Modal>
                     <TextField 
                         variant='outlined'
                         color='primary'
@@ -97,7 +201,7 @@ function ConfirmSign (props) {
                         defaultCountry="US"
                         countryCallingCodeEditable={false}
                         value={form.phone}
-                        onChange={(e)=>{console.log(e);setForm({...form,phone:e})}}
+                        onChange={(e)=>{setForm({...form,phone:e,otp:''})}}
                     />
                     {
                         form.userType==='supplier'||form.userType==='both'?(
@@ -124,21 +228,13 @@ function ConfirmSign (props) {
                             </Fragment>
                         ):<span/>
                     }
-                    <Button color='primary' variant='contained' onClick={handleSubmit} style={{width:200}}>Confirm</Button>
+                    <Button color='primary' variant='contained' onClick={confirmOTP} style={{width:200}}>Confirm</Button>
                 </div>
             )
         }
         else{
-            return(
-                <div>
-                    <p>Successfully Completed Signup. Redirecting </p>
-                    {
-                        setTimeout(()=>{
-                            props.history.replace('/user/login')
-                        },4000)
-                    }
-                </div>
-            )
+            dispatch(startTokenSetUser(localStorage.getItem('x-auth'),()=>{props.history.replace('/')}))
+            return <CircularProgress/>
         }
     }
     else{

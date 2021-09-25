@@ -16,8 +16,8 @@ const authUser = (req,res,next) =>{
                 res.json(response)
             }
             else{
-                if(!response.mobile){
-                    errorHandler({status:false,message:'Incomplete Signup',statusCode:401})
+                if(!response.email.confirmed.value){
+                    errorHandler({status:false,message:'Incomplete Signup',statusCode:401,payload:{signup:true}})
                 }
                 req.user=response
                 req.token=token

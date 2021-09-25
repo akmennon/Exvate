@@ -25,7 +25,6 @@ import OrderPage from '../components/User/orderPage'
 import EditProfile from '../components/User/editProfile'
 import SearchWork from '../components/Work/searchWork'
 import AddCompanyDetails from '../components/User/addCompanyDetails'
-import AddMobile from '../components/User/addMobile'
 import EditFns from '../components/User/editProfileFns'
 import EditProfilePassword from '../components/User/editProfilePassword'
 
@@ -97,7 +96,6 @@ class Router extends React.Component{
                     <NavRoute path="/user/editProfile" component={EditProfile} />
                     <NavRoute path="/search/:value" component={SearchWork} />
                     <NavRoute path="/user/addCompanyDetails" component={AddCompanyDetails} />
-                    <NavRoute path="/user/addMobile" component={AddMobile} />
                     <NavRoute path="/user/editFns/:type" component={EditFns} />
                 </Switch>
             </BrowserRouter>

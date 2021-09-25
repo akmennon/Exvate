@@ -1,6 +1,7 @@
 import React from 'react'
 import axios from '../../config/axios'
 import errMsg from '../../config/errMsg'
+import CircularProgress from '@material-ui/core/CircularProgress'
 
 /* registration */
 
@@ -14,7 +15,7 @@ class Register extends React.Component{
             message:'',
             confirmPassword:'',
             data:{},
-            status:true,
+            status:'none',
             loading:false
         }
     }
@@ -56,42 +57,46 @@ class Register extends React.Component{
         }
     }
 
-    hiddenMsg = () =>{
-        if(!this.state.status){
-            return <p>{this.state.message}</p>
+    render(){
+        if(this.state.status===true){
+            return(
+                <div>
+                    An email has been send to your account. please check your email
+                </div>
+            )
         }
         else{
-            return <span/>
-        }
-    }
+            return(
+                <div>
+                    <form onSubmit={this.handleSubmit}>
     
-    render(){
-        return(
-            <div>
-                <form onSubmit={this.handleSubmit}>
+                        <div style={{display:'flex',flexDirection:'column',width:200,margin:20,rowGap:15}}>
 
-                    <h1>Register</h1>
+                        <h1>Register</h1>
+    
+                        <label htmlFor='name'>Name </label>
+                        <input type='text' id='name' name='name' placeholder='Name' onChange={this.handleClick} value={this.state.name}/>
 
-                    <label htmlFor='name'>Name </label>
-                    <input type='text' id='name' name='name' placeholder='Name' onChange={this.handleClick} value={this.state.name}/>
+                        <label htmlFor='email'>Email </label>
+                        <input type='text' id='email' name='email' placeholder='Email' onChange={this.handleClick} value={this.state.email}/>
 
-                    <label htmlFor='email'>Email </label>
-                    <input type='text' id='email' name='email' placeholder='Email' onChange={this.handleClick} value={this.state.email}/>
+                        <label htmlFor='password'>Password </label>
+                        <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick} value={this.state.password}/>
 
-                    <label htmlFor='password'>Password </label>
-                    <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick} value={this.state.password}/>
+                        <label htmlFor='confirmPassword'>Confirm Password </label>
+                        <input type='password' id='confirmPassword' name='confirmPassword' placeholder='Confirm Password' onChange={this.handleClick} value={this.state.confirmPassword}/>
 
-                    <label htmlFor='confirmPassword'>Confirm Password </label>
-                    <input type='password' id='confirmPassword' name='confirmPassword' placeholder='Confirm Password' onChange={this.handleClick} value={this.state.confirmPassword}/>
+                        <button type='submit' style={{display:'flex',flexDirection:'row'}}>Register {this.state.loading?<CircularProgress/>:<span/>}</button>
 
-                    <button type='submit'>Register {this.state.loading?<p>O</p>:<span/>}</button>
-                </form>
-                {
-                    this.hiddenMsg()
-                }
-                <button name='resendEmail' onClick={this.handleClick}>Resend Email</button>
-            </div>
-        )
+                        </div>
+
+                    </form>
+                    {
+                        this.state.status===false?<p>{this.state.message}</p>:<span/>
+                    }
+                </div>
+            )
+        }
     }
 }
 

@@ -1,20 +1,21 @@
 import React,{useState} from 'react';
-import { makeStyles, fade } from '@material-ui/core/styles';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
-import Typography from '@material-ui/core/Typography';
-import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
-import MenuIcon from '@material-ui/icons/Menu';
-import InputBase from '@material-ui/core/InputBase';
-import SearchIcon from '@material-ui/icons/Search';
+import {alpha} from '@mui/material/styles';
+import {makeStyles} from '@mui/styles';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import InputBase from '@mui/material/InputBase';
+import SearchIcon from '@mui/icons-material/Search';
 import { startRemoveUser } from '../../action/userAction';
 import { connect } from 'react-redux'
-import ShoppingCartIcon from '@material-ui/icons/ShoppingCart';
-import Avatar from '@material-ui/core/Avatar';
-import Menu from '@material-ui/core/Menu'
-import MenuItem from '@material-ui/core/MenuItem';
-import Fade from '@material-ui/core/Fade';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem';
+import Fade from '@mui/material/Fade';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -43,9 +44,9 @@ const useStyles = makeStyles((theme) => ({
   search: {
     position: 'relative',
     borderRadius: theme.shape.borderRadius,
-    backgroundColor: fade(theme.palette.common.white, 0.9),
+    backgroundColor: alpha(theme.palette.common.white, 0.9),
     '&:hover': {
-      backgroundColor: fade(theme.palette.common.white, 1),
+      backgroundColor: alpha(theme.palette.common.white, 1),
     },
     
     display:'none',
@@ -57,9 +58,9 @@ const useStyles = makeStyles((theme) => ({
   search1: {
     position: 'relative',
     borderRadius: theme.shape.borderRadius,
-    backgroundColor: fade(theme.palette.common.white, 0.9),
+    backgroundColor: alpha(theme.palette.common.white, 0.9),
     '&:hover': {
-      backgroundColor: fade(theme.palette.common.white, 1),
+      backgroundColor: alpha(theme.palette.common.white, 1),
     },
     width: '100%',
   },
@@ -70,7 +71,7 @@ const useStyles = makeStyles((theme) => ({
     pointerEvents: 'none',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     color:'black'
   },
   inputRoot: {

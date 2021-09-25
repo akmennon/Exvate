@@ -21,7 +21,15 @@ module.exports.create = (req,res,next) =>{
             res.json(status)
         })
         .catch(function(err){
-            errorHandler(err,next)
+            console.log(err)
+            if(err.keyPattern['email.email']==1){
+                const error = new Error('User already exists')
+                error.statusCode = 401
+                errorHandler(error,next)
+            }
+            else{
+                errorHandler(err,next)
+            }
         })
 }
 
@@ -129,6 +137,20 @@ module.exports.resendRegisterMail = (req,res,next) =>{
             res.json({status:true,message:'The registration email has been sent to the address'})
         })
         .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+/* When the confirms otp */
+
+module.exports.confirmOtp = (req,res,next) =>{
+    const token = req.params.token
+
+    User.sendOtp(token,req.body)
+        .then(function(response){
+            res.json(response)
+        })
+        .catch(function(err){
             errorHandler(err,next)
         })
 }
@@ -513,6 +535,30 @@ module.exports.changeCompanyDetails = (req,res,next) =>{
     const body = req.body
 
     user.changeCompanyDetails(body)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changeMobile = (req,res,next) =>{
+    const user = this
+
+    user.changeMobileOtp(req.body)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.confirmMobileChange = (req,res,next) =>{
+    const user = this
+
+    user.confirmMobileChange(req.otp)
         .then((response)=>{
             res.json(response)
         })

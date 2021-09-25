@@ -9,6 +9,7 @@ const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
 const size = require('lodash/size')
+const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 const Schema = mongoose.Schema
 
@@ -44,6 +45,20 @@ const userSchema = new Schema({
     },
     mobile:{
         type:String
+    },
+    mobileVerified:{
+        value:{
+            type:Boolean,
+            default:false
+        },
+        token:{
+            type:String,
+            maxlength:6,
+            minlength:6
+        },
+        lastSend:{
+            type:Date
+        }
     },
     password:{
         type:String,
@@ -142,11 +157,6 @@ const userSchema = new Schema({
             maxlength:60
         },
         officeAddress:{
-            name:{
-                type:String,
-                maxlength:40,
-                minlength:3
-            },
             street:{
                 type:String,
                 maxlength:32,
@@ -373,7 +383,31 @@ const userSchema = new Schema({
                 }
             }
         }
-    }/*,                                //For admin created user
+    },
+    createdAt:{
+        type:Date,
+        default:Date.now
+    },
+    profileChangeToken:{
+        value:{
+            type:String
+        },
+        createdAt:{
+            type:Date
+        },
+        mobile:{
+            token:{
+                type:String
+            },
+            number:{
+                type:String
+            },
+            lastSend:{
+                type:Date
+            }
+        }
+    }
+    /*,                                //For admin created user
     adminCreated:{
         type:Schema.Types.ObjectId,
         ref:'User'
@@ -478,7 +512,7 @@ userSchema.statics.findByCredentials = async function(email,password){
                 return Promise.reject({message:'Please confirm email',statusCode:401,payload:{email:false}})
             }*/
 
-            return Promise.reject({status:false,message:'Please confirm email',statusCode:401,payload:{email:true}})
+            return Promise.reject({status:false,message:'Incomplete Signup',statusCode:401,payload:{signup:false}})
         }
         
         if(user.perms.user.suspended&&user.perms.user.suspended.value){
@@ -604,24 +638,68 @@ userSchema.methods.generateForgotToken = async function(){
 
 /* Creates a login token for the User */
 
-userSchema.methods.generateToken = function(){
+userSchema.methods.generateToken = async function(){
     const user = this
+
     const tokenData = {
         createdAt:new Date()
     }
 
-    const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
-    if(user.tokens.length==10){
-        user.tokens.length.shift()
+    try{
+
+        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
+
+        if(user.tokens.length==10){
+            user.tokens.length.shift()
+        }
+
+        user.tokens.push({token})
+        await user.save()
+        return Promise.resolve(token)
     }
-    user.tokens.push({token})
-    return user.save()
-            .then(function(){
-                return Promise.resolve(token)
-            })
-            .catch(function(err){
-                return Promise.reject(err)
-            })
+    catch(e){
+        return Promise.reject(err)
+    }
+}
+
+/* Send the otp for mobile verification for account registration */
+
+userSchema.statics.sendOtp = async function (token,body) {
+    const User = this
+
+    try{
+        const user = await User.findOne({'email.confirmed.token':token})
+
+        if(!user||!body.mobile){
+            return Promise.reject({status:false,message:'User not found',statusCode:404})
+        }
+
+        if(user.mobileVerified&&user.mobileVerified.value){
+            return Promise.resolve({status:true,message:'Mobile already verified'})
+        }
+
+        const lastSendValue = user.mobileVerified&&user.mobileVerified.lastSend? new Date(user.mobileVerified.lastSend).getTime()+60000 : undefined
+
+        if( user.mobileVerified && user.mobileVerified.lastSend &&  (lastSendValue > Date.now()) ){
+            return Promise.reject({status:false,message:'Time limit not ended',statusCode:401})
+        }
+
+        user.mobile = body.mobile
+        user.mobileVerified.lastSend = Date.now()
+        user.mobileVerified.token = ('' + Math.random()).slice(2,8)
+        await user.save()
+
+        const message = await client.messages.create({
+            body: `The code to register your Exvate account is ${user.mobileVerified.token}`,
+            from: '+19096555292',
+            to: user.mobile
+        })
+
+        console.log(message)
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 /* confirms the email when the link from the verification email is followed */
@@ -640,6 +718,20 @@ userSchema.statics.confirmEmail = async function(token,body){
             return Promise.reject({status:false,message:'User already verified',statusCode:401})
         }
 
+        if(user.mobile != body.phone){
+            return Promise.reject({status:false,message:'Mobile does not match',statusCode:401})
+        }
+
+        if(user.mobileVerified && user.mobileVerified.token != body.otp){
+            return Promise.reject({status:false,message:'Incorrect OTP',statusCode:401})
+        }
+
+        const lastSendValue = user.mobileVerified&&user.mobileVerified.lastSend? new Date(user.mobileVerified.lastSend).getTime()+3600000 : undefined
+
+        if( user.mobileVerified && user.mobileVerified.lastSend &&  ( !lastSendValue || ( lastSendValue < Date.now()) ) ){
+            return Promise.reject({status:false,message:'Expired OTP',statusCode:401})
+        }
+
         if(body.userType=='buyer'){
             
             const companyDetails = pick(body,['country','state','companyName','city','street','userType','phone','pin'])
@@ -652,14 +744,12 @@ userSchema.statics.confirmEmail = async function(token,body){
 
             user.companyDetails = {
                 name:companyDetails.companyName,
-                phone:companyDetails.phone,
                 officeAddress:{
                     street:companyDetails.street,
                     city:companyDetails.city,
                     state:companyDetails.state,
                     country:companyDetails.country,
-                    pin:companyDetails.pin,
-                    name:user.name
+                    pin:companyDetails.pin
                 }
             }
 
@@ -677,15 +767,13 @@ userSchema.statics.confirmEmail = async function(token,body){
             user.companyDetails = {
                 name:companyDetails.companyName,
                 position:companyDetails.position,
-                phone:companyDetails.phone,
                 website:companyDetails.website,
                 officeAddress:{
                     street:companyDetails.street,
                     city:companyDetails.city,
                     state:companyDetails.state,
                     country:companyDetails.country,
-                    pin:companyDetails.pin,
-                    name:user.name
+                    pin:companyDetails.pin
                 }
             }
 
@@ -693,11 +781,25 @@ userSchema.statics.confirmEmail = async function(token,body){
             user.userType = 'Supplier'
         }
 
+        user.mobileVerified.value = true
         user.email.confirmed.value = true
+
+        const tokenData = {
+            createdAt:new Date()
+        }
+
+        const emailToken = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
+
+        if(user.tokens.length==10){
+            user.tokens.length.shift()
+        }
+
+        user.tokens.push({token:emailToken})
+
         await user.save()
-        return Promise.resolve({status:true,message:'Email confirmed successfully'})
+        return Promise.resolve({status:true,message:'Signup completed successfully',payload:{token:emailToken}})
     }
-    catch(e){
+    catch(err){
         return Promise.reject(err)
     }
 }
@@ -1480,34 +1582,6 @@ userSchema.methods.getCompanyDetails = async function () {
     }
 }
 
-userSchema.methods.changeCompanyDetails = async function (details) {
-    const user = this
-
-    try{
-        const companyDetails = pick(details,['name','position','phone','website','taxId'])
-        companyDetails.officeAddress = pick(details.officeAddress,['building','street','city','state','country','pin'])
-
-        for (const x in companyDetails){
-            if(!companyDetails[x]){
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-            }
-        }
-
-        for (const x in companyDetails.officeAddress){
-            if(!companyDetails.officeAddress[x]){
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-            }
-        }
-
-        user.companyDetails = companyDetails
-        await user.save()
-        return Promise.resolve(user.companyDetails)
-    }
-    catch(e){
-        return Promise.reject({status:false,message:'Error adding address',statusCode:500})
-    }
-}
-
 userSchema.methods.changePassword = async function (password,token){
     const user = this
 
@@ -1579,10 +1653,10 @@ userSchema.methods.changeCompanyDetails = async function (body){
     const user = this
 
     try{
-        const companyDetails = pick(body,['name','position','phone','website','taxId'])
-        companyDetails.officeAddress = pick(body.officeAddress,['name','building','street','city','state','country','pin'])
+        const companyDetails = pick(body,['name','position','website'])
+        companyDetails.officeAddress = pick(body.officeAddress,['street','city','state','country','pin'])
 
-        if(size(companyDetails)!=6||size(companyDetails.officeAddress)!=7){
+        if(size(companyDetails)!=5||size(companyDetails.officeAddress)!=5){
             return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
         }
 
@@ -1599,6 +1673,7 @@ userSchema.methods.changeCompanyDetails = async function (body){
         }
 
         user.companyDetails = companyDetails
+        user.mobile = body.phone
         await user.save()
         return Promise.resolve({status:true,message:'Successfully changed company details'})
     }
@@ -1621,7 +1696,69 @@ userSchema.methods.sendProfile = async function (body){
             return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
 
-        return Promise.resolve(user) //pick
+        if(((new Date(user.profileChangeToken.createdAt).getTime()+1800000)-Date.now())>600000){
+            return Promise.resolve(user)
+        }
+
+        const token = jwt.sign({createdAt:new Date()},keys.jwtSecret)
+        user.profileChangeToken.value = token
+        user.profileChangeToken.createdAt = Date.now()
+        await user.save()
+        return Promise.resolve(user) //VULNERABLE - pick - send profile token seperately
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+userSchema.methods.changeMobileOtp = async function(body){
+    const user = this
+
+    try{
+        const mobile = body.mobile
+
+        if(!mobile){
+            return Promise.reject({status:false,message:'User not found',statusCode:404})
+        }
+
+        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+60000) > Date.now())){
+            return Promise.reject({status:false,message:'Time limit not reached',statusCode:401})
+        }
+
+        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+1800000) < Date.now())){
+            return Promise.reject({status:false,message:'OTP Expired',statusCode:401})
+        }
+
+        user.profileChangeToken.mobile.number = mobile
+        user.profileChangeToken.mobile.lastSend = Date.now()
+        user.profileChangeToken.mobile.token = ('' + Math.random()).slice(2,8)
+        await user.save()
+
+        const message = await client.messages.create({
+            body: `The code to change your mobile number is ${user.profileChangeToken.mobile.token}`,
+            from: '+19096555292',
+            to: user.profileChangeToken.mobile.number
+        })
+
+        console.log(message)
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+userSchema.methods.confirmMobileChange = async function(otp){
+    const user = this
+
+    try{
+        if(!otp||otp!=user.profileChangeToken.mobile.token){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
+        }
+
+        user.mobile = user.profileChangeToken.mobile.number
+        delete user.profileChangeToken.mobile
+        await user.save()
+        return Promise.resolve({status:true,message:'Mobile changed successfully'})
     }
     catch(e){
         return Promise.reject(e)

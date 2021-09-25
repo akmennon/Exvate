@@ -1,13 +1,17 @@
 import React from 'react';
 import Router from './config/router';
+import { createTheme,ThemeProvider } from '@mui/material/styles';
+import { StyledEngineProvider } from '@mui/material/styles';
 
-class App extends React.Component{
+const theme = createTheme()
 
-  render(){
-    return(
-      <Router/>
-    )
-  }
+function App (props){
+
+  return(
+    <StyledEngineProvider injectFirst>
+      <ThemeProvider theme={theme}><Router/></ThemeProvider>
+    </StyledEngineProvider>
+  )
 }
 
 export default App;

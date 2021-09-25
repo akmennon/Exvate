@@ -1,11 +1,11 @@
 import React,{useState,useEffect} from 'react';
-import { DataGrid } from '@material-ui/data-grid';
-import Card from '@material-ui/core/Card'
-import CardContent from '@material-ui/core/CardContent'
+import { DataGrid } from '@mui/x-data-grid';
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
 import axios from '../../config/axios'
 import { connect } from 'react-redux';
-import Button from '@material-ui/core/Button'
-import {makeStyles} from '@material-ui/core/styles'
+import Button from '@mui/material/Button'
+import {makeStyles} from '@mui/styles'
 
 /* Pending : Accept order */
 

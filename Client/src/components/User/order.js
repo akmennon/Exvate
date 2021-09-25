@@ -29,7 +29,12 @@ class Orders extends React.Component {
             }
         })
             .then((response)=>{
-                this.setState({orders:response.data})
+                if(response.data.length===0){
+                    this.setState({status:'none'})
+                }
+                else{
+                    this.setState({orders:response.data})
+                }
             })
             .catch((err)=>{
                 console.log(err)
@@ -53,6 +58,13 @@ class Orders extends React.Component {
                             )
                         })
                     }
+                </div>
+            )
+        }
+        else if(this.state.status==='none'){
+            return (
+                <div>
+                    You have not made any orders
                 </div>
             )
         }

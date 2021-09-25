@@ -22,7 +22,7 @@ export default function EditPassword (props){
     const handleSubmit = () =>{
         const token = localStorage.getItem('x-auth')
         console.log(passwordDetails)
-        axios.post('/user/editProfile/changePassword',passwordDetails,{
+        axios.post('/user/editProfile/changePassword',{payload:passwordDetails,profileToken:profile.profileChangeToken.value},{
             headers:{
                 'x-auth':token
             }
@@ -32,6 +32,7 @@ export default function EditPassword (props){
             setState('success')
         })
         .catch((err)=>{
+            props.history.replace('/user/editProfilePassword')
             setState('failed')
         })
     }

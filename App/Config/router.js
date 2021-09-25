@@ -20,6 +20,10 @@ const admin = require('../Middlewares/authAdmin')
 
 /* For admin level authorization */
 const adminLevel = require('../Middlewares/adminLevel')
+
+/* For profile edit verification */
+const profileEdit = require('../Middlewares/profileEdit')
+
 /* 
     0 - Highest level data and changing data of the level 1
     1 - Can manipulate data that can affect multiple users
@@ -91,10 +95,12 @@ router.get('/works/:id',works.detail)
 router.post('/order/:id',authUser,orders.create)
 router.get('/order/:id',authUser,orders.details)
 router.get('/user/companyDetails',authUser,users.companyDetails)
-router.post('/user/companyDetails',authUser,users.changeCompanyDetails)
-router.post('/user/editprofile/changePassword',authUser,users.changePassword)
-router.post('/user/editProfile/changeName',authUser,users.changeName)
-router.post('/user/editProfile/changeCompanyDetails',authUser,users.changeCompanyDetails)
+router.post('/user/editprofile/changePassword',authUser,profileEdit,users.changePassword)
+router.post('/user/editProfile/changeName',authUser,profileEdit,users.changeName)
+router.post('/user/editProfile/changeMobile',authUser,profileEdit,users.changeMobile)
+router.post('/user/editProfile/changeMobileConfirm',authUser,profileEdit,users.confirmMobileChange)
+router.post('/user/editProfile/changeCompanyDetails',authUser,profileEdit,users.changeCompanyDetails)
+router.post('/user/sendOtp/:token',users.confirmOtp)
 
 /* PENDING */
 /*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/
