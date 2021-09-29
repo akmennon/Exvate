@@ -2,21 +2,30 @@
 const devKeys = () =>{
     return {
         jwtSecret:'Secret@123&',
-        mongoURI:'mongodb://localhost:27017/sourceo'
+        mongoURI:'mongodb://localhost:27017/sourceo',
+        messageMobile:'+19096555292',
+        twilioSid:process.env.TWILIO_ACCOUNT_SID, 
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
     }
 }
 
 const ciKeys = () =>{
     return {
         jwtSecret:process.env.JWT_SECRET,
-        mongoURI:process.env.MONGO_URI
+        mongoURI:process.env.MONGO_URI,
+        messageMobile:process.env.MESSAGE_MOBILE,
+        twilioSid:process.env.TWILIO_ACCOUNT_SID, 
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
     }
 }
 
 const prodKeys = () =>{
     return {
         jwtSecret:process.env.JWT_SECRET,
-        mongoURI:process.env.MONGO_URI
+        mongoURI:process.env.MONGO_URI,
+        messageMobile:process.env.MESSAGE_MOBILE,
+        twilioSid:process.env.TWILIO_ACCOUNT_SID, 
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
     }
 }
 

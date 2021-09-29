@@ -805,9 +805,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             }
 
             /* Order is modelled with result and saved */
-            const savedOrder = await order.save()
-
-            await user.saveOrder(savedOrder)
+            await order.save()
         }
 
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
@@ -825,9 +823,8 @@ orderSchema.statics.orderDetails = async function(id,user){
     /* Checks if the order is present in the user */
     
     try{
-        if(user.orders.includes(id)||user.isAdmin.value){
-            /* Lean should not be used */
-            let mainOrder = await Order.findById(id).lean()
+        const mainOrder = await Order.findById(id).lean()
+        if(mainOrder.userId._id==user._id||user.isAdmin.value){
             return Promise.resolve(mainOrder)
         }
         else{
@@ -887,6 +884,11 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
         order.paymentStatus.supplierAmount = body.values.supplierAmount
 
         if(verifiedValues.supplier.assigned){
+
+            if(order.status == 'Completed'||order.status == 'Finished'){
+                return Promise.reject({status:false,message:'Cannot change supplier for completed or Finished order',statusCode:401})
+            }
+            
             order.verified.value = true
             const index = order.supplier.removed.indexOf(verifiedValues.supplier.assigned)
             if(index!=-1){
@@ -895,15 +897,27 @@ orderSchema.statics.verifyOrder = async function(id,body,user,User){
             const date = new Date()
             order.validTill = date.setDate(date.getDate()+body.values.validTill)
             order.supplier.assigned = [verifiedValues.supplier.assigned]
-            await User.assignWork(order._id,verifiedValues.supplier.assigned,'assign')
+
+            const supplier = await User.findById(verifiedValues.supplier.assigned).lean()
+
+            if(supplier.perms.supplier.suspended.value||supplier.perms.supplier.banned.value||supplier.perms.user.suspended.value||supplier.perms.user.suspended.value){
+                return Promise.reject({status:false,message:'Banned/Suspended supplier',statusCode:403})
+            }
+
         }
 
         if(verifiedValues.supplier.removed&&verifiedValues.supplier.removed.length!=0){
+
+            if(order.status == 'Completed'||order.status == 'Finished'){
+                return Promise.reject({status:false,message:'Cannot change supplier for completed or Finished order',statusCode:401})
+            }
+
             if(verifiedValues.supplier.removed.includes(String(order.supplier.assigned[0]))){
-                await User.assignWork(order._id,order.supplier.assigned[0],'remove')
                 order.supplier.assigned = []
             }
+
             order.supplier.removed = [...new Set([...order.supplier.removed,...verifiedValues.supplier.removed])]
+
             if(order.status == 'Pending'){
                 order.verified.value = false
             }
@@ -1195,7 +1209,6 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 order.pl.currentPL = order.pl.totalPL
                 order.status = 'Finished'
                 order.completionVerified.push({verifiedAt:new Date(),verifiedBy:user._id})
-                User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                 await order.save()
                 return Promise.resolve({status:true,message:'Order completed'})
             }
@@ -1230,7 +1243,6 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 order.cancelVerified.push({verifiedBy:user._id})
 
                 if(order.supplier.assigned[0]){
-                    await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                     order.supplier.assigned = []
                 }
                 await order.save()
@@ -1249,7 +1261,6 @@ orderSchema.statics.orderFns = async function(id,type,user,details,User){
                 order.completionVerified.push({verifiedBy:user._id})
                 order.pl.totalPL = order.pl.currentPL
                 if(order.supplier.assigned[0]){
-                    await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
                     order.supplier.assigned = []
                 }
                 await order.save()
@@ -1351,7 +1362,6 @@ orderSchema.statics.supplierPayment = async function({id,user,details,User}){
 
             order.paymentStatus.transaction.push({info:'Finished',status:'Successful',method:'Admin Created',paymentType:'Supplier payment',createdBy:user._id})
             await order.save()
-            await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
         }
     }
     catch(e){
@@ -1364,14 +1374,8 @@ orderSchema.statics.contractFinished = async function(id,user,User){
 
     try{
         /* Checks if supplier is payment is also by contract, if it is. It is completed as well */
-        const order = await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},[{$set:{'paymentStatus.value':'Finished','paymentStatus.supplierPayment':{$cond:[{$eq:['Contract','$paymentStatus.supplierPayment']},'Finished','$paymentStatus.supplierPayment']},'paymentStatus.transaction':{$concatArrays:['$paymentStatus.transaction',[{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}]]}}}],{new:true})
-        const res = await User.supplierWorkComplete(order.supplier.assigned[0],order._id)
-        if(res.nModified==0){
-            return Promise.reject({status:false,message:'Invalid update action',statusCode:403})
-        }
-        else{
-            return Promise.resolve({status:true,message:'Contract Finished',statusCode:403})
-        }
+        await Order.findOneAndUpdate({_id:id,'paymentStatus.value':'Contract'},[{$set:{'paymentStatus.value':'Finished','paymentStatus.supplierPayment':{$cond:[{$eq:['Contract','$paymentStatus.supplierPayment']},'Finished','$paymentStatus.supplierPayment']},'paymentStatus.transaction':{$concatArrays:['$paymentStatus.transaction',[{info:'Finished',status:'Successful',method:'Admin Created',createdBy:user._id}]]}}}],{new:true})
+        return Promise.resolve({status:true,message:'Contract Finished',statusCode:403})
     }
     catch(e){
         console.log(e)

@@ -1,4 +1,4 @@
-import React,{Fragment, useState} from 'react'
+import React,{useState} from 'react'
 import Button from '@material-ui/core/Button'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import { useSelector } from 'react-redux'
@@ -19,39 +19,16 @@ export default function EditProfile (props){
                     <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/email`)}>Edit</Button>
                 </div>
                 <div style={{display:'flex',flexDirection:'row'}}>
-                    {
-                        profile.mobile?(
-                            <Fragment>
-                                <p>Mobile : {profile.mobile}</p>
-                                <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/mobile`)}>Edit</Button>
-                            </Fragment>
-                        ):
-                        (
-                            <Fragment>
-                                <p>Mobile </p>
-                                <Button variant='contained' onClick={props.history.push('/user/addMobile')}>Add</Button>
-                            </Fragment>
-                        )
-                    }
+                    <p>Mobile : {profile.mobile}</p>
+                    <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/mobile`)}>Edit</Button>
                 </div>
                 <div style={{display:'flex',flexDirection:'row'}}>
                     <p>Password</p>
                     <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/password`)}>Edit</Button>
                 </div>
                 <div>
-                    {
-                        profile.companyDetails?(
-                            <div>
-                                <p>Company details</p>
-                                <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/companyDetails`)}>Edit</Button>
-                            </div>
-                        ):(
-                            <div>
-                                <p>Company details</p>
-                                <Button variant='contained' onClick={()=>{props.history.push('/user/addCompanyDetails')}}>Add</Button>
-                            </div>
-                        )
-                    }
+                    <p>Company details</p>
+                    <Button variant='contained' onClick={()=>props.history.push(`/user/editFns/companyDetails`)}>Edit</Button>
                 </div>
             </div>
         )

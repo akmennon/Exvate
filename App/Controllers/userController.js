@@ -352,7 +352,6 @@ module.exports.details = (req,res,next) =>{
         })
 }
 
-/* ADMIN - UNRELIABLE */
 module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
 
@@ -544,7 +543,7 @@ module.exports.changeCompanyDetails = (req,res,next) =>{
 }
 
 module.exports.changeMobile = (req,res,next) =>{
-    const user = this
+    const user = req.user
 
     user.changeMobileOtp(req.body)
         .then((response)=>{
@@ -556,9 +555,9 @@ module.exports.changeMobile = (req,res,next) =>{
 }
 
 module.exports.confirmMobileChange = (req,res,next) =>{
-    const user = this
+    const user = req.user
 
-    user.confirmMobileChange(req.otp)
+    user.confirmMobileChange(req.body.otp)
         .then((response)=>{
             res.json(response)
         })

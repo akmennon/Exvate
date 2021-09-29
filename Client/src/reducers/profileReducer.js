@@ -4,6 +4,8 @@ const profileReducer = (state={},action) =>{
             return action.payload
         case 'REMOVE_PROFILE':
             return {}
+        case 'SET_PROFILE_VALUE':
+            return {...state,...action.payload}
         default:
             return state
     }

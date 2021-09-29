@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import {useSelector} from 'react-redux'
+import {useDispatch, useSelector} from 'react-redux'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import axios from '../../../config/axios'
 import pick from 'lodash/pick'
+import { changeProfileValue } from '../../../action/profileAction'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
@@ -12,12 +13,8 @@ export default function EditCompanyDetails (props){
     const [companyDetails,setCompanyDetails] = useState({
         name:'',
         position:'',
-        phone:'',
         website:'',
-        taxId:'',
         officeAddress:{
-            name:'',
-            building:'',
             street:'',
             city:'',
             state:'',
@@ -25,6 +22,7 @@ export default function EditCompanyDetails (props){
             pin:''
         }
     })
+    const dispatch = useDispatch()
 
     useEffect(()=>{
 
@@ -32,12 +30,8 @@ export default function EditCompanyDetails (props){
             const defaultValue = {
                 name:'',
                 position:'',
-                phone:'',
                 website:'',
-                taxId:'',
                 officeAddress:{
-                    name:'',
-                    building:'',
                     street:'',
                     city:'',
                     state:'',
@@ -45,7 +39,7 @@ export default function EditCompanyDetails (props){
                     pin:''
                 }
             }
-            let companyDetailsOnly = pick(profile.companyDetails,['name','phone','website','position','taxId','officeAddress'])
+            let companyDetailsOnly = pick(profile.companyDetails,['name','phone','website','position','officeAddress'])
             companyDetailsOnly = {...defaultValue,...companyDetailsOnly}
             console.log(companyDetailsOnly)
             setCompanyDetails(companyDetailsOnly)
@@ -63,6 +57,7 @@ export default function EditCompanyDetails (props){
         })
         .then((response)=>{
             console.log(response)
+            dispatch(changeProfileValue({companyDetails}))
             setStatus('success')
         })
         .catch((err)=>{
@@ -120,41 +115,13 @@ export default function EditCompanyDetails (props){
                             <TextField
                                 variant='outlined'
                                 color='primary'
-                                value={companyDetails.phone}
-                                label='phone'
-                                onChange={(e)=>{e.persist();status==='error'?setStatus('none'):<span/>;setCompanyDetails({...companyDetails,phone:e.target.value})}}
-                            />
-                            <TextField
-                                variant='outlined'
-                                color='primary'
                                 value={companyDetails.website}
                                 label='website'
                                 onChange={(e)=>{e.persist();status==='error'?setStatus('none'):<span/>;setCompanyDetails({...companyDetails,website:e.target.value})}}
                             />
-                            <TextField
-                                variant='outlined'
-                                color='primary'
-                                value={companyDetails.taxId}
-                                label='taxId'
-                                onChange={(e)=>{e.persist();status==='error'?setStatus('none'):<span/>;setCompanyDetails({...companyDetails,taxId:e.target.value})}}
-                            />
                         </div>
                         <div style={{display:'flex',flexDirection:'column',rowGap:10}}>
                             <p>Company Address</p>
-                            <TextField
-                                variant='outlined'
-                                color='primary'
-                                value={companyDetails.officeAddress.name}
-                                label='name'
-                                onChange={(e)=>{e.persist();status==='error'?setStatus('none'):<span/>;setCompanyDetails({...companyDetails,officeAddress:{...companyDetails.officeAddress,name:e.target.value}})}}
-                            />
-                            <TextField
-                                variant='outlined'
-                                color='primary'
-                                value={companyDetails.officeAddress.building}
-                                label='building'
-                                onChange={(e)=>{e.persist();status==='error'?setStatus('none'):<span/>;setCompanyDetails({...companyDetails,officeAddress:{...companyDetails.officeAddress,building:e.target.value}})}}
-                            />
                             <TextField
                                 variant='outlined'
                                 color='primary'

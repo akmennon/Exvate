@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import {useSelector} from 'react-redux'
+import {useDispatch, useSelector} from 'react-redux'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
@@ -10,6 +10,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Backdrop from '@mui/material/Backdrop';
 import PhoneInput,{isPossiblePhoneNumber} from 'react-phone-number-input'
+import { changeProfileValue } from '../../../action/profileAction'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
@@ -18,21 +19,22 @@ export default function EditCompanyDetails (props){
     const [open,setOpen] = useState(false)
     const [resendCountdown,setResendCountdown] = useState(60)
     const [intervalId,setIntervalId] = useState('')
+    const [loading,setLoading] = useState(false)
+    const dispatch = useDispatch()
     
     useEffect(()=>{
-        console.log(intervalId)
-        if(resendCountdown===0){
+        if(resendCountdown===0&&intervalId){
             clearInterval(intervalId)
             setIntervalId('')
         }
-    },[intervalId,resendCountdown])
 
-    const handleChange = (ev) =>{
-        ev.persist()
-        setMobile((prev)=>{
-            return ev.target.value
-        })
-    }
+        return function cleanup(){
+            if(loading){
+                console.log('it worked')
+                clearInterval(intervalId)
+            }
+        }
+    },[intervalId,resendCountdown,loading])
 
     const style = {
         position: 'absolute',
@@ -89,7 +91,11 @@ export default function EditCompanyDetails (props){
             })
             .then((response)=>{
                 if(response.data.status){
-                    props.history.push('/user/editProfile')
+                    setLoading(true)
+                    dispatch(changeProfileValue({mobile:mobile}))
+                    setTimeout(()=>{
+                        props.history.push('/user/editProfile')
+                    },3000)
                 }
             })
             .catch((err)=>{
@@ -97,62 +103,69 @@ export default function EditCompanyDetails (props){
             })
         }
         else{
-
+            console.log('otp error')
         }
     }
 
     if(!profile.email){
-        props.history.replace('/user/editProfilePassword')
+        setTimeout(()=>{
+            props.history.replace('/user/editProfilePassword')
+        },2000)
         return <CircularProgress/>
     }
     else{
-        return(
-            <div style={{display:'flex',flexDirection:'column',margin:20,rowGap:10}}>
-                <Modal
-                    aria-labelledby="transition-modal-title"
-                    aria-describedby="transition-modal-description"
-                    open={open}
-                    onClose={()=>{setOpen(false)}}
-                    closeAfterTransition
-                    BackdropComponent={Backdrop}
-                    BackdropProps={{
-                    timeout: 500,
-                    }}
-                >
-                    <Fade in={open}>
-                        <Box sx={style}>
-                            <Typography variant="h6" component="h2">
-                                Mobile OTP Verification
-                            </Typography>
-                            <Typography id="transition-modal-description" sx={{ mt: 2 }}>
-                                Please enter the six digit code sent to your mobile number
-                            </Typography>
-                            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
-                                <Typography>Code</Typography>
-                                <TextField
-                                    value={otp}
-                                    onChange={(e)=>{e.persist();setOtp(e.target.value)}}
-                                    variant='outlined'
-                                    color='primary'
-                                    label='OTP'
-                                />
-                                <Button disabled={resendCountdown===0||resendCountdown===60?false:true} onClick={()=>{setResendCountdown(59);confirmOTP()}}>Resend{resendCountdown>0&&resendCountdown!==60?` ${resendCountdown}`:null} </Button>
-                            </div>
-                            <div style={{display:'flex',justifyContent:'flex-end',margin:10}}>
-                                <Button color='primary' variant='contained' onClick={handleSubmit}>Confirm</Button>
-                            </div>
-                        </Box>
-                    </Fade>
-                </Modal>
-                <PhoneInput
-                    international
-                    defaultCountry="US"
-                    countryCallingCodeEditable={false}
-                    value={mobile}
-                    onChange={(e)=>{setMobile(e)}}
-                />
-                <Button variant='contained' color='primary' onClick={confirmOTP} >Confirm</Button>
-            </div>
-        )
+        if(loading===true){
+            return <CircularProgress/>
+        }
+        else{
+            return(
+                <div style={{display:'flex',flexDirection:'column',margin:20,rowGap:10}}>
+                    <Modal
+                        aria-labelledby="transition-modal-title"
+                        aria-describedby="transition-modal-description"
+                        open={open}
+                        onClose={()=>{setOpen(false)}}
+                        closeAfterTransition
+                        BackdropComponent={Backdrop}
+                        BackdropProps={{
+                        timeout: 500,
+                        }}
+                    >
+                        <Fade in={open}>
+                            <Box sx={style}>
+                                <Typography variant="h6" component="h2">
+                                    Mobile OTP Verification
+                                </Typography>
+                                <Typography id="transition-modal-description" sx={{ mt: 2 }}>
+                                    Please enter the six digit code sent to your mobile number
+                                </Typography>
+                                <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                    <Typography>Code</Typography>
+                                    <TextField
+                                        value={otp}
+                                        onChange={(e)=>{e.persist();setOtp(e.target.value)}}
+                                        variant='outlined'
+                                        color='primary'
+                                        label='OTP'
+                                    />
+                                    <Button disabled={resendCountdown===0||resendCountdown===60?false:true} onClick={()=>{setResendCountdown(59);confirmOTP()}}>Resend{resendCountdown>0&&resendCountdown!==60?` ${resendCountdown}`:null} </Button>
+                                </div>
+                                <div style={{display:'flex',justifyContent:'flex-end',margin:10}}>
+                                    <Button color='primary' variant='contained' onClick={handleSubmit}>Confirm</Button>
+                                </div>
+                            </Box>
+                        </Fade>
+                    </Modal>
+                    <PhoneInput
+                        international
+                        defaultCountry="US"
+                        countryCallingCodeEditable={false}
+                        value={mobile}
+                        onChange={(e)=>{setMobile(e)}}
+                    />
+                    <Button variant='contained' color='primary' onClick={confirmOTP} >Confirm</Button>
+                </div>
+            )
+        }
     }
 }

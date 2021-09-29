@@ -9,7 +9,8 @@ const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
 const size = require('lodash/size')
-const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const client = require('twilio')(keys.twilioSid,keys.twilioAuthToken);
+const messageMobile = keys.messageMobile
 
 const Schema = mongoose.Schema
 
@@ -246,20 +247,8 @@ const userSchema = new Schema({
                     type:Date
                 }
             }
-        }],
-        workOrder:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
-        }],
-        workHistory:[{
-            type:Schema.Types.ObjectId,
-            ref:'Order'
         }]
     },
-    orders:[{
-        type:Schema.Types.ObjectId,
-        ref:'Order'
-    }],
     sampleOrders:[{
         type:Schema.Types.ObjectId,
         ref:'Order'
@@ -921,22 +910,6 @@ userSchema.statics.findByAdminToken = function(token){
                 })
 }
 
-/* UNEDITED - Not from user controller - remove this after this is edited */
-/* Helps change the order status and move it to respt. arrays in user */
-userSchema.methods.saveOrder = async function(order){
-    const user = this
-
-    try{
-        user.orders = [...new Set([...user.orders,order])]
-        await user.save()
-        return Promise.resolve({status:true,message:'Order Saved'})
-    }
-    catch(e){
-        console.log(e)
-        return Promise.reject(e)
-    }
-}
-
 /* Adds,deletes or updates work for the host*/
 userSchema.statics.updateWork = async function(reqUser,body,id){
     const User = this
@@ -1214,39 +1187,6 @@ userSchema.statics.orderSuppliers = async function(workId){
     }
 } */
 
-userSchema.statics.assignWork = async function(orderId,supplierId,type){
-    const User = this
-
-    try{
-        const supplier = await User.findById(supplierId)
-        if(type=='assign'){
-            if(supplier.perms.supplier.suspended.value||supplier.perms.supplier.banned.value||supplier.perms.user.suspended.value||supplier.perms.user.suspended.value){
-                return Promise.reject({status:false,message:'Banned/Suspended supplier',statusCode:403})
-            }
-            if(!supplier.work.workOrder.includes(orderId)){
-                supplier.work.workOrder = [...new Set([...supplier.work.workOrder,orderId])]
-                await supplier.save()
-            }
-            return Promise.resolve(supplier)
-        }
-        else if(type=='remove'){
-            if(supplier.work.workOrder.includes(orderId)){
-                supplier.work.workOrder = supplier.work.workOrder.filter(ele=>String(ele)!=orderId)
-                await supplier.save()
-                return Promise.resolve('work removed')
-            }
-            return Promise.reject({status:false,message:'User is not assigned the order',statusCode:403})
-        }
-        else{
-            return Promise.reject({status:false,message:'Type not provided',statusCode:403})
-        }
-    }
-    catch(e){
-        console.log(e)
-        return Promise.reject(e)
-    }
-}
-
 /* userSchema.statics.notify = async function(type,id,message,userId){
     const User = this
 
@@ -1494,21 +1434,6 @@ userSchema.statics.supplierVerify = async function(userId,body,admin){
     }
 }
 
-userSchema.statics.supplierWorkComplete = async function (userId,orderId){
-    const User = this
-
-    try{
-        if(!userId){
-            return Promise.reject({status:false,message:'No supplier to complete work',statusCode:404})
-        }
-        const res = await User.updateOne({_id:userId},{$addToSet:{'work.workHistory':orderId},$pull:{'work.workOrder':orderId}})
-        return Promise.resolve(res)
-    }
-    catch(e){
-        return Promise.reject(e)
-    }
-}
-
 userSchema.statics.changeSampleLimit = async function (userId,body){
     const User = this
 
@@ -1656,7 +1581,7 @@ userSchema.methods.changeCompanyDetails = async function (body){
         const companyDetails = pick(body,['name','position','website'])
         companyDetails.officeAddress = pick(body.officeAddress,['street','city','state','country','pin'])
 
-        if(size(companyDetails)!=5||size(companyDetails.officeAddress)!=5){
+        if(size(companyDetails)!=4||size(companyDetails.officeAddress)!=5){
             return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
         }
 
@@ -1721,12 +1646,12 @@ userSchema.methods.changeMobileOtp = async function(body){
             return Promise.reject({status:false,message:'User not found',statusCode:404})
         }
 
-        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+60000) > Date.now())){
-            return Promise.reject({status:false,message:'Time limit not reached',statusCode:401})
+        if(mobile==user.mobile){
+            return Promise.reject({status:false,message:'Same mobile number',statusCode:401})
         }
 
-        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+1800000) < Date.now())){
-            return Promise.reject({status:false,message:'OTP Expired',statusCode:401})
+        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+60000) > Date.now())){
+            return Promise.reject({status:false,message:'Time limit not reached',statusCode:401})
         }
 
         user.profileChangeToken.mobile.number = mobile
@@ -1736,7 +1661,7 @@ userSchema.methods.changeMobileOtp = async function(body){
 
         const message = await client.messages.create({
             body: `The code to change your mobile number is ${user.profileChangeToken.mobile.token}`,
-            from: '+19096555292',
+            from: messageMobile,
             to: user.profileChangeToken.mobile.number
         })
 
@@ -1755,8 +1680,12 @@ userSchema.methods.confirmMobileChange = async function(otp){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
 
+        if(user.profileChangeToken.mobile.token && ( (new Date(user.profileChangeToken.mobile.lastSend).getTime()+1800000) < Date.now())){
+            return Promise.reject({status:false,message:'OTP Expired',statusCode:401})
+        }
+
         user.mobile = user.profileChangeToken.mobile.number
-        delete user.profileChangeToken.mobile
+        user.profileChangeToken.mobile = undefined
         await user.save()
         return Promise.resolve({status:true,message:'Mobile changed successfully'})
     }

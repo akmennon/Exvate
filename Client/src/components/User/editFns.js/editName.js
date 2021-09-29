@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
-import {useSelector} from 'react-redux'
+import {useDispatch, useSelector} from 'react-redux'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import axios from '../../../config/axios'
+import { changeProfileValue } from '../../../action/profileAction'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
     const [name,setName] = useState('')
+    const dispatch = useDispatch()
     console.log(profile)
 
     const handleChange = (ev) =>{
@@ -26,6 +28,7 @@ export default function EditCompanyDetails (props){
         })
         .then((response)=>{
             if(response.data.status){
+                dispatch(changeProfileValue({name:name}))
                 props.history.push('/user/editProfile')
             }
         })

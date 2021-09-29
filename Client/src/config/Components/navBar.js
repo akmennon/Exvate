@@ -16,6 +16,7 @@ import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem';
 import Fade from '@mui/material/Fade';
+import {removeProfile} from '../../action/profileAction'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -113,6 +114,7 @@ const handleClick = (e,props) =>{
         const redirect = () =>{
           props.route.history.push('/')
         }
+        props.dispatch(removeProfile())
         props.dispatch(startRemoveUser(token,redirect))
       }
     break;
