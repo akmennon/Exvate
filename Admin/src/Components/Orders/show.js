@@ -12,6 +12,7 @@ import Select from '@material-ui/core/Select'
 import MenuItem from '@material-ui/core/MenuItem'
 import { useDispatch } from "react-redux";
 import { setOrder } from "../../Action/orderAction";
+import {CountryDropdown,RegionDropdown} from 'react-country-region-selector'
 
 
 const useStyles = makeStyles( (theme) => ({
@@ -61,9 +62,10 @@ const PostShowActions = (props) => {
     const [paymentDetails,setPaymentDetails] = useState({type:'LC',deadline:'',advancePercent:0})
     const [shippingDetails,setShippingDetails] = useState({shipmentType:'Cargo',consignmentId:'',incoterm:'',serviceProvider:'',statusLink:'',port:'',CHA:''})
     const [charges,setCharges] = useState({chargeType:'Shipping',otherDetails:'',entity:'',entityName:'',price:0,contactName:'',contactNumber:'',transactionId:'',paymentDate:'',paymentMethod:''})
-    const token = sessionStorage.getItem('token')
+    const [address,setAddress] = useState({type:'shipping',address:''})
 
     const handleClick = (orderId='',type,email='',pass='',props={},payment) =>{
+        const token = sessionStorage.getItem('token')
         switch(type){
             case 'complete':
                 axios.post(`/orders/${orderId}/orderfn`,{email,password:pass,type:'complete'},{
@@ -193,6 +195,20 @@ const PostShowActions = (props) => {
                     console.log(e)
                 })
             break;
+            case 'address':
+                axios.post(`/orders/${orderId}/editAddress`,{email,password:pass,address},{
+                    headers:{
+                        'x-admin':token
+                    }
+                })
+                .then((response)=>{
+                    console.log(response.data)
+                    setOpen(false)
+                })
+                .catch((e)=>{
+                    console.log(e)
+                })
+            break;
             default:
                 console.log('wrong entry')
         }
@@ -200,6 +216,7 @@ const PostShowActions = (props) => {
 
     if(props.record){
         console.log(props.record)
+        console.log(address)
         return (
             <TopToolbar className={styles.actions}>
                 <Modal
@@ -485,6 +502,88 @@ const PostShowActions = (props) => {
                                             </div>
                                         </div>
                                     </Fragment>
+                                ):
+                                type==='address'?(
+                                    <Fragment>
+                                        <div className={styles.paymentSelect}>
+                                            <Typography>Address Type :</Typography>
+                                            <div className={styles.select}>
+                                                <Select
+                                                value={address.type}
+                                                onChange={(e)=>{const val = e.target.value;setAddress(p=>({type:val,address:e.target.value==='shipping'?props.record.address:props.record.billingAddress}))}}
+                                                label="Payment Method"
+                                                >
+                                                    <MenuItem value={"shipping"}>Shipping</MenuItem>
+                                                    <MenuItem value={"billing"}>Billing</MenuItem>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <Fragment>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>Name :</Typography>
+                                                <TextField1
+                                                    variant='outlined'
+                                                    value={address.address.name}
+                                                    className={styles.textField}
+                                                    InputLabelProps={{
+                                                    shrink: true,
+                                                    }}
+                                                    onChange={(e)=>{const val = e.target.value;setAddress(p=>({...p,address:{...p.address,name:val}}))}}
+                                                />
+                                            </div>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>Street :</Typography>
+                                                <TextField1
+                                                    variant='outlined'
+                                                    value={address.address.street}
+                                                    className={styles.textField}
+                                                    InputLabelProps={{
+                                                    shrink: true,
+                                                    }}
+                                                    onChange={(e)=>{const val = e.target.value;setAddress(p=>({...p,address:{...p.address,street:val}}))}}
+                                                />
+                                            </div>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>City :</Typography>
+                                                <TextField1
+                                                    variant='outlined'
+                                                    value={address.address.city}
+                                                    className={styles.textField}
+                                                    InputLabelProps={{
+                                                    shrink: true,
+                                                    }}
+                                                    onChange={(e)=>{const val = e.target.value;setAddress(p=>({...p,address:{...p.address,city:val}}))}}
+                                                />
+                                            </div>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>Country :</Typography>
+                                                <CountryDropdown 
+                                                    value={address.address.country}
+                                                    onChange={(e)=>{setAddress(p=>({...p,address:{...p.address,country:e}}))}}
+                                                />
+                                            </div>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>State :</Typography>
+                                                <RegionDropdown 
+                                                    value={address.address.state}
+                                                    country={address.address.country}
+                                                    onChange={(e)=>{setAddress(p=>({...p,address:{...p.address,state:e}}))}}
+                                                />
+                                            </div>
+                                            <div className={styles.paymentSelect}>
+                                                <Typography>Pin :</Typography>
+                                                <TextField1
+                                                    variant='outlined'
+                                                    value={address.address.pin}
+                                                    className={styles.textField}
+                                                    InputLabelProps={{
+                                                    shrink: true,
+                                                    }}
+                                                    onChange={(e)=>{const val = e.target.value;setAddress(p=>({...p,address:{...p.address,pin:val}}))}}
+                                                />
+                                            </div>
+                                        </Fragment>
+                                    </Fragment>
                                 ):<span/>
                             }
                             <div>
@@ -554,6 +653,7 @@ const PostShowActions = (props) => {
                                 (props.record.paymentStatus.value==='Contract'||props.record.paymentStatus.value==='Completed')&&props.record.status!=='Completed'&&props.record.status!=='Transit'&&props.record.status!=='Finished'?(
                                     <Fragment>
                                         <Button color="primary" variant='outlined' onClick={() => {setType('shipped');setOpen(true)}}>Shipped</Button>
+                                        <Button color="primary" variant='outlined' onClick={() => {setAddress(p=>{return {...p,address:props.record.address}});setType('address');setOpen(true)}}>Edit Address</Button>
                                     </Fragment>
                                 ):<span/>
                             }

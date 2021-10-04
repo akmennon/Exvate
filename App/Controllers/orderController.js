@@ -231,3 +231,15 @@ module.exports.removeCharges = (req,res,next) =>{
             errorHandler(err,next)
         })
 }
+
+module.exports.editAddress = (req,res,next) =>{
+    const id = req.params.id
+
+    Order.editAddress(id,req.body)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}

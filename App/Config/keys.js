@@ -3,9 +3,11 @@ const devKeys = () =>{
     return {
         jwtSecret:'Secret@123&',
         mongoURI:'mongodb://localhost:27017/sourceo',
-        messageMobile:'+19096555292',
+        messageMobile:process.env.MESSAGE_MOBILE,
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
-        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
+        awsSid:process.env.AWS_ACCESS_KEY_ID,
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
     }
 }
 
@@ -15,7 +17,9 @@ const ciKeys = () =>{
         mongoURI:process.env.MONGO_URI,
         messageMobile:process.env.MESSAGE_MOBILE,
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
-        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
+        awsSid:process.env.AWS_ACCESS_KEY_ID,
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
     }
 }
 
@@ -25,7 +29,9 @@ const prodKeys = () =>{
         mongoURI:process.env.MONGO_URI,
         messageMobile:process.env.MESSAGE_MOBILE,
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
-        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN
+        twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
+        awsSid:process.env.AWS_ACCESS_KEY_ID,
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
     }
 }
 

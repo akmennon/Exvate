@@ -2,6 +2,8 @@ const mongoose = require('mongoose')
 const Option = require('./optionSubdoc')
 const Result = require('./resultSubdoc')
 const pick = require('lodash/pick')
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
+const { v4: uuidv4 } = require('uuid')
 
 const Schema = mongoose.Schema
 
@@ -11,6 +13,22 @@ const workSchema = new Schema({
         maxlength:40,
         minlength:2,
         required:true
+    },
+    status:{
+        type:String,
+        validator: function (value){
+            switch(value){
+                case 'Unlisted':
+                    return true
+                case 'Available':
+                    return true
+                case 'Unavailable':
+                    return true
+                default:
+                    return false
+            }
+        },
+        default:'Unlisted'
     },
     type:{
         _id:{
@@ -158,10 +176,25 @@ const workSchema = new Schema({
 
 /* Function to create new work */  // Pending work //use pick on options and result
 
-workSchema.statics.createNew = async function(body,Type,Category){
+workSchema.statics.createNew = async function(req,Type,Category){
     const Work = this
     
     try{
+        const body = req.body
+
+        /*const client = new S3Client({
+            'region':'us-east-1'
+        });
+        const command = new PutObjectCommand({
+            Bucket:'exvate-images',
+            Body:req.file,
+            Key:`${uuidv4()}`,
+            contentType:'images/jpeg',
+            contentDisposition:'inline',
+        });
+
+        const response = await client.send(command); -- Move to images addition */ 
+
         const options = body.options
         const results = body.result
         const workBody = pick(body,['title','type','category'])
@@ -241,7 +274,7 @@ workSchema.statics.workEdit = async function(body,Type,Category){
 workSchema.statics.all = async (query,user) =>{
     try{
         if(!user){
-            const works = await Work.find({}) //remove once client frontend is updated
+            const works = await Work.find({$or:[{status:'Unavailable'},{status:'Available'}]}) //remove once client frontend is updated
             return Promise.resolve({works})
         }
         else if(query.filter.q!=undefined){
@@ -262,6 +295,29 @@ workSchema.statics.all = async (query,user) =>{
             const count = await Work.countDocuments()
             return Promise.resolve({works,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
         }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+workSchema.statics.changeStatus = async function (workId,body){
+    const Work = this
+
+    try{
+        const status = body.status
+
+        if(status!='Unavailable'&&status!='Available'&&status!='Unlisted'){
+            return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
+        }
+
+        const res = await Work.updateOne({_id:workId},{$set:{status:status}},{runValidators:true})
+
+        if(!res.nModified){
+            return Promise.reject({status:false,message:'Server Error',statusCode:500})
+        }
+
+        return Promise.resolve({status:true,message:'Status changed successfully'})
     }
     catch(e){
         return Promise.reject(e)

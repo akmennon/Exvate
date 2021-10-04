@@ -98,10 +98,10 @@ const orderSchema = new Schema({
         }]
     },
     address:{
-        building:{
+        name:{
             type:String,
-            maxlength:32,
-            minlength:2
+            maxlength:40,
+            minlength:3
         },
         street:{
             type:String,
@@ -134,11 +134,6 @@ const orderSchema = new Schema({
             type:String,
             maxlength:40,
             minlength:3
-        },
-        building:{
-            type:String,
-            maxlength:32,
-            minlength:2
         },
         street:{
             type:String,
@@ -650,6 +645,11 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
 
     try{
         const work = await Work.findById(id).lean()
+
+        if(work.status != 'Available'){
+            return Promise.reject({status:false,message:'Service unavailable',statusCode:403})
+        }
+
         const resultValue = work.result
         resultValue.workId = work._id
         const option = work.options
@@ -704,24 +704,12 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             order.userId = user
             order.workId = work
             order.orderType = 'Sample'
-            order.address = user.address.find((ele)=>{
+
+            const userAddress = user.address.find((ele)=>{
                 return ele._id = orderValues.address
             })
-
-            if(orderValues.billingAddress){
-                const billingAddress = pick(orderValues.billingAddress,['name','building','street','city','state','country','pin'])
-                for(const x in billingAddress){
-                    if(!x){
-                        return Promise.reject({status:false,message:'Invalid input',statusCode:403})
-                    }
-                }
-                order.billingAddress = billingAddress
-            }
-            else{
-                order.billingAddress = user.address.find((ele)=>{
-                    return ele._id = orderValues.address
-                })
-            }
+            order.address = userAddress
+            order.billingAddress = userAddress
 
             /* Order is modelled with result and saved */
             await order.save()
@@ -785,24 +773,11 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             order.status = 'Pending'
             order.userId = user
             order.workId = work
-            order.address = user.address.find((ele)=>{
+            const userAddress = user.address.find((ele)=>{
                 return ele._id = orderValues.address
             })
-
-            if(orderValues.billingAddress){
-                const billingAddress = pick(orderValues.billingAddress,['name','building','street','city','state','country','pin'])
-                for(const x in billingAddress){
-                    if(!x){
-                        return Promise.reject({status:false,message:'Invalid input',statusCode:403})
-                    }
-                }
-                order.billingAddress = billingAddress
-            }
-            else{
-                order.billingAddress = user.address.find((ele)=>{
-                    return ele._id = orderValues.address
-                })
-            }
+            order.address = userAddress
+            order.billingAddress = userAddress
 
             /* Order is modelled with result and saved */
             await order.save()
@@ -1466,12 +1441,56 @@ orderSchema.statics.removeCharges = async function(id,chargeId){
             {
                 $unset:['chargePrice']
             }
-        ])
+        ],{ runValidators: true })
         if(order.nModified!=0){
             return Promise.resolve({status:true,message:'Charge removed successfully',statusCode:200})
         }
         else{
             return Promise.reject({status:false,message:'Unsuccessful',statusCode:400})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+orderSchema.statics.editAddress = async function(id,body){
+    const Order = this
+
+    try{
+        const address = pick(body.address,['type','address'])
+        if(address.type=='billing'){
+            address.address = pick(address.address,['name','street','city','state','country','pin'])
+        }
+        else if (address.type=='shipping'){
+            address.address = pick(address.address,['street','city','state','country','pin'])
+        }
+        else{
+            return Promise.reject({status:false,message:'Wrong address type',statusCode:403})
+        }
+
+        for(const x in address.address){
+            if(!address.address[x]){
+                return Promise.reject({status:false,message:'Invalid input',statusCode:403})
+            }
+        }
+
+        const res = await Order.updateOne({_id:id},[
+            {
+                $set:address.type=='shipping'?{
+                    'address':address.address
+                }:
+                {
+                    'billingAddress':address.address
+                }
+            }
+        ],{runValidators:true})
+
+        if(res.nModified){
+            return Promise.resolve({status:true,message:'Address changed successfully'})
+        }
+        else{
+            return Promise.reject({status:false,message:'Error updating address',statusCode:500})
         }
     }
     catch(e){

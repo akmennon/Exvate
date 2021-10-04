@@ -1467,7 +1467,7 @@ userSchema.methods.addAddress = async function (address) {
         if(user.address.length>=10){
             return Promise.reject({status:false,message:'Address limit reached',statusCode:403})
         }
-        const newAddress = pick(address,['name','building','street','city','state','country','pin'])
+        const newAddress = pick(address,['name','street','city','state','country','pin'])
         user.address.push(newAddress)
         await user.save()
         return Promise.resolve(user.address[user.address.length-1])

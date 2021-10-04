@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
-
+const multer = require('multer')
+const storage = multer.memoryStorage()
 /*-------------------- Controllers --------------------*/
 
 const users = require('../Controllers/userController')
@@ -63,6 +64,8 @@ router.get('/admin/works',admin.authAdminToken,works.all)
 router.get('/admin/searchWorks',admin.authAdminToken,works.searchAll)
 router.get('/admin/works/:id',admin.authAdminToken,works.detail)
 router.put('/admin/works/:id',admin.authAdminToken,adminLevel(0),works.workEdit)
+router.post('/admin/works/:id/changeStatus',admin.authAdminSign,adminLevel(1),works.changeStatus)
+router.post('/admin/works/:id/image',multer({storage:storage}).single('image'),admin.authAdminSign,adminLevel(1),works.changeStatus)
 /* router.post('/admin/users',admin.authAdminToken,users.adminCreate) Temporarily not used */
 router.get('/admin/users',admin.authAdminToken,users.all)
 router.get('/admin/users/:id',admin.authAdminToken,users.details)
@@ -85,6 +88,7 @@ router.post('/admin/orders/supplierPayment/:id',admin.authAdminSign,adminLevel(1
 router.post('/admin/orders/:id/contractFinished',admin.authAdminSign,adminLevel(1),orders.contractFinished)
 router.post('/admin/orders/:id/addCharges',admin.authAdminSign,adminLevel(1),orders.orderCharges)
 router.post('/admin/orders/:id/removeCharges',admin.authAdminToken,adminLevel(1),orders.removeCharges)
+router.post('/admin/orders/:id/editAddress',admin.authAdminSign,adminLevel(1),orders.editAddress)
 router.post('/admin/users/:id/sampleLimit',admin.authAdminToken,adminLevel(1),users.changeSampleLimit)
 router.get('/admin/token',users.adminToken)
 router.post('/admin/logout',users.adminLogout)

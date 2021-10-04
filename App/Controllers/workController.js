@@ -6,9 +6,8 @@ const Category = require('../Models/category')
 /* Function to create a new Work */
 
 module.exports.create = (req,res,next) =>{
-    const body = req.body
     
-    Work.createNew(body,Type,Category)
+    Work.createNew(req,Type,Category)
         .then(function(work){
             res.json(work)
         })
@@ -61,6 +60,18 @@ module.exports.searchAll = (req,res,next) =>{ //Highly unoptimized /Not a search
 module.exports.workEdit = (req,res,next) =>{
 
     Work.workEdit(req.body,Type,Category)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}
+
+module.exports.changeStatus = (req,res,next) =>{
+    const workId = req.params.id
+
+    Work.changeStatus(workId,req.body)
         .then((response)=>{
             res.json(response)
         })
