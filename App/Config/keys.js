@@ -7,7 +7,8 @@ const devKeys = () =>{
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
         twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
         awsSid:process.env.AWS_ACCESS_KEY_ID,
-        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY,
+        awsRegion:process.env.AWS_REGION
     }
 }
 
@@ -19,7 +20,8 @@ const ciKeys = () =>{
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
         twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
         awsSid:process.env.AWS_ACCESS_KEY_ID,
-        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY,
+        awsRegion:process.env.AWS_REGION
     }
 }
 
@@ -31,7 +33,8 @@ const prodKeys = () =>{
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
         twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
         awsSid:process.env.AWS_ACCESS_KEY_ID,
-        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY
+        awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY,
+        awsRegion:process.env.AWS_REGION
     }
 }
 

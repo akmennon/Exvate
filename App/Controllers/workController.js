@@ -79,3 +79,15 @@ module.exports.changeStatus = (req,res,next) =>{
             errorHandler(err,next)
         })
 }
+
+module.exports.changeImage = (req,res,next) =>{
+    const workId = req.params.id
+
+    Work.changeImage(workId,req)
+        .then((response)=>{
+            res.json(response)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
+}

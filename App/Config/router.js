@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const multer = require('multer')
 const storage = multer.memoryStorage()
+
 /*-------------------- Controllers --------------------*/
 
 const users = require('../Controllers/userController')
@@ -65,7 +66,7 @@ router.get('/admin/searchWorks',admin.authAdminToken,works.searchAll)
 router.get('/admin/works/:id',admin.authAdminToken,works.detail)
 router.put('/admin/works/:id',admin.authAdminToken,adminLevel(0),works.workEdit)
 router.post('/admin/works/:id/changeStatus',admin.authAdminSign,adminLevel(1),works.changeStatus)
-router.post('/admin/works/:id/image',multer({storage:storage}).single('image'),admin.authAdminSign,adminLevel(1),works.changeStatus)
+router.post('/admin/works/:id/image',multer({storage:storage}).single('image'),admin.authAdminSign,adminLevel(1),works.changeImage)
 /* router.post('/admin/users',admin.authAdminToken,users.adminCreate) Temporarily not used */
 router.get('/admin/users',admin.authAdminToken,users.all)
 router.get('/admin/users/:id',admin.authAdminToken,users.details)

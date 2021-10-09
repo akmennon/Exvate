@@ -4,6 +4,7 @@ const Result = require('./resultSubdoc')
 const pick = require('lodash/pick')
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
 const { v4: uuidv4 } = require('uuid')
+const keys = require('../../Config/keys')
 
 const Schema = mongoose.Schema
 
@@ -69,6 +70,9 @@ const workSchema = new Schema({
             minlength:4,
             maxlength:4
         }
+    },
+    imagePath:{
+        type:String
     },
     options:{
         _id:{
@@ -181,19 +185,6 @@ workSchema.statics.createNew = async function(req,Type,Category){
     
     try{
         const body = req.body
-
-        /*const client = new S3Client({
-            'region':'us-east-1'
-        });
-        const command = new PutObjectCommand({
-            Bucket:'exvate-images',
-            Body:req.file,
-            Key:`${uuidv4()}`,
-            contentType:'images/jpeg',
-            contentDisposition:'inline',
-        });
-
-        const response = await client.send(command); -- Move to images addition */ 
 
         const options = body.options
         const results = body.result
@@ -311,13 +302,49 @@ workSchema.statics.changeStatus = async function (workId,body){
             return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
         }
 
-        const res = await Work.updateOne({_id:workId},{$set:{status:status}},{runValidators:true})
+        const res = await Work.updateOne({_id:workId,imagePath:{$exists:true,$ne:null}},{$set:{status:status}},{runValidators:true})
 
         if(!res.nModified){
-            return Promise.reject({status:false,message:'Server Error',statusCode:500})
+            return Promise.reject({status:false,message:'Image not added / Server Error',statusCode:500})
         }
 
         return Promise.resolve({status:true,message:'Status changed successfully'})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
+workSchema.statics.changeImage = async function (workId,req) {
+    const Work = this
+
+    try{
+
+        const work = await Work.findById(workId)
+
+        const client = new S3Client({
+            'region':keys.awsRegion
+        });
+
+        const command = new PutObjectCommand({
+            Bucket:'exvate-images',
+            Body:req.file.buffer,
+            Key:`works/${work._id}`,
+            contentType:'images/png',
+            contentDisposition:'inline',
+        });
+
+        const response = await client.send(command);
+
+        if(response.$metadata.httpStatusCode!=200){
+            return Promise.reject({status:false,message:'Error changing image',statusCode:500})
+        }
+
+        work.imagePath = `https://exvate-images.s3.amazonaws.com/works/${work._id}`
+
+        await work.save()
+
+        return Promise.resolve({status:true,message:'Successfully changed/added image'})
     }
     catch(e){
         return Promise.reject(e)

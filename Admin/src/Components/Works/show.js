@@ -10,14 +10,17 @@ import MenuItem from '@mui/material/MenuItem'
 import axios from '../../config/Axios'
 import TextField1 from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { useFilePicker } from 'use-file-picker';
 import PropTypes from 'prop-types';
 import { useRecordContext } from 'react-admin';
 
-/*const imageField = (props) => {
+const ImageField = (props) => {
+    console.log(props)
     const { source } = props;
     const record = useRecordContext(props);
-    return <img src={record[source]} width="500" height="600"/>
-}*/
+
+    return <img src={record[source]} alt='Work pic' height={200} width={300}></img>
+}
 
 TextField.propTypes = {
     label: PropTypes.string,
@@ -42,6 +45,9 @@ const WorkShowActions = (props) =>{
     const [status,setStatus] = useState('Unlisted')
     const [type,setType] = useState('')
     const [cred,setCred] = useState({email:'',password:''})
+    const [imageDisplay,setImageDisplay] = useState([])
+    const [image,setImage] = useState('')
+    let imageForm = new FormData()
 
     const handleConfirm = () =>{
 
@@ -61,10 +67,15 @@ const WorkShowActions = (props) =>{
                     console.log(err)
                 })
             break;
-            case 'image': //Add image pending
-                axios.post(`/works/${props.match.params.id}/addImage`,{status:status},{
+            case 'image':
+                imageForm.append('email',cred.email)
+                imageForm.append('password',cred.password)
+                imageForm.append('image',image)
+                console.log(...imageForm)
+                axios.post(`/works/${props.match.params.id}/image`,imageForm,{
                     headers:{
-                        'x-admin':token
+                        'x-admin':token,
+                        'Content-Type': 'multipart/form-data',
                     }
                 })
                 .then((response)=>{
@@ -72,6 +83,7 @@ const WorkShowActions = (props) =>{
                 })
                 .catch((err)=>{
                     console.log(err)
+                    imageForm = new FormData()
                 })
             break;
             default:
@@ -79,6 +91,51 @@ const WorkShowActions = (props) =>{
         }
     }
 
+    const ImageInputRender = (props) =>{
+        const [openFileSelector, { filesContent, plainFiles, loading, errors }] = useFilePicker({
+            readAs: 'DataURL',
+            accept: 'image/*',
+            multiple: false,
+            // minFileSize: 0.1, // in megabytes
+            maxFileSize: 1,
+            imageSizeRestrictions: {
+              maxHeight: 900, // in pixels
+              maxWidth: 1600,
+              minHeight: 200,
+              minWidth: 200,
+            }
+        });
+
+        if(plainFiles.length){
+            console.log(plainFiles[0])
+            setImage(plainFiles[0])
+            setImageDisplay(filesContent)
+        }
+
+          if (loading) {
+            return <div>Loading...</div>;
+          }
+        
+          if (errors.length) {
+            return <div>Error...</div>;
+          }
+        
+          return (
+            <div>
+              <button onClick={() => openFileSelector()}>Select files </button>
+              <br />
+              {imageDisplay.map((file, index) => (
+                <div key={index}>
+                  <h2>{file.name}</h2>
+                  <img alt={file.name} src={file.content}></img>
+                  <br />
+                </div>
+              ))}
+            </div>
+          );
+    }
+
+    console.log(props)
     return (
         <div>
             <Modal
@@ -125,7 +182,20 @@ const WorkShowActions = (props) =>{
                         ):
                         type==='image'?(
                             <div>
-                                <input type='file' accept='image/*' name='Work Image'/>
+                                <ImageInputRender />
+                                <TextField1 
+                                    value={cred.email}
+                                    type='email'
+                                    label='Email'
+                                    onChange={(e)=>{e.persist();setCred({...cred,email:e.target.value})}}
+                                />
+                                <TextField1 
+                                    value={cred.password}
+                                    type='password'
+                                    label='Password'
+                                    onChange={(e)=>{e.persist();setCred({...cred,password:e.target.value})}}
+                                />
+                                <Button color="primary" variant='outlined' onClick={() => {setType('image');handleConfirm()}}>Confirm</Button>
                             </div>
                         ):<span/>
                     }
@@ -133,8 +203,10 @@ const WorkShowActions = (props) =>{
                 </Fade>
             </Modal>
             <div style={{display:'flex',flexDirection:'row',justifyContent:'space-between'}}>
-                <Button color="primary" variant='outlined' onClick={() => {setType('status');setOpen(true)}}>Edit Status</Button>
-                <Button color="primary" variant='outlined' onClick={() => {setType('image');setOpen(true)}}>Add Image</Button>
+                <div>
+                    <Button color="primary" variant='outlined' onClick={() => {setType('status');setOpen(true)}}>Edit Status</Button>
+                    <Button color="primary" variant='outlined' onClick={() => {setType('image');setOpen(true)}}>{props.record.imagePath?'Change Image':'Add Image'}</Button>
+                </div>
                 <EditButton {...props}/>
             </div>
         </div>
@@ -218,6 +290,7 @@ const WorkShow = (props) => {
             <TextField source="status" label='Status'/>
             <TextField source="category.title" label='Category'/>
             <TextField source="type.title" label='Type'/>
+            <ImageField source='imagePath' label='Image' />
             <Array history={props.history} {...newProps}/>
         </SimpleShowLayout>
     </Show>
