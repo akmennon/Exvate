@@ -186,35 +186,7 @@ module.exports.confirmChangePassword = (req,res,next) =>{
         })
 }
 
-/* Admin login function */
-
-module.exports.adminLogin = (req,res,next) =>{
-    const body = req.body
-
-    User.adminLogin(body.email,body.password)
-            .then(function(user){
-                return user.generateAdminToken()
-            })
-            .then(function(token){
-                res.setHeader('x-admin',token).send({})
-            })
-            .catch(function(err){
-                errorHandler(err,next)
-            })
-}
-
-/* Admin logout function */
-
-module.exports.adminLogout = (req,res,next) =>{
-    User.findByIdAndUpdate(req.user._id,{$pull:{isAdmin:{token:req.token}}})
-        .then(function(){
-            res.json('Successfully logged out')
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
-}
-
+/*ADMINCHANGE */
 /* Adding response and reject structure, error handling - this work controller being worked on frontend pending */
 /* Adds, deletes or updates a work for the supplier*/
 module.exports.addWork = (req,res,next) =>{
@@ -256,102 +228,8 @@ module.exports.forgotCheck = (req,res,next) =>{
         })
 }
 
-/* UNRELIABLE - Change the Regex search to mongodb atlas search*/
-module.exports.all = (req,res) =>{
-    const query = req.query
-    query.filter = JSON.parse(query.filter)
-    query.sort = JSON.parse(query.sort)
-    query.range = JSON.parse(query.range)
 
-    if(query.filter.q){
-        User.find({'email.email':{$regex:query.filter.q}}).skip(query.range[0]).limit(query.range[1]+1-query.range[0]).lean()
-            .then(async (users)=>{
-                const count = await User.countDocuments({'email.email':{$regex:query.filter.q}})
-                return Promise.resolve({users,count})
-            })
-            .then((users)=>{
-                res.setHeader('full',`orders ${query.range[0]}-${query.range[1]}/${users.count}`)
-                res.json(users)
-            })
-            .catch((err)=>{
-                console.log(err)
-                res.json('Invalid request')
-            })
-    }
-    else{
-        User.find({}).skip(query.range[0]).limit(query.range[1]+1-query.range[0])
-            .then(async (users)=>{
-                const count = await User.countDocuments()
-                return Promise.resolve({users,count})
-            })
-            .then((users)=>{
-                res.setHeader('full',`orders ${query.range[0]}-${query.range[1]}/${users.count}`)
-                res.json(users.users)
-            })
-            .catch((err)=>{
-                console.log(err)
-                res.json('Invalid request')
-            })
-    }
-}
-
-/* ADMIN - Finds the admin by his token - For react admin to verify*/
-module.exports.adminToken = (req,res,next) =>{
-    const token = req.header('x-admin')
-
-    User.findByAdminToken(token)
-        .then((admin)=>{
-            res.status(200).send({})
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-/* ADMIN - Finds all the suppliers for the type of work */
-module.exports.suppliers = (req,res,next) =>{
-    const workId = req.params.id
-
-    User.orderSuppliers(workId)
-        .then((response)=>{
-            res.json(response)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-/*module.exports.adminCreate = (req,res) =>{    //Usage Temporarily not used
-    const body = req.body
-
-    User.adminCreate(body)
-        .then((user)=>{
-            res.json(user)
-        })
-        .catch((err)=>{
-            console.log(err)
-            res.json(err)
-        })
-}*/
-
-/* ADMIN - Finds the details of the user including his work */
-module.exports.details = (req,res,next) =>{
-    const id = req.params.id
-
-    User.findById(id).populate('work.workDetails.options') //UNRELIABLE - use projection
-        .then((user)=>{
-            if(user){
-                res.json(user)
-            }
-            else{
-                res.status(404).send('Not found')
-            }
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
+/* ADMINCHANGE */
 module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
 
@@ -377,76 +255,6 @@ module.exports.supplierCancel = (req,res) =>{
             res.json(result)
         })
         .catch((e)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.userEdit = (req,res,next) =>{
-    const user = req.user
-    const body = req.body
-    const id = req.params.id
-
-    User.userEdit(user,body,id)
-        .then((response)=>{
-            res.json(response)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.suspend = (req,res,next) =>{
-    const admin = req.user
-    const userId = req.params.id
-    const body = req.body
-
-    User.suspend(userId,body,admin)
-        .then((resp)=>{
-            res.json(resp)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.suspendCancel = (req,res,next) =>{
-    const admin = req.user
-    const userId = req.params.id
-    const body = req.body
-
-    User.suspendCancel(userId,body,admin)
-        .then((resp)=>{
-            res.json(resp)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.supplierVerify = (req,res,next) =>{
-    const admin = req.user
-    const userId = req.params.id
-    const body = req.body
-
-    User.supplierVerify(userId,body,admin)
-        .then((resp)=>{
-            res.json(resp)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.changeSampleLimit = (req,res,next) =>{
-    const admin = req.user
-    const userId = req.params.id
-    const body = req.body
-
-    User.changeSampleLimit(userId,body,admin)
-        .then((resp)=>{
-            res.json(resp)
-        })
-        .catch((err)=>{
             errorHandler(err,next)
         })
 }

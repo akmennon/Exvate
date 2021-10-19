@@ -1,22 +1,7 @@
 const Work = require('../Models/work/work')
 const errorHandler = require('../Resolvers/errorHandler')
-const Type = require('../Models/type')
-const Category = require('../Models/category')
 
-/* Function to create a new Work */
-
-module.exports.create = (req,res,next) =>{
-    
-    Work.createNew(req,Type,Category)
-        .then(function(work){
-            res.json(work)
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
-}
-
-/* Function to show all works */
+/*ADMINCHANGE Function to show all works */
 
 module.exports.all = (req,res,next) =>{
     const query = req.query
@@ -46,46 +31,12 @@ module.exports.detail = (req,res,next) =>{
         })
 }
 
+/* ADMINCHANGE */
 module.exports.searchAll = (req,res,next) =>{ //Highly unoptimized /Not a search at all
 
     Work.find({},'_id options title')
         .then((works)=>{
             res.json(works)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.workEdit = (req,res,next) =>{
-
-    Work.workEdit(req.body,Type,Category)
-        .then((response)=>{
-            res.json(response)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.changeStatus = (req,res,next) =>{
-    const workId = req.params.id
-
-    Work.changeStatus(workId,req.body)
-        .then((response)=>{
-            res.json(response)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
-}
-
-module.exports.changeImage = (req,res,next) =>{
-    const workId = req.params.id
-
-    Work.changeImage(workId,req)
-        .then((response)=>{
-            res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)

@@ -33,41 +33,6 @@ const typeSchema = new Schema({
     }]
 })
 
-/* Creates a new type */
-
-typeSchema.statics.createType = async function(user,title,hscode){
-    const Type = this
-
-    try{
-        const type = new Type({title,hscode,createdBy:user._id})
-
-        await type.save()
-        return Promise.resolve(type)
-    }
-    catch(e){
-        return Promise.reject(err)
-    }
-}
-
-/* function to edit type */
-
-typeSchema.statics.editType = async function(id,title,hscode,user,Work,Category){
-    const Type = this
-
-    try{
-        const type = await Type.findByIdAndUpdate(id,{ $set: {title:title,hscode:hscode}, $addToSet:{modified:{modifiedBy:user}} },{new:true, runValidators:true})
-        if(!type){
-            return Promise.reject({status:false,message:'Type not found',statusCode:404})
-        }
-        await Category.updateMany({'type._id':id},{'type._id':id,'type.title':title,'type.hscode':hscode})
-        await Work.updateMany({'type._id':id},{'type._id':id,'type.title':title,'type.hscode':hscode})
-        return Promise.resolve(type)
-    }
-    catch(e){
-        return Promise.reject('Type not found', err)
-    }
-}
-
 const Type = mongoose.model('Type',typeSchema)
 
 module.exports = Type

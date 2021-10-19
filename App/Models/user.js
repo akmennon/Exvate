@@ -4,7 +4,6 @@ const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
-// const generator = require('generate-password') - only for admin user creation
 const Order = require('./order') // find another way
 const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
@@ -656,8 +655,10 @@ userSchema.methods.generateToken = async function(){
 userSchema.statics.sendOtp = async function (token,body) {
     const User = this
 
+    let user;
+
     try{
-        const user = await User.findOne({'email.confirmed.token':token})
+        user = await User.findOne({'email.confirmed.token':token})
 
         if(!user||!body.mobile){
             return Promise.reject({status:false,message:'User not found',statusCode:404})
@@ -687,6 +688,8 @@ userSchema.statics.sendOtp = async function (token,body) {
         console.log(message)
     }
     catch(e){
+        user.mobileVerified.lastSend = undefined    //move this to redis
+        await user.save()
         return Promise.reject(e)
     }
 }
@@ -842,54 +845,6 @@ userSchema.statics.adminSignAction = async function(email,password,token){
     }
     catch(e){
         return Promise.reject(e)
-    }
-}
-
-/* Admin login function */
-
-userSchema.statics.adminLogin = async function(email,password){
-    const User = this
-
-    try{
-        const user = await User.findOne({'email.email':email})
-        if(!user||!user.isAdmin.value){
-            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
-        }
-        if(user.isAdmin.banned&&user.isAdmin.banned.value){
-            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
-        }
-        const result = await bcryptjs.compare(password,user.password)
-        if(result){
-            return Promise.resolve(user)
-        }
-        else{
-            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
-        }
-    }
-    catch(err){
-        return Promise.reject(err)
-    }
-}
-
-/* Admin login token generation */
-
-userSchema.methods.generateAdminToken = async function(){
-    const user = this
-
-    try{
-        let tokenData = {
-            createdAt:new Date()
-        }
-    
-        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG - Expiration
-
-        /* admin token is saved to isAdmin.token not tokens array */
-        await user.set('isAdmin.token',token)
-        await user.save()
-        return Promise.resolve(user.isAdmin.token)
-    }
-    catch(err){
-        return Promise.reject(err)
     }
 }
 
@@ -1127,66 +1082,6 @@ userSchema.statics.forgotCheck = async function(token){
     }
 }
 
-/* Find suppliers based on the order inventory requirement */
-userSchema.statics.orderSuppliers = async function(workId){
-    const User = this
-
-    try{
-        //Use projection and pagination
-        let suppliers = await User.find({'work.workDetails':{$elemMatch:{workId:workId,'verified.verifiedBy':{$exists:true,$ne:null}}},'perms.user.suspended.value':false,'perms.user.banned.value':false,'perms.supplier.suspended.value':false,'perms.supplier.banned.value':false,'isAdmin.value':{$exists:false}}).lean()
-        if(suppliers.length!==0){
-            return Promise.resolve({suppliers})
-        }
-        return Promise.reject({status:false,message:'Unable to find suppliers',statusCode:404})
-    }
-    catch(e){
-        return Promise.reject(e)
-    }
-}
-
-/* Add email notification and provide password on creation -- CHECK USAGE*/
-/* userSchema.statics.adminCreate = async function(body){
-    const User = this
-
-    try{
-        console.log(body)
-        const creds = pick(body,['name','email','mobile','address','userType','host','perms'])
-
-        const password = generator.generate({
-            symbols:true,
-            strict:true
-        })
-
-        creds.password = password
-        creds.adminCreated = true
-        console.log(creds)
-
-        if(!creds.host){
-            delete creds.host
-            delete creds.perms
-        }
-
-        const mailData = {
-            from: '"Exvate" <kajaymenon@hotmail.com>',
-            to: user.email.email, // list of receivers
-            subject: "Account Created",
-            text: `An account has been created for you by our team. Please use the credentials below to sign in.\n\n email:${email} \n password:${password}`
-        }
-
-        const user = new User(creds)
-        
-        const mailInfo = await sendMail(mailData)
-        console.log(mailInfo)
-
-        const savedUser = await user.save()
-
-        return Promise.resolve(savedUser)
-    }
-    catch(e){
-        console.log(e)
-    }
-} */
-
 /* userSchema.statics.notify = async function(type,id,message,userId){
     const User = this
 
@@ -1228,234 +1123,6 @@ userSchema.statics.supplierCancel = async function(orderId,reqUser){
     }
     catch(e){
         console.log(e)
-        return Promise.reject(e)
-    }
-}
-
-userSchema.statics.userEdit = async function(user,body,id){
-    const User = this
-
-    let userBody
-
-    if(user.isAdmin.value){
-        userBody = pick(body,['name','email.email','mobile','address','userType','supplier'])
-    }
-    else{
-        userBody = pick(body,['name','email.email','mobile','userType','supplier'])
-    }
-
-    try{
-        if(user.isAdmin.value||user._id==id){
-            const user = await User.findByIdAndUpdate(id,{...userBody})
-            console.log(user)
-            return Promise.resolve('Successfully updated')
-        }
-        else{
-            return Promise.reject('Unauthorised')
-        }
-    }
-    catch(e){
-        console.log(e)
-        Promise.reject('Error updating user')
-    }
-}
-
-userSchema.statics.suspend = async function (userId,body,admin){
-    const User = this
-
-    try{
-        const user = await User.findById(userId)
-        body.duration = new Date(body.duration)
-        if(user.isAdmin.value&&admin.isAdmin.auth>=user.isAdmin.auth){ //higher auth means lower authorization
-            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
-        }
-        user.tokens = []
-        if(body.action==='suspend'){
-            if(body.target=='user'){
-                if(user.perms.user.suspended.value||user.perms.user.banned.value){
-                    return Promise.reject({status:false,message:'Already under suspension/ban',statusCode:403})
-                }
-                user.perms.user.suspended = {...user.perms.user.suspended,value:true,duration:body.duration}
-                user.perms.user.suspended.details.push({doneBy:admin._id,reason:body.reason})
-                console.log(user)
-                await user.save()
-                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
-            }
-            else if(body.target=='supplier'){
-                if(!user.supplier){
-                    return Promise.reject({status:false,message:'Invalid action on user type',statusCode:400})
-                }
-                if(user.perms.supplier.suspended.value||user.perms.supplier.banned.value){
-                    return Promise.reject({status:false,message:'Already under suspension/ban',statusCode:403})
-                }
-                user.perms.supplier.suspended = {...user.perms.supplier.suspended,value:true,duration:body.duration}
-                user.perms.supplier.suspended.details.push({doneBy:admin._id,reason:body.reason})
-                console.log(user)
-                await user.save()
-                return Promise.resolve({status:true,message:'Suspended successfully',statusCode:200})
-            }
-            else{
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
-            }
-        }
-        else if(body.action==='ban'){
-            if(body.target=='user'){
-                if(user.isAdmin.value){
-                    if(user.isAdmin.banned.value){
-                        return Promise.reject({status:false,message:'Already banned',statusCode:403})
-                    }
-                    user.isAdmin.token = undefined
-                    user.isAdmin.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
-                    console.log(user)
-                    await user.save()
-                    return Promise.resolve({status:true,message:'Banned successfully',statusCode:200})
-                }
-                else{
-                    if(user.perms.user.banned.value){
-                        return Promise.reject({status:false,message:'Already banned',statusCode:403})
-                    }
-                    user.perms.user.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
-                    console.log(user)
-                    await user.save()
-                    return Promise.resolve({status:true,message:'Banned successfully',statusCode:200})
-                }
-            }
-            else if(body.target=='supplier'){
-                if(!user.supplier){
-                    Promise.reject({status:false,message:'Invalid action on user type',statusCode:400})
-                }
-                if(user.perms.supplier.banned.value){
-                    return Promise.reject({status:false,message:'Already banned',statusCode:403})
-                }
-                user.perms.supplier.banned = {value:true,doneBy:admin._id,createdAt:new Date(),reason:body.reason}
-                console.log(user)
-                await user.save()
-                return Promise.resolve({status:true,message:'Banned Supplier successfully',statusCode:200})
-            }
-            else{
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
-            }
-        }
-        else{
-            return Promise.reject({status:false,message:'Invalid Input',statusCode:400})
-        }
-    }
-    catch(e){
-        console.log(e)
-        return Promise.reject(e)
-    }
-}
-
-userSchema.statics.suspendCancel = async function(userId,body,admin){
-    const User = this
-
-    try{
-        let result
-        if(body.target=='user'){
-            result = await User.updateOne({_id:userId},[
-                {
-                    $set:{
-                        'perms.user.suspended.details':{
-                            $concatArrays:[
-                                '$perms.user.suspended.details',
-                                {$cond:[{$eq:['$perms.user.suspended.value',true]},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
-                            ]
-                        },
-                        'perms.user.banned.details':{
-                            $concatArrays:[
-                                '$perms.user.banned.details',
-                                {$cond:[{$eq:['$perms.user.banned.value',true]},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
-                            ]
-                        },
-                        'perms.user.suspended.value':false,
-                        'perms.user.banned.value':false
-                    }
-                },
-                {
-                    $unset:['perms.user.suspended.duration']
-                }
-            ])
-        }
-        else if(body.target=='supplier'){
-            result = await User.updateOne({_id:userId},[
-                {
-                    $set:{
-                        'perms.supplier.suspended.details':{
-                            $concatArrays:[
-                                '$perms.supplier.suspended.details',
-                                {$cond:[{$eq:['$perms.supplier.suspended.value',true]},[{reason:'Cancelled Suspension',doneBy:admin._id}],[]]},
-                            ]
-                        },
-                        'perms.supplier.banned.details':{
-                            $concatArrays:[
-                                '$perms.supplier.banned.details',
-                                {$cond:[{$eq:['$perms.supplier.banned.value',true]},[{reason:'Cancelled ban',doneBy:admin._id}],[]]},
-                            ]
-                        },
-                        'perms.supplier.suspended.value':false,
-                        'perms.supplier.banned.value':false
-                    }
-                },{
-                    $unset:['perms.supplier.suspended.duration']
-                }
-            ])
-        }
-        else{
-            return Promise.reject({status:false,message:'Invalid attempt',statusCode:403})
-        }
-
-        if(result.nModified){
-            return Promise.resolve({status:true,message:'User updated successfully'})
-        }
-        else{
-            return Promise.reject({status:false,message:'Error updating suspension',statusCode:403})
-        }
-    }
-    catch(e){
-        return Promise.reject(e)
-    }
-}
-
-userSchema.statics.supplierVerify = async function(userId,body,admin){
-    const User = this
-
-    try{
-        const result = await User.updateOne({_id:userId},{$set:{'perms.supplier.multipleWorks.workCount':body.workCount,'perms.supplier.verified':body.verified},$push:{'perms.supplier.multipleWorks.doneBy':admin._id}})
-        if(result.nModified){
-            return Promise.resolve({status:true,message:'Modified successfully',statusCode:200})
-        }
-        else{
-            return Promise.reject({status:false,message:'Unable to modify',statusCode:404})
-        }
-    }
-    catch(e){
-        console.log(e)
-        return Promise.reject(e)
-    }
-}
-
-userSchema.statics.changeSampleLimit = async function (userId,body){
-    const User = this
-
-    try{
-        if(!userId){
-            return Promise.reject({status:false,message:'No supplier to complete work',statusCode:404})
-        }
-        let res;
-        if(body.clear){
-            res = await User.updateOne({_id:userId},{$set:{'perms.user.sample.max':Number(body.limit),'sampleOrders':[]}})
-        }
-        else{
-            res = await User.updateOne({_id:userId},{$set:{'perms.user.sample.max':Number(body.limit)}})
-        }
-        if(res.nModified==0){
-            return Promise.reject({status:false,message:'Unable to update',statusCode:500})
-        }
-        else{
-            return Promise.resolve({status:true,message:'Sample parameters updated successfully'})
-        }
-    }
-    catch(e){
         return Promise.reject(e)
     }
 }

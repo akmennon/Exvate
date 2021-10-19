@@ -2,7 +2,7 @@
 const devKeys = () =>{
     return {
         jwtSecret:'Secret@123&',
-        mongoURI:'mongodb://localhost:27017/sourceo',
+        mongoURI:process.env.MONGO_URI,
         messageMobile:process.env.MESSAGE_MOBILE,
         twilioSid:process.env.TWILIO_ACCOUNT_SID, 
         twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,

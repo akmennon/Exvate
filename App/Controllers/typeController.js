@@ -2,22 +2,8 @@ const Type = require('../Models/type')
 const Work = require('../Models/work/work')
 const Category = require('../Models/category')
 const errorHandler = require('../Resolvers/errorHandler')
-/* Creates a Type */
 
-module.exports.create = (req,res,next) =>{
-    const user = req.user
-    const body = req.body
-    
-    Type.createType(user,body.title,body.hscode)
-        .then(function(type){
-            res.json(type)
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
-}
-
-/* Show all types */
+/*ADMINCHANGE - Show all types */
 
 module.exports.all = (req,res,next) =>{
     console.log(req.query)
@@ -42,34 +28,6 @@ module.exports.all = (req,res,next) =>{
         .then((typesAll)=>{
             res.setHeader('full',typesAll.count)
             res.json(typesAll.types)
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
-}
-
-module.exports.details = (req,res,next) =>{
-    const id = req.params.id
-    
-    Type.findById(id)
-        .then(function(types){
-            res.json(types)
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
-}
-
-/* Edit type */
-
-module.exports.edit = (req,res,next) =>{
-    const user = req.user
-    const body = req.body
-    const id = req.params.id
-
-    Type.editType(id,body.title,body.hscode,user._id,Work,Category)
-        .then(function(type){
-            res.json(type)
         })
         .catch(function(err){
             errorHandler(err,next)

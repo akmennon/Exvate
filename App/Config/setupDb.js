@@ -3,14 +3,14 @@ const keys = require('./keys')
 
 /* Mongodb server creation */
 
-const setupDb = () =>{
-    mongoose.connect(keys.mongoURI,{useNewUrlParser : true, useUnifiedTopology : true, useCreateIndex:true, useFindAndModify: false})
-        .then(()=>{
-            console.log('Connected to db')
-        })
-        .catch((err)=>{
-            console.log('Db connection failed. Reason :', err)
-        })
+const setupDb = async () => {
+    try{
+        await mongoose.connect(keys.mongoURI,{useNewUrlParser : true, useUnifiedTopology : true, useCreateIndex:true, useFindAndModify: false})
+        return Promise.resolve('Connected to db')
+    }
+    catch(e){
+        return Promise.reject('Db connection failed. Reason : ',e)
+    }
 }
 
 module.exports = setupDb        // Used in index page
