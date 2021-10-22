@@ -5,9 +5,6 @@ const router = require('./App/Config/router')
 const cors = require('cors')
 const port = 3015
 
-/* Mongoose server creation function */
-setupDb()
-
 App.use(express.json())
 
 App.use(express.urlencoded({

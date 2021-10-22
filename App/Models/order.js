@@ -794,7 +794,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     
     try{
         const mainOrder = await Order.findById(id).lean()
-        if(mainOrder.userId._id==user._id||user.isAdmin.value){
+        if(mainOrder.userId._id==user._id){
             return Promise.resolve(mainOrder)
         }
         else{
@@ -810,16 +810,9 @@ orderSchema.statics.userAll = async function(id,user){
     const Order = this
 
     try{
-        if(user.isAdmin.value){
-            const orders = await Order.find({'userId._id':id}).sort({createdAt:-1}).limit(20).lean() //proper pagination required
-            console.log(orders)
-            return Promise.resolve(orders)
-        }
-        else{
-            const orders = await Order.find({'userId._id':user.id}).sort({createdAt:-1}).limit(20).lean()
-            console.log(orders)
-            return Promise.resolve(orders)
-        }
+        const orders = await Order.find({'userId._id':user.id}).sort({createdAt:-1}).limit(20).lean()
+        console.log(orders)
+        return Promise.resolve(orders)
     }
     catch(e){
         console.log(e)

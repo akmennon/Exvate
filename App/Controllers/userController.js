@@ -228,23 +228,16 @@ module.exports.forgotCheck = (req,res,next) =>{
         })
 }
 
-
-/* ADMINCHANGE */
 module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
 
-    if(req.params.id!=req.user._id&&!req.user.isAdmin.value){
-        res.status(401).send('Unauthorized')
-    }
-    else{
-        Order.find({'supplier.assigned.0':id}).sort({_id:-1}).lean()
-            .then((orders)=>{
-                res.json(orders)
-            })
-            .catch((err)=>{
-                errorHandler(err,next)
-            })
-    }
+    Order.find({'supplier.assigned.0':id}).sort({_id:-1}).lean()
+    .then((orders)=>{
+        res.json(orders)
+    })
+    .catch((err)=>{
+        errorHandler(err,next)
+    })
 }
 
 module.exports.supplierCancel = (req,res) =>{

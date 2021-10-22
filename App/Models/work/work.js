@@ -172,36 +172,6 @@ const workSchema = new Schema({
     }
 })
 
-workSchema.statics.all = async (query,user) =>{
-    try{
-        if(!user){
-            const works = await Work.find({$or:[{status:'Unavailable'},{status:'Available'}]}) //remove once client frontend is updated
-            return Promise.resolve({works})
-        }
-        else if(query.filter.q!=undefined){
-            query.filter = JSON.parse(query.filter)
-            query.sort = JSON.parse(query.sort)
-            query.range = JSON.parse(query.range)
-            
-            const works = await Work.find({title:{$regex:query.filter.q}}).skip(query.range[0]).limit(query.range[1]+1-query.range[0])
-            const count = await Work.countDocuments({title:{$regex:query.filter.q}})
-            return Promise.resolve({works,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
-        }
-        else{
-            query.filter = JSON.parse(query.filter)
-            query.sort = JSON.parse(query.sort)
-            query.range = JSON.parse(query.range)
-
-            const works = await Work.find().skip(query.range[0]).limit(query.range[1]+1-query.range[0])
-            const count = await Work.countDocuments()
-            return Promise.resolve({works,count:`orders ${query.range[0]}-${query.range[1]}/${count}`})
-        }
-    }
-    catch(e){
-        return Promise.reject(e)
-    }
-}
-
 const Work = mongoose.model('Work', workSchema)
 
 module.exports = Work
