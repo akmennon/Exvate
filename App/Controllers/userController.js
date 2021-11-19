@@ -126,13 +126,7 @@ module.exports.forgotPassword = (req,res,next) =>{
 module.exports.resendRegisterMail = (req,res,next) =>{
     const body = req.body
 
-    User.findByEmail(body.email)
-        .then(function(user){
-            if(user.email.confirmed.value){
-                return Promise.reject({status:false,message:'The account is already verified',statusCode:401})
-            }
-            return user.registerMail() // sends the confirmation email
-        })
+    User.resendRegisterEmail(body.email)
         .then(function(response){
             res.json({status:true,message:'The registration email has been sent to the address'})
         })
@@ -226,18 +220,6 @@ module.exports.forgotCheck = (req,res,next) =>{
         .catch((err)=>{
             errorHandler(err,next)
         })
-}
-
-module.exports.workOrders = (req,res,next) =>{
-    const id = req.params.id
-
-    Order.find({'supplier.assigned.0':id}).sort({_id:-1}).lean()
-    .then((orders)=>{
-        res.json(orders)
-    })
-    .catch((err)=>{
-        errorHandler(err,next)
-    })
 }
 
 module.exports.supplierCancel = (req,res) =>{

@@ -32,7 +32,7 @@ router.get('/user/forgotCheck',users.forgotCheck)
 router.post('/user/confirmForgot/:token',users.confirmChangePassword)
 router.post('/user/addAddress',authUser,users.addAddress)
 router.post('/user/removeAddress/:id',authUser,users.removeAddress)
-router.get('/supplier/:id/workOrders',authUser,users.workOrders)
+router.get('/supplier/:id/workOrders',authUser,orders.workOrders)
 router.get('/supplier/orders/:orderId/cancel',authUser,users.supplierCancel)/* Add suspension if cancelled during active order */
 router.get('/categories/all',categories.all)
 router.get('/types/all',types.all)

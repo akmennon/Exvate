@@ -44,11 +44,9 @@ module.exports.cancelOrder = (req,res,next) =>{
         })
 }
 
-/* ADMINCHANGE */
 module.exports.userAll = (req,res,next) =>{
-    const id = req.params.id
 
-    Order.userAll(id,req.user)
+    Order.userAll(req.user)
         .then((response)=>{
             res.json(response)
         })
@@ -81,4 +79,16 @@ module.exports.failedOrder = (req,res,next) =>{
         .catch((err)=>{
             errorHandler(err,next)
         })
+}
+
+module.exports.workOrders = (req,res,next) =>{
+    const id = req.params.id
+
+    Order.workOrders(req.user._id)
+    .then((orders)=>{
+        res.json(orders)
+    })
+    .catch((err)=>{
+        errorHandler(err,next)
+    })
 }

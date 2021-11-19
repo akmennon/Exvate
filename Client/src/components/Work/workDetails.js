@@ -40,6 +40,7 @@ class Work extends React.Component{
             return( //Work component is executed after api call
                 <div>
                     <h1>{this.state.work.title}</h1>
+                    <img src={this.state.work.imagePath} alt={this.state.title} style={{width:400,height:300}}/>
                     <WorkComponents parent={this.props} work={this.state.work}/>
                 </div>
             )

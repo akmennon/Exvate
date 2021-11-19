@@ -265,28 +265,6 @@ const orderSchema = new Schema({
         }
     },
     shipmentDetails:{
-        incoterm:{
-            type:String,
-            validate:{
-                validator:function(value){
-                    switch(value){
-                        case 'CIF':
-                            return true
-                        case 'FOB':
-                            return true
-                        case 'FCA':
-                            return true
-                        case 'CFR':
-                            return true
-                        default:
-                            return false
-                    }
-                },
-                message:function(){
-                    return 'Invalid Incoterm'
-                }
-            }
-        },
         shipmentType:{
             type:String,
             validate:{
@@ -806,12 +784,39 @@ orderSchema.statics.orderDetails = async function(id,user){
     }
 }
 
-orderSchema.statics.userAll = async function(id,user){
+orderSchema.statics.userAll = async function(user){
     const Order = this
 
     try{
-        const orders = await Order.find({'userId._id':user.id}).sort({createdAt:-1}).limit(20).lean()
-        console.log(orders)
+        const orders =  await Order.aggregate(
+        [
+            {
+                $match:{
+                    'userId._id': new mongoose.Types.ObjectId(user.id)
+                }
+            },
+            {
+                $addFields:{
+                    sortValue:{
+                        $switch: {
+                            branches: [
+                               { case: {$eq:['$status','Pending']}, then: 1 },
+                               { case: {$eq:['$status','Active']}, then: 1 },
+                               { case: {$eq:['$status','Transit']}, then: 1 }
+                            ],
+                            default: 0
+                        }
+                    }
+                }
+            },
+            {
+                $sort:{sortValue:-1,createdAt:-1}
+            },
+            {
+                $limit:20
+            }
+        ])
+        console.trace(orders)
         return Promise.resolve(orders)
     }
     catch(e){
@@ -831,6 +836,39 @@ orderSchema.statics.dashBoard = async function(user){
     }
     catch(e){
         console.log(e)
+        return Promise.reject(e)
+    }
+}
+
+orderSchema.statics.workOrders = async function (userId){
+    const Order = this
+
+    try{
+        const orders = await Order.aggregate(
+        [
+            {
+                $match:{
+                    'supplier.assigned.0': new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $addFields:{
+                    sortValue:{
+                        $cond:[{$eq:['$status','Active']},1,0]
+                    }
+                }
+            },
+            {
+                $sort:{sortValue:-1,createdAt:-1}
+            },
+            {
+                $limit:20
+            }
+        ])
+
+        return Promise.resolve(orders)
+    }
+    catch(e){
         return Promise.reject(e)
     }
 }

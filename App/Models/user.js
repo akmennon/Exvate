@@ -38,6 +38,9 @@ const userSchema = new Schema({
             token:{             //Token for email confirmation
                 type:String
             },
+            lastSend:{
+                type:Date
+            },
             value:{             //The value to verify that the email has been confimed
                 type:Boolean
             }
@@ -414,32 +417,69 @@ userSchema.methods.registerMail = async function(){
     const user = this
 
     try{
-        const createdAt = new Date()
-        let tokenData = {
-            createdAt:createdAt
-        }
     
-        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
-    
-        let mailData = {
-            from: '"Exvate" <ajaydragonballz@gmail.com>',
-            to: user.email.email, // list of receivers
-            subject: "Signup email confirmation",
-            text: `Test - http://localhost:3000/user/confirmSign/${token}`, // Email confirmation link
-            /*html: "<b>Hello world?</b>"*/ // html body
-        }
+        let mailData;
     
         /* checks if the email token is empty (first time) */
         if(!user.email.confirmed.token){
+            const createdAt = new Date()
+
+            let tokenData = {
+                createdAt:createdAt
+            }
+    
+            const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
+
             user.set('email.confirmed.token', token)
-            await user.save()
-            await sendMail(mailData)
-            return Promise.resolve({status:true,message:'Successfully sent mail'})
+            user.set('email.confirmed.lastSend', new Date())
+
+            mailData = {
+                from: '"Exvate" <ajaydragonballz@gmail.com>',
+                to: user.email.email, // list of receivers
+                subject: "Signup email confirmation",
+                text: `Test - http://localhost:3000/user/confirmSign/${token}`, // Email confirmation link
+                /*html: "<b>Hello world?</b>"*/ // html body
+            }
+
+        }
+        else{
+
+            if( (new Date(user.email.confirmed.lastSend).getTime() + 60000) > Date.now() ){
+                return Promise.reject({status:false,message:"Timeout still active for resend",statusCode:401})
+            }
+
+            mailData = {
+                from: '"Exvate" <ajaydragonballz@gmail.com>',
+                to: user.email.email, // list of receivers
+                subject: "Signup email confirmation",
+                text: `Click the following link to verify \n\nhttp://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
+                /*html: "<b>Hello world?</b>"*/ // html body
+            }
+
+            if( (new Date(user.email.confirmed.lastSend).getTime() + 1800000) < Date.now() ){
+                const createdAt = new Date()
+
+                let tokenData = {
+                    createdAt:createdAt
+                }
+        
+                const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
+
+                user.set('email.confirmed.token', token)
+
+                mailData = {
+                    from: '"Exvate" <ajaydragonballz@gmail.com>',
+                    to: user.email.email, // list of receivers
+                    subject: "Signup email confirmation",
+                    text: `Test - http://localhost:3000/user/confirmSign/${token}`, // Email confirmation link
+                    /*html: "<b>Hello world?</b>"*/ // html body
+                }
+            }
+            
+            user.set('email.confirmed.lastSend', new Date())
         }
     
-        /* uses existing token for the link (email resend) */
-        mailData.text = `Click the following link to verify \n\nhttp://localhost:3000/user/confirmSign/${user.email.confirmed.token}`
-    
+        await user.save()
         await sendMail(mailData)
         return Promise.resolve({status:true,message:'Successfully sent mail'})
     }
@@ -471,11 +511,23 @@ userSchema.statics.findByCredentials = async function(email,password){
         }
         
         if(user.perms.user.suspended&&user.perms.user.suspended.value){
-            return Promise.reject({status:false,message:'User suspended',statusCode:401,payload:{duration:new Date(user.perms.user.suspended.duration)}})     
+            if( new Date(user.perms.user.suspended.duration).getTime > Date.now() ){
+                return Promise.reject({status:false,message:'User suspended',statusCode:401,payload:{duration:new Date(user.perms.user.suspended.duration)}})
+            }
+            else{
+                perms.user.suspended.value = false,
+                perms.user.suspended.duration = undefined
+            }  
         }
 
         if(user.perms.user.banned&&user.perms.user.banned.value){
-            return Promise.reject({status:false,message:'User Banned',statusCode:401})
+            if( new Date(user.perms.user.suspended.duration).getTime > Date.now() ){
+                return Promise.reject({status:false,message:'User Banned',statusCode:401})
+            }
+            else{
+                perms.user.suspended.value = false,
+                perms.user.suspended.duration = undefined
+            }  
         }
         
         const result = bcryptjs.compare(password,user.password)
@@ -938,14 +990,7 @@ userSchema.statics.workAll = async function (id,body){
 
     try{
         const user = await User.findById(id).lean()
-        switch(body.select){
-            case 'WorkDetails':
-                return Promise.resolve(user.work.workDetails)
-            case 'orders':
-                return Promise.resolve({order:user.work.workOrder})
-            default:
-                return Promise.reject({status:false,message:`Option doesn't exist`,statusCode:404})
-        }
+        return Promise.resolve(user.work.workDetails)
     }
     catch(err){
         return Promise.reject(err)
@@ -1246,6 +1291,28 @@ userSchema.methods.confirmMobileChange = async function(otp){
     }
     catch(e){
         return Promise.reject(e)
+    }
+}
+
+userSchema.statics.resendRegisterEmail = async function (email){
+    const User = this
+
+    try{
+        const user = await User.findByEmail(email)
+
+        if(!user){
+            return Promise.reject({status:false,message:"Invalid",statusCode:401})
+        }
+
+        if(user.email.confirmed.value){
+            return Promise.reject({status:false,message:'The account is already verified',statusCode:401})
+        }
+
+        return user.registerMail() // sends the confirmation email
+
+    }
+    catch(e){
+        return Promise.resolve(e)
     }
 }
 
