@@ -1,4 +1,4 @@
-import React,{useState} from 'react';
+import React,{useEffect, useState} from 'react';
 import {alpha} from '@mui/material/styles';
 import {makeStyles} from '@mui/styles';
 import AppBar from '@mui/material/AppBar';
@@ -7,7 +7,8 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import InputBase from '@mui/material/InputBase';
+import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import SearchIcon from '@mui/icons-material/Search';
 import { startRemoveUser } from '../../action/userAction';
 import { connect } from 'react-redux'
@@ -17,6 +18,8 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem';
 import Fade from '@mui/material/Fade';
 import {removeProfile} from '../../action/profileAction'
+import CircularProgress from '@mui/material/CircularProgress';
+import axios from '../axios'
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -148,10 +151,31 @@ const handleClick = (e,props) =>{
   }
 }
 
+const getData = (searchValue,setOptions) =>{
+  const token = localStorage.getItem('x-auth')
+  axios.post('/works/search',{query:searchValue,autoSearch:true},{
+    headers:{
+      'x-auth':token
+    }
+  })
+  .then((response)=>{
+    setOptions(response.data)
+    console.log(response)
+  })
+  .catch((err)=>{
+    console.log(err)
+  })
+}
+
 function ButtonAppBar(props) {
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchValue,setSearchValue] = useState('')
+  const [openSearch,setOpenSearch] = useState(false)
+  const [loading,setLoading] = useState(false)
+  const [options,setOptions] = useState([])
+  const [timeouts,setTimeouts] = useState([])
+
   const open = Boolean(anchorEl);
 
   const handleClickMenu = (event) => {
@@ -161,6 +185,32 @@ function ButtonAppBar(props) {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  useEffect(()=>{
+    if(searchValue){
+      setLoading(true)
+
+      if(timeouts.length!==0){
+        setTimeouts((p)=>{
+          p.forEach((val)=>{
+            clearTimeout(val)
+          })
+          p=[]
+          return p
+        })
+      }
+
+      setTimeouts((timArray)=>{
+        timArray.push(
+          setTimeout( async ()=>{
+            await getData(searchValue,setOptions)
+            setLoading(false)
+          },2000)
+        )
+        return timArray
+      })
+    }
+  },[searchValue])
 
   return (
     <div className={classes.root}>
@@ -178,22 +228,60 @@ function ButtonAppBar(props) {
                 <div className={classes.searchIcon}>
                   <SearchIcon />
                 </div>
-                <InputBase
-                  placeholder="Search…"
+                <Autocomplete
+                  open={openSearch}
+                  onOpen={() => {
+                    setOpenSearch(true);
+                  }}
+                  onClose={() => {
+                    setOpenSearch(false);
+                  }}
                   classes={{
                     root: classes.inputRoot,
                     input: classes.inputInput,
                   }}
-                  inputProps={{ 'aria-label': 'search' }}
+                  filterOptions={(x) => x}
+                  getOptionLabel={(option) => {
+                    if (option.hasOwnProperty('title')) {
+                      return option.title;
+                    }
+                    return option;
+                  }}
+                  options={options}
+                  loading={loading}
                   value={searchValue}
-                  onChange={(ev)=>{
-                    ev.persist()
-                    setSearchValue(ev.target.value)
+                  onInputChange={(ev,val)=>{
+                    setSearchValue(val)
                   }}
+                  onChange={(ev,val)=>{
+                    setSearchValue('')
+                    if(val&&val._id){
+                      props.route.history.push(`/work/${val._id}`)
+                    }
+                  }}
+                  freeSolo={true}
                   onKeyUp={(ev)=>{
-                    if(ev.key==='Enter')
-                    props.route.history.push(`/search/${searchValue}`)
-                  }}
+                      if(ev.key==='Enter'&&searchValue){
+                        setSearchValue('')
+                        setOpenSearch(false)
+                        props.route.history.push(`/search/${searchValue}`)
+                      }
+                    }
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <React.Fragment>
+                            {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                            {params.InputProps.endAdornment}
+                          </React.Fragment>
+                        ),
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>

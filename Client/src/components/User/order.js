@@ -2,7 +2,7 @@ import React from 'react'
 import axios from '../../config/axios'
 import {connect} from 'react-redux'
 import {setFinishedOrder} from '../../action/orderAction'
-import CircularProgress from '@material-ui/core/CircularProgress';
+import CircularProgress from '@mui/material/CircularProgress';
 
 /* display all the orders of a user */
 

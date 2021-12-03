@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import {Link} from 'react-router-dom'
-import {Typography} from '@material-ui/core'
+import Typography from '@mui/material/Typography'
 
 class Home extends React.Component{
     constructor(props){

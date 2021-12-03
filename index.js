@@ -12,7 +12,7 @@ App.use(express.urlencoded({
 }))
 
 /* PENDING - cors management - exposed headers for frontend*/
-App.use(cors({exposedHeaders: ['x-auth','full'],credentials: true, origin: true}))
+App.use(cors({exposedHeaders: ['x-auth','full','total'],credentials: true, origin: true}))
 
 App.use('/',router)
 

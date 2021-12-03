@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import {useSelector} from 'react-redux'
-import CircularProgress from '@material-ui/core/CircularProgress'
-import TextField from '@material-ui/core/TextField'
-import { Button, Typography } from '@material-ui/core'
+import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
+import TextField from '@mui/material/TextField'
+import Typography from '@mui/material/Typography'
 import axios from '../../../config/axios'
 
 export default function EditPassword (props){

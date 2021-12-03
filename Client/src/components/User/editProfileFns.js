@@ -4,7 +4,7 @@ import Email from './editFns.js/editEmail'
 import Mobile from './editFns.js/editMobile'
 import Password from './editFns.js/editPassword'
 import CompanyDetails from './editFns.js/editCompanyDetails'
-import CircularProgress from "@material-ui/core/CircularProgress";
+import CircularProgress from "@mui/material/CircularProgress";
 
 
 export default function EditFunction (props){

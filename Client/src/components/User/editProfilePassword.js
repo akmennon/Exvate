@@ -1,5 +1,7 @@
 import React,{useEffect, useState} from 'react'
-import { Button, CircularProgress, TextField } from '@material-ui/core'
+import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
+import TextField from '@mui/material/TextField'
 import { useDispatch, useSelector } from 'react-redux'
 import axios from '../../config/axios'
 import { setProfile } from '../../action/profileAction'

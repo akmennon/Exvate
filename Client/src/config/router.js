@@ -3,7 +3,7 @@ import {BrowserRouter,Route,Switch} from 'react-router-dom'
 import {connect} from 'react-redux'
 import {startRemoveUser} from '../action/userAction' //Logout action
 import MenuAppBar from './Components/navBar'    //Navbar component
-import { Grid } from '@material-ui/core'
+import Grid from '@mui/material/Grid'
 
 import Home from '../components/Home/home'
 import Register from '../components/User/register'

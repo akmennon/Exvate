@@ -1,6 +1,6 @@
 import React,{useState} from 'react'
-import Button from '@material-ui/core/Button'
-import CircularProgress from '@material-ui/core/CircularProgress'
+import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
 import { useSelector } from 'react-redux'
 
 export default function EditProfile (props){

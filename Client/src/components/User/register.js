@@ -1,7 +1,7 @@
 import React from 'react'
 import axios from '../../config/axios'
 import errMsg from '../../config/errMsg'
-import CircularProgress from '@material-ui/core/CircularProgress'
+import CircularProgress from '@mui/material/CircularProgress'
 
 /* registration */
 

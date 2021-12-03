@@ -14,12 +14,12 @@ module.exports.detail = (req,res,next) =>{
         })
 }
 
-/* ADMINCHANGE */
-module.exports.searchAll = (req,res,next) =>{ //Highly unoptimized /Not a search at all
+module.exports.searchAll = (req,res,next) =>{
 
-    Work.find({},'_id options title')
+    Work.searchAll(req.body.query.trim(),req.body.autoSearch,req.body.pageCount)
         .then((works)=>{
-            res.json(works)
+            res.setHeader('total',works.count)
+            res.json(works.works)
         })
         .catch((err)=>{
             errorHandler(err,next)

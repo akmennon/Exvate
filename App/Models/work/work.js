@@ -172,6 +172,93 @@ const workSchema = new Schema({
     }
 })
 
+workSchema.statics.searchAll = async function (query,autoSearch,pageCount){
+    const Work = this
+
+    try{
+        let works
+        if(autoSearch){
+            works = await Work.aggregate([
+                {
+                   $search:{
+                       index:"WorkSearch",
+                       autocomplete:{
+                            query:query,
+                            path:"title"
+                        }
+                   }
+                },
+                {
+                    $project:{
+                        title:1,
+                        _id:1,
+                        imagePath:1
+                    }
+                },
+                {
+                    $facet:{
+                        works:[
+                            {
+                                $limit:15
+                            }
+                        ],
+                        count:[
+                            {
+                                $count:'count'
+                            }
+                        ]
+                    }
+                }
+            ])
+        }
+        else{
+            works = await Work.aggregate([
+                {
+                   $search:{
+                       index:"WorkSearch",
+                       autocomplete:{
+                            query:query,
+                            path:"title"
+                        }
+                   }
+                },
+                {
+                    $project:{
+                        title:1,
+                        _id:1,
+                        status:1,
+                        type:{title:1},
+                        category:{title:1},
+                        imagePath:1
+                    }
+                },
+                {
+                    $facet:{
+                        works:[
+                            {
+                                $skip:(pageCount-1)*15
+                            },
+                            {
+                                $limit:15
+                            }
+                        ],
+                        count:[
+                            {
+                                $count:'count'
+                            }
+                        ]
+                    }
+                }
+            ])
+        }
+
+        return Promise.resolve({works:works[0].works,count:works[0].count[0]?works[0].count[0].count:0})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
 const Work = mongoose.model('Work', workSchema)
 
 module.exports = Work

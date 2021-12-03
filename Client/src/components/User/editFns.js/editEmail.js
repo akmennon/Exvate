@@ -1,6 +1,6 @@
 import React from 'react'
 import {useSelector} from 'react-redux'
-import CircularProgress from '@material-ui/core/CircularProgress'
+import CircularProgress from '@mui/material/CircularProgress'
 
 export default function EditEmail (props){
     const profile = useSelector((state)=>state.profile)

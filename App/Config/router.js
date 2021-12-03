@@ -46,6 +46,7 @@ router.post('/user/editProfile/changeMobile',authUser,profileEdit,users.changeMo
 router.post('/user/editProfile/changeMobileConfirm',authUser,profileEdit,users.confirmMobileChange)
 router.post('/user/editProfile/changeCompanyDetails',authUser,profileEdit,users.changeCompanyDetails)
 router.post('/user/sendOtp/:token',users.confirmOtp)
+router.post('/works/search',works.searchAll)
 
 /* PENDING */
 /*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/
