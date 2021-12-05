@@ -94,7 +94,7 @@ module.exports.logout = (req,res,next) =>{
 module.exports.logoutAll = (req,res,next) =>{
 
     /* removes the login token */
-    User.findByIdAndUpdate(req.user._id,{$set:{tokens:[]}}) 
+    User.updateOne(req.user._id,{$set:{tokens:[]}},{runValidators:true}) 
         .then(function(){
             res.json('Successfully logged out of all systems')
         })
@@ -225,7 +225,7 @@ module.exports.forgotCheck = (req,res,next) =>{
 module.exports.supplierCancel = (req,res) =>{
     const orderId = req.params.orderId
 
-    User.supplierCancel(orderId,req.user)
+    User.supplierCancel(orderId,req.user,Order)
         .then((result)=>{
             res.json(result)
         })

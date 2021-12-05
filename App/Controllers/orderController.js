@@ -46,9 +46,10 @@ module.exports.cancelOrder = (req,res,next) =>{
 
 module.exports.userAll = (req,res,next) =>{
 
-    Order.userAll(req.user)
+    Order.userAll(req.user,req.body.page)
         .then((response)=>{
-            res.json(response)
+            res.setHeader('total',response.count)
+            res.json(response.orders)
         })
         .catch((err)=>{
             errorHandler(err,next)
@@ -83,12 +84,14 @@ module.exports.failedOrder = (req,res,next) =>{
 
 module.exports.workOrders = (req,res,next) =>{
     const id = req.params.id
+    const page = req.header('page')
 
-    Order.workOrders(req.user._id)
-    .then((orders)=>{
-        res.json(orders)
-    })
-    .catch((err)=>{
-        errorHandler(err,next)
-    })
+    Order.workOrders(id,page)
+        .then((response)=>{
+            res.setHeader('total',response.count)
+            res.json(response.orders)
+        })
+        .catch((err)=>{
+            errorHandler(err,next)
+        })
 }

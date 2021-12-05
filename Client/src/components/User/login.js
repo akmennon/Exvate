@@ -16,6 +16,8 @@ import axios from '../../config/axios'
 
 import {startSetUser,startTokenSetUser} from '../../action/userAction'
 import { useDispatch } from 'react-redux';
+import Fade from '@mui/material/Fade';
+import Snackbar from '@mui/material/Snackbar';
 
 //Just a template, furthur work required
 
@@ -58,22 +60,28 @@ const useStyles = makeStyles((theme) => ({
     }
   }))
 
-const resendMail = (auth,setAuth) =>{
+const resendMail = (auth,setAuth,setOpen,setMessage) =>{
     axios.post('/user/resendRegisterMail',{email:auth.email})
         .then((response)=>{
             console.log(response.data)
             if(response.data.status){
                 setAuth(p=>({...p,resendMail:false}))
-                console.log(response.data.message)
+                setMessage(response.data.message)
+                setOpen(true)
             }
         })
         .catch((err)=>{
             console.log(err)
+            setMessage(err.response.data.message)
+            setOpen(true)
         })
 }
 
 const SignIn = (props) => {
     const [auth,setAuth] = useState({ email:'', password:'', resendMail:false })
+    const [open,setOpen] = useState(false)
+    const [message,setMessage] = useState('')
+
     const dispatch = useDispatch()
 
     useEffect(()=>{
@@ -167,7 +175,7 @@ const SignIn = (props) => {
                                 Email not verified, resend?
                             </Typography>
                             <Button
-                                onClick={()=>resendMail(auth,setAuth)}
+                                onClick={()=>resendMail(auth,setAuth,setOpen,setMessage)}
                                 variant="contained"
                                 className={classes.submit}
                             >
@@ -199,6 +207,12 @@ const SignIn = (props) => {
                 </Grid>
             </form>
             </div>
+            <Snackbar
+                open={open}
+                onClose={()=>{setOpen(false)}}
+                TransitionComponent={Fade}
+                message={message}
+            />
             <Box mt={8}>
             <Copyright />
             </Box>

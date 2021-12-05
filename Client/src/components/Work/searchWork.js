@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from '../../config/axios'
 import Pagination from '@mui/material/Pagination';
+import LoadingError from '../../config/loadingError'
 
 const searchWorks = (query,pageCount=1,setData,setLoading,setTotal) =>{
     const token = localStorage.getItem('token')
@@ -31,17 +32,13 @@ export default function SearchWork (props){
     },[props.match.params.value,pageCount])
 
     if(loading){
-        return(
-            <div>
-                <h3>Loading</h3>
-            </div>
-        )
+        return <LoadingError loading={loading} setLoading={setLoading} />
     }
     else{
-        if(!data.length){
+        if(!data||!data.length){
             return(
                 <div>
-                    <h3>No product match</h3>
+                    <h3>No products match</h3>
                 </div>
             )
         }

@@ -160,7 +160,6 @@ const getData = (searchValue,setOptions) =>{
   })
   .then((response)=>{
     setOptions(response.data)
-    console.log(response)
   })
   .catch((err)=>{
     console.log(err)

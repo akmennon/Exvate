@@ -11,7 +11,6 @@ import Login from '../components/User/login'
 import Forgot from '../components/User/forgot'
 import ConfirmForgot from '../components/User/confirmForgot'
 import ConfirmSign from '../components/User/confirmSign'
-import ResendEmail from '../components/User/resendEmail'
 import Work from '../components/Work/workDetails'
 import OrderPreivew from '../components/Order/orderPreview'
 import OrderConfirm from '../components/Order/orderConfirm'
@@ -85,7 +84,6 @@ class Router extends React.Component{
                     <Route path="/user/forgot" component={Forgot} />
                     <Route path="/user/confirmForgot/:token" component={ConfirmForgot} />
                     <Route path="/user/confirmSign/:token" component={ConfirmSign}/>
-                    <Route path="/user/resendEmail" component={ResendEmail}/>
                     <Route path="/supplier/dashboard" component={Dashboard}/>
                     <Route path="/supplier/signup" component={HostSignUp} />
                     <Route path="/user/addAddress" component={Addaddress} />

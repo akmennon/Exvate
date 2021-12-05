@@ -3,7 +3,7 @@ import axios from '../../config/axios'
 import errMsg from '../../config/errMsg'
 import CircularProgress from '@mui/material/CircularProgress'
 
-/* registration */
+//Last - Adding loading and error to pages
 
 class Register extends React.Component{
     constructor(props){

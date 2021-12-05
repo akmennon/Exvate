@@ -26,6 +26,8 @@ const useStyles = makeStyles((theme)=>({
 
 function DataTable(props) {
     const [data,setData] = useState([])
+    const [page,setPage] = useState(1)
+    const [total,setTotal] = useState(0)
     const classes = useStyles()
 
     useEffect(()=>{
@@ -33,7 +35,8 @@ function DataTable(props) {
             const token = localStorage.getItem('x-auth')
             axios.get(`/supplier/${props.user._id}/workOrders`,{
                 headers:{
-                    'x-auth':token
+                    'x-auth':token,
+                    'page':page
                 }
             })
             .then((response)=>{
@@ -42,13 +45,14 @@ function DataTable(props) {
                     return ele
                 })
                 console.log(response.data)
+                setTotal(response.total)
                 setData(response.data)
             })
             .catch((e)=>{
                 console.log(e)
             })
         }
-    },[props.user._id,setData])
+    },[page])
 
     const handleClick = (event,{id}) =>{
         const token = localStorage.getItem('x-auth')
@@ -152,7 +156,7 @@ function DataTable(props) {
         <Card>
             <CardContent>
                 <div style={{ height: 500, width: '100%' }}>
-                    <DataGrid rows={data} columns={columns} pageSize={5} disableSelectionOnClick={true} components={{ noRowsOverlay: noRows}} />
+                    <DataGrid rows={data} columns={columns} disableSelectionOnClick={true} components={{ noRowsOverlay: noRows}} onPageChange={(e)=>{setPage(e+1)}} pageSize={20} paginationMode='server' rowCount={total}/>
                 </div>
             </CardContent>
         </Card>

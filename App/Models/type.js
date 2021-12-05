@@ -33,6 +33,34 @@ const typeSchema = new Schema({
     }]
 })
 
+typeSchema.statics.findAll = async function(){
+    const Type = this
+
+    try{
+        const types = await Type.aggregate([
+            {
+                $facet:{
+                    types:[
+                        {
+                            $limit:10
+                        }
+                    ],
+                    count:[
+                        {
+                            $count:'count'
+                        }
+                    ]
+                }
+            }
+        ])
+
+        return Promise.resolve({types:types[0].types,count:types[0].count[0]?types[0].count[0].count:0})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
 const Type = mongoose.model('Type',typeSchema)
 
 module.exports = Type

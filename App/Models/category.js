@@ -52,6 +52,34 @@ const categorySchema = new Schema({
     }]
 })
 
+categorySchema.statics.findAll = async function(){
+    const Category = this
+
+    try{
+        const categories = await Category.aggregate([
+            {
+                $facet:{
+                    categories:[
+                        {
+                            $limit:10
+                        }
+                    ],
+                    count:[
+                        {
+                            $count:'count'
+                        }
+                    ]
+                }
+            }
+        ])
+
+        return Promise.resolve({categories:categories[0].categories,count:categories[0].count[0]?categories[0].count[0].count:0})
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
+}
+
 const Category = mongoose.model('Category',categorySchema)
 
 module.exports = Category

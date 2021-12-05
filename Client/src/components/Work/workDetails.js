@@ -1,51 +1,48 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import WorkComponents from './workComponents'
 import axios from '../../config/axios'
 import {setWork} from '../../action/workAction'
-import {connect} from 'react-redux'
+import {useDispatch} from 'react-redux'
+import LoadingError from '../../config/loadingError'
 
 /* The work parent page which contains the work components */
 
-class Work extends React.Component{ 
-    constructor(props){
-        super(props)
-        this.state={
-            work:''
-        }
-    }
+function Work (props){ 
+    const [workData,setWorkData] = useState([])
+    const [loading,setLoading] = useState(true)
+
+    const dispatch = useDispatch()
 
     /* The work details - complete with options and result populated */
 
-    componentDidMount(){  
-        axios.get(`/works/${this.props.match.params.id}`)
+    useEffect(()=>{
+        setWorkData([])
+        setLoading(true)
+        axios.get(`/works/${props.match.params.id}`)
             .then((response)=>{
-                console.log(response.data)
-                this.props.dispatch(setWork(response.data))
-                this.setState({work:response.data})
+                dispatch(setWork(response.data))
+                setWorkData(response.data)
+                setLoading(false)
             })
             .catch((err)=>{
+                setLoading(false)
                 console.log(err)
             })
-    }
+    },[props.match.params.id])
 
-    render(){
-        if(!this.state.work){   //loading 
-            return(
-                <div>
-                    <h1>Loading</h1>
-                </div>
-            )
-        }
-        else{
-            return( //Work component is executed after api call
-                <div>
-                    <h1>{this.state.work.title}</h1>
-                    <img src={this.state.work.imagePath} alt={this.state.title} style={{width:400,height:300}}/>
-                    <WorkComponents parent={this.props} work={this.state.work}/>
-                </div>
-            )
-        }
+    if(!workData||workData.length===0){   //loading 
+        return <LoadingError loading={loading} setLoading={setLoading} />
+    }
+    else{
+        console.log(workData)
+        return( //Work component is executed after api call
+            <div>
+                <h1>{workData.title}</h1>
+                <img src={workData.imagePath} alt={workData.title} style={{width:400,height:300}}/>
+                <WorkComponents parent={props} work={workData}/>
+            </div>
+        )
     }
 }
 
-export default connect()(Work)
+export default Work

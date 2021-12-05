@@ -1,28 +1,27 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import axios from '../../config/axios'
-import {connect} from 'react-redux'
 import {setFinishedOrder} from '../../action/orderAction'
 import CircularProgress from '@mui/material/CircularProgress';
+import Pagination from '@mui/material/Pagination';
+import { useDispatch } from 'react-redux';
 
 /* display all the orders of a user */
 
-class Orders extends React.Component {
-    constructor(props){
-        super(props)
-        this.state={
-            orders:[],
-            status:'loading'
-        }
+function Orders (props) {
 
-        this.handleClick = this.handleClick.bind(this)
-    }
+    const [orders,setOrders] = useState([])
+    const [total,setTotal] = useState(1)
+    const [pageCount,setPageCount] = useState(1)
+    const [status,setStatus] = useState('loading')
+    const dispatch = useDispatch()
 
-    componentDidMount(){
+    useEffect(()=>{
+        setStatus('loading')
         const token = localStorage.getItem('x-auth')
         if(token===undefined||token==='undefined'){
             this.props.history.push('/user/login')
         }
-        axios.post('/user/orders',null,
+        axios.post('/user/orders',{page:pageCount},
         {
             headers:{
                 'x-auth':token
@@ -30,59 +29,62 @@ class Orders extends React.Component {
         })
             .then((response)=>{
                 if(response.data.length===0){
-                    this.setState({status:'none'})
+                    setStatus('none')
                 }
                 else{
-                    this.setState({orders:response.data})
+                    const totalPages = Math.ceil(Number(response.headers.total)/15)
+                    setTotal(totalPages)
+                    console.log(response.data)
+                    setOrders(response.data)
+                    setStatus('working')
                 }
             })
             .catch((err)=>{
                 console.log(err)
-                this.setState({status:'failed'})
+                setStatus('failed')
             })
+    },[pageCount])
+
+    const handleClick = (orderIndex) =>{
+        dispatch(setFinishedOrder(orders[orderIndex]))
+        this.props.history.push(`/user/orderPage/${orders[orderIndex]._id}`)
     }
 
-    handleClick(orderIndex){
-        this.props.dispatch(setFinishedOrder(this.state.orders[orderIndex]))
-        this.props.history.push(`/user/orderPage/${this.state.orders[orderIndex]._id}`)
+    if(status==='none'){
+        return (
+            <div>
+                You have not made any orders
+            </div>
+        )
     }
-
-    render(){
-        if(this.state.orders.length){
-            return(
-                <div>
-                    {
-                        this.state.orders.map((order,orderIndex)=>{
-                            return (
-                                <p key={order._id} onClick={()=>{this.handleClick(orderIndex)}} >{order.status}</p>
-                            )
-                        })
-                    }
-                </div>
-            )
-        }
-        else if(this.state.status==='none'){
-            return (
-                <div>
-                    You have not made any orders
-                </div>
-            )
-        }
-        else if(this.state.status==='loading'){
-            return(
-                <div>
-                    <CircularProgress />
-                </div>
-            )
-        }
-        else{
-            return(
-                <div>
-                    <h3>Error Fetching data.Please retry by refreshing the page</h3>
-                </div>
-            )
-        }
+    else if(status==='loading'){
+        return(
+            <div>
+                <CircularProgress />
+            </div>
+        )
+    }
+    else if(orders.length){
+        return(
+            <div>
+                {
+                    orders.map((order,orderIndex)=>{
+                        return (
+                            <p key={order._id} onClick={()=>{handleClick(orderIndex)}} >{order.status}</p>
+                        )
+                    })
+                }
+                <Pagination count={total} page={pageCount} onChange={(e,val)=>{setPageCount(val)}} />
+            </div>
+        )
+    }
+    else{
+        return(
+            <div>
+                <h3>Error Fetching data.Please retry by refreshing the page</h3>
+            </div>
+        )
     }
 }
 
-export default connect()(Orders)
+export default Orders

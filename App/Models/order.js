@@ -162,10 +162,10 @@ const orderSchema = new Schema({
         }
     },
     supplier:{
-        assigned:[{
+        assigned:{
             type:Schema.Types.ObjectId,
             ref:'User'
-        }],
+        },
         removed:[{
             type:Schema.Types.ObjectId,
             ref:'User'
@@ -784,7 +784,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     }
 }
 
-orderSchema.statics.userAll = async function(user){
+orderSchema.statics.userAll = async function(user,pageCount=1){
     const Order = this
 
     try{
@@ -810,14 +810,27 @@ orderSchema.statics.userAll = async function(user){
                 }
             },
             {
-                $sort:{sortValue:-1,createdAt:-1}
-            },
-            {
-                $limit:20
+                $facet:{
+                    orders:[
+                        {
+                            $sort:{sortValue:-1,createdAt:-1}
+                        },
+                        {
+                            $skip:(pageCount-1)*10
+                        },
+                        {
+                            $limit:10
+                        }
+                    ],
+                    count:[
+                        {
+                            $count:'count'
+                        }
+                    ]
+                }
             }
         ])
-        console.trace(orders)
-        return Promise.resolve(orders)
+        return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){
         console.log(e)
@@ -840,36 +853,57 @@ orderSchema.statics.dashBoard = async function(user){
     }
 }
 
-orderSchema.statics.workOrders = async function (userId){
+orderSchema.statics.workOrders = async function (id,page){
     const Order = this
 
     try{
-        const orders = await Order.aggregate(
-        [
+        page = page?Number(page):1
+        const orders = await Order.aggregate([
             {
                 $match:{
-                    'supplier.assigned.0': new mongoose.Types.ObjectId(userId)
+                    'supplier.assigned':mongoose.Types.ObjectId(id)
                 }
             },
             {
                 $addFields:{
                     sortValue:{
-                        $cond:[{$eq:['$status','Active']},1,0]
+                        $switch: {
+                            branches: [
+                               { case: {$eq:['$status','Pending']}, then: 1 },
+                               { case: {$eq:['$status','Active']}, then: 1 },
+                               { case: {$eq:['$status','Transit']}, then: 1 },
+                               { case: {$eq:['$status','Completed']}, then: 1 }
+                            ],
+                            default: 0
+                        }
                     }
                 }
             },
             {
-                $sort:{sortValue:-1,createdAt:-1}
-            },
-            {
-                $limit:20
+                $facet:{
+                    orders:[
+                        {
+                            $sort:{sortValue:-1,createdAt:-1}
+                        },
+                        {
+                            $skip:page?(page-1)*20:0
+                        },
+                        {
+                            $limit:20
+                        }
+                    ],
+                    count:[
+                        {
+                            $count:'count'
+                        }
+                    ]
+                }
             }
         ])
-
-        return Promise.resolve(orders)
+        return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){
-        return Promise.reject(e)
+        return Promise.resolve(e)
     }
 }
 

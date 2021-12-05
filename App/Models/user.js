@@ -488,8 +488,6 @@ userSchema.methods.registerMail = async function(){
     }
 }
 
-/* PENDING - Lazy - Login function. Also checks if the email has been confirmed */
-
 userSchema.statics.findByCredentials = async function(email,password){
     const User = this
 
@@ -906,7 +904,7 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
                     return Promise.reject({status:false,message:'Not proper params',statusCode:400}) //does not work
                 }
 
-                await Option.findByIdAndUpdate(user.work.workDetails[workIndex].options,{...option})
+                await Option.updateOne(user.work.workDetails[workIndex].options,{...option},{runValidators:true})
 
                 for(let i=0;i<user.work.workDetails.length;i++){
                     if(user.work.workDetails[i].workId.toString()==reqParams.workId){
@@ -1036,17 +1034,16 @@ userSchema.statics.forgotCheck = async function(token){
     }
 } */
 
-userSchema.statics.supplierCancel = async function(orderId,reqUser){
+userSchema.statics.supplierCancel = async function(orderId,reqUser,Order){
     const User = this
 
     try{
-        const order = reqUser.work.workOrder.find(ele=>ele==orderId)
-        if(!order){
+        const order = await Order.findById(orderId).lean()
+        if(!order||order.supplier.assigned!=reqUser._id){
             return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
-        reqUser.work.workOrder = reqUser.work.workOrder.filter(ele=>ele!=orderId)
-        const result = await Order.updateOne({_id:order,status:{$nin:['Transit','Completed','Finished','Cancelled','Failed','Active']}},{'verified.value':false,'host.assigned':[],$addToSet:{'host.removed':reqUser._id}})
-        if(result.nModified!=0){
+        const result = await Order.updateOne({_id:order._id,status:{$nin:['Transit','Completed','Finished','Cancelled','Failed','Active']}},{$set:{'verified.value':false},$addToSet:{'supplier.removed':reqUser._id},$unset:{'supplier.assigned':''}},{runValidators:true})
+        if(result.nModified!=0&&result.ok!=0){
             await reqUser.save()
             return Promise.resolve(reqUser)
         }
