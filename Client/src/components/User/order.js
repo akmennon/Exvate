@@ -19,7 +19,7 @@ function Orders (props) {
         setStatus('loading')
         const token = localStorage.getItem('x-auth')
         if(token===undefined||token==='undefined'){
-            this.props.history.push('/user/login')
+            props.history.push('/user/login')
         }
         axios.post('/user/orders',{page:pageCount},
         {
@@ -47,7 +47,7 @@ function Orders (props) {
 
     const handleClick = (orderIndex) =>{
         dispatch(setFinishedOrder(orders[orderIndex]))
-        this.props.history.push(`/user/orderPage/${orders[orderIndex]._id}`)
+        props.history.push(`/user/orderPage/${orders[orderIndex]._id}`)
     }
 
     if(status==='none'){

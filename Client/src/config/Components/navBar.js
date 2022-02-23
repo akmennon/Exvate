@@ -186,7 +186,7 @@ function ButtonAppBar(props) {
   };
 
   useEffect(()=>{
-    if(searchValue){
+    if(searchValue&&searchValue.length>1){
       setLoading(true)
 
       if(timeouts.length!==0){
@@ -208,6 +208,10 @@ function ButtonAppBar(props) {
         )
         return timArray
       })
+    }
+    else{
+      setLoading(false)
+      setOpenSearch(false)
     }
   },[searchValue])
 

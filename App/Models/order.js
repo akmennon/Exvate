@@ -171,6 +171,23 @@ const orderSchema = new Schema({
             ref:'User'
         }]
     },
+    biddingStatus:{
+        type:String,
+        validation:function(value){
+            switch(value){
+                case 'Open':
+                    return true
+                case 'Closed':
+                    return true
+                default:
+                    return false
+            }
+        },
+        default:'Closed'
+    },
+    biddingDuration:{
+        type:Date
+    },
     affiliate:{
         type:Schema.Types.ObjectId,
         ref:'User'
@@ -771,7 +788,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     /* Checks if the order is present in the user */
     
     try{
-        const mainOrder = await Order.findById(id).lean()
+        const mainOrder = await Order.findOne({_id:id},{'email.confirmed':0,supplier:0,biddingStatus:0,affiliate:0,shipmentDetails:0,completionVerified:0,cancelVerified:0,'paymentStatus.supplierPayment':0,'paymentStatus.supplierAmount':0,'paymentStatus.supplierAmountPaid':0,'paymentStatus.transaction':0,'pl':0,'verified.verifiedBy':0}).lean()
         if(mainOrder.userId._id==user._id){
             return Promise.resolve(mainOrder)
         }
@@ -793,6 +810,23 @@ orderSchema.statics.userAll = async function(user,pageCount=1){
             {
                 $match:{
                     'userId._id': new mongoose.Types.ObjectId(user.id)
+                }
+            },
+            {
+                $project:{
+                    'email.confirmed':0,
+                    'supplier':0,
+                    'biddingStatus':0,
+                    'affiliate':0,
+                    'shipmentDetails':0,
+                    'completionVerified':0,
+                    'cancelVerified':0,
+                    'paymentStatus.supplierPayment':0,
+                    'paymentStatus.supplierAmount':0,
+                    'paymentStatus.supplierAmountPaid':0,
+                    'paymentStatus.transaction':0,
+                    'pl':0,
+                    'verified.verifiedBy':0
                 }
             },
             {
@@ -865,6 +899,23 @@ orderSchema.statics.workOrders = async function (id,page){
                 }
             },
             {
+                $project:{
+                    userId:0,
+                    address:0,
+                    billingAddress:0,
+                    'supplier.removed':0,
+                    biddingStatus:0,
+                    affiliate:0,
+                    shipmentDetails:0,
+                    completionVerified:0,
+                    cancelVerified:0,
+                    'paymentStatus.value':0,
+                    shipmentDetails:0,
+                    pl:0,
+                    verified:0
+                }
+            },
+            {
                 $addFields:{
                     sortValue:{
                         $switch: {
@@ -886,10 +937,10 @@ orderSchema.statics.workOrders = async function (id,page){
                             $sort:{sortValue:-1,createdAt:-1}
                         },
                         {
-                            $skip:page?(page-1)*20:0
+                            $skip:page?(page-1)*10:0
                         },
                         {
-                            $limit:20
+                            $limit:10
                         }
                     ],
                     count:[
@@ -904,6 +955,68 @@ orderSchema.statics.workOrders = async function (id,page){
     }
     catch(e){
         return Promise.resolve(e)
+    }
+}
+
+orderSchema.statics.getBidOrders = async function(user,body){
+    const Order = this
+
+    try{
+
+        const work = user.work.workDetails.find((workEle)=>{
+            return workEle.workId == body.workId
+        })
+
+        if(!work){
+            return Promise.reject({status:false,message:'User not verified for this work',statusCode:403})
+        }
+
+        const orders = await Order.aggregate([
+            {
+                $match:{
+                    'workId._id':mongoose.Types.ObjectId(body.workId),
+                    'userId._id':{$ne:mongoose.Types.ObjectId(user._id)},
+                    'biddingStatus':'Open',
+                    'biddingDuration':{$lte:'$biddingDuration'}
+                }
+            },
+            {
+                $project:{
+                    workId:1,
+                    values:1,
+                    orderType:1,
+                    createdAt:1,
+                    validTill:1
+                }
+            },
+            {
+                $facet:{
+                    orders:[
+                        {
+                            $sort:{
+                                createdAt:-1
+                            }
+                        },
+                        {
+                            $skip:body.skip||0
+                        },
+                        {
+                            $limit:body.limit<=15?body.limit:15
+                        }
+                    ],
+                    count:[
+                        {
+                            $count:'count'
+                        }
+                    ]
+                }
+            }
+        ])
+
+        return Promise.resolve(orders)
+    }
+    catch(e){
+        return Promise.reject(e)
     }
 }
 

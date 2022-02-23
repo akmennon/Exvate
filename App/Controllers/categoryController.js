@@ -1,12 +1,12 @@
 const Category = require('../Models/category')
 const errorHandler = require('../Resolvers/errorHandler')
 
-/* ADMINCHANGE Shows all categories */
+/* Shows all categories */
 
 module.exports.all = (req,res,next) =>{
+    const body = req.body
 
-    //use pagination
-    Category.findAll()
+    Category.findAll(body)
         .then((categoriesAll)=>{
             res.setHeader('full',categoriesAll.count)
             res.json(categoriesAll.categories)

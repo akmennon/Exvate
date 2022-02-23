@@ -26,7 +26,7 @@ export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
                 redirect()
             })
             .catch((err)=>{
-                if(err.response.data.payload&&err.response.data.payload.signup===false){
+                if(err.response&&err.response.data.payload&&err.response.data.payload.signup===false){
                     setAuth(p=>({...p,password:'',resendMail:true}))
                 }
                 else{

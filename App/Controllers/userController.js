@@ -79,7 +79,6 @@ module.exports.logout = (req,res,next) =>{
     const token = req.header('x-auth')
 
     /* removes the login token */
-    console.log('loggedout')
     user.logOut(token)
         .then(function(){
             res.json({status:true,message:'Successfully logged out'})
@@ -96,7 +95,7 @@ module.exports.logoutAll = (req,res,next) =>{
     /* removes the login token */
     User.updateOne(req.user._id,{$set:{tokens:[]}},{runValidators:true}) 
         .then(function(){
-            res.json('Successfully logged out of all systems')
+            res.json({status:true,message:'Successfully logged out of all systems'})
         })
         .catch(function(err){
             errorHandler(err,next)
@@ -107,7 +106,6 @@ module.exports.logoutAll = (req,res,next) =>{
 
 module.exports.forgotPassword = (req,res,next) =>{
     const body = req.body
-    console.log(body)
 
     User.findByEmail(body.email)
         .then(function(user){
@@ -180,8 +178,6 @@ module.exports.confirmChangePassword = (req,res,next) =>{
         })
 }
 
-/*ADMINCHANGE */
-/* Adding response and reject structure, error handling - this work controller being worked on frontend pending */
 /* Adds, deletes or updates a work for the supplier*/
 module.exports.addWork = (req,res,next) =>{
     const body = req.body

@@ -33,7 +33,7 @@ const typeSchema = new Schema({
     }]
 })
 
-typeSchema.statics.findAll = async function(){
+typeSchema.statics.findAll = async function(body){
     const Type = this
 
     try{
@@ -42,7 +42,10 @@ typeSchema.statics.findAll = async function(){
                 $facet:{
                     types:[
                         {
-                            $limit:10
+                            $skip:body.skip||0
+                        },
+                        {
+                            $limit:body.limit<20?body.limit:10
                         }
                     ],
                     count:[

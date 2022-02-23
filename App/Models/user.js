@@ -47,7 +47,8 @@ const userSchema = new Schema({
         }
     },
     mobile:{
-        type:String
+        type:String,
+        unique:true
     },
     mobileVerified:{
         value:{
@@ -492,7 +493,7 @@ userSchema.statics.findByCredentials = async function(email,password){
     const User = this
 
     try{
-        const user = await User.findOne({'email.email':email})
+        const user = await User.findOne({'email.email':email},{'userType':1,'_id':1,'name':1,'supplier':1,'email.email':1,'address':1,'password':1,'tokens':1,'perms':1})
 
         if(!user){
             return Promise.reject({message:'Invalid email or password',statusCode:401})
@@ -547,7 +548,7 @@ userSchema.statics.findByCredentials = async function(email,password){
 userSchema.statics.findByEmail = function(email){
     const User = this
 
-    return User.findOne({'email.email':email})
+    return User.findOne({'email.email':email},{forgotToken:1,email:1})
                 .then(function(user){
                     if(!user){
                         return Promise.reject('Email does not exist')
@@ -588,6 +589,35 @@ userSchema.statics.findByToken = function(token,path){
             .catch(function(err){
                 return Promise.reject(err)
             })
+}
+
+userSchema.methods.supplierCheck = async function (){
+    const user = this
+
+    try{
+        if(!user.supplier){
+            return Promise.reject({status:false,message:'Not a supplier',statusCode:401})
+        }
+        if(!user.perms.supplier.verified){
+            return Promise.reject({status:false,message:'Not a verified supplier. Contact support',statusCode:401})
+        }
+        if(user.perms.supplier.banned.value){
+            return Promise.reject({status:false,message:'Supplier is banned',statusCode:401})
+        }
+        if(user.perms.supplier.suspended.value){
+            const suspendedDate = new Date(user.perms.supplier.suspended.duration)
+            if(suspended.getTime()<new Date().getTime()){
+                user.perms.supplier.suspended.value = false
+                user.perms.supplier.suspended.duration = undefined
+                await user.save()
+                return Promise.resolve('Suspension cleared')
+            }
+            return Promise.reject({status:false,message:`Supplier is suspended till ${suspendedDate.toUTCString()}`,statusCode:401})
+        }
+    }
+    catch(e){
+        return Promise.reject(e)
+    }
 }
 
 /* Creates token to change the Password and sends the email with link */
@@ -649,11 +679,11 @@ userSchema.methods.generateToken = async function(){
 
     try{
 
-        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
-
-        if(user.tokens.length==10){
-            user.tokens.length.shift()
+        if(user.tokens.length>=5){
+            user.tokens.shift()
         }
+
+        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
 
         user.tokens.push({token})
         await user.save()
@@ -672,7 +702,7 @@ userSchema.statics.sendOtp = async function (token,body) {
     let user;
 
     try{
-        user = await User.findOne({'email.confirmed.token':token})
+        user = await User.findOne({'email.confirmed.token':token},{mobileVerified:1,mobile:1})
 
         if(!user||!body.mobile){
             return Promise.reject({status:false,message:'User not found',statusCode:404})
@@ -695,11 +725,11 @@ userSchema.statics.sendOtp = async function (token,body) {
 
         const message = await client.messages.create({
             body: `The code to register your Exvate account is ${user.mobileVerified.token}`,
-            from: '+19096555292',
+            from: messageMobile,
             to: user.mobile
         })
 
-        console.log(message)
+        return Promise.resolve({status:true,message:'Successfully send otp'})
     }
     catch(e){
         user.mobileVerified.lastSend = undefined    //move this to redis
@@ -714,7 +744,7 @@ userSchema.statics.confirmEmail = async function(token,body){
     const User = this
 
     try{
-        const user = await User.findOne({'email.confirmed.token':token})
+        const user = await User.findOne({'email.confirmed.token':token},{email:1,mobile:1,mobileVerified:1,companyDetails:1,supplier:1,userType:1,tokens:1})
 
         if(!user){
             return Promise.reject({status:false,message:'User not found',statusCode:404})
@@ -816,7 +846,7 @@ userSchema.statics.confirmPassword = async function(token,password){
     const User = this
 
     try{
-        const user = await User.findOne({'forgotToken.token':token})
+        const user = await User.findOne({'forgotToken.token':token},{forgotToken:1,password:1,userType:1,_id:1,name:1,'email.email':1})
         if(!user){
             return Promise.reject({status:false,message:'Invalid password change attempt',statusCode:401})
         }
@@ -838,7 +868,7 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
     const User = this
 
     const reqParams = pick(body,['workId','options'])
-    
+
     try{
         let user = reqUser
 
@@ -1034,25 +1064,41 @@ userSchema.statics.forgotCheck = async function(token){
     }
 } */
 
-userSchema.statics.supplierCancel = async function(orderId,reqUser,Order){
-    const User = this
+userSchema.statics.supplierCancel = async function(orderId,user,Order){
 
     try{
-        const order = await Order.findById(orderId).lean()
-        if(!order||order.supplier.assigned!=reqUser._id){
-            return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
-        }
-        const result = await Order.updateOne({_id:order._id,status:{$nin:['Transit','Completed','Finished','Cancelled','Failed','Active']}},{$set:{'verified.value':false},$addToSet:{'supplier.removed':reqUser._id},$unset:{'supplier.assigned':''}},{runValidators:true})
+        const result = await Order.updateOne(
+        {
+            'supplier.assigned':{$ne:user._id},
+            '_id':orderId,
+            'status':{$nin:['Transit','Completed','Finished','Cancelled','Failed','Active']}
+        },
+        [
+            {
+                $set:{
+                    'verified.value':false,
+                    'supplier.removed':{
+                        $cond:[
+                            {$in:[mongoose.Types.ObjectId(user._id),'$supplier.removed']},
+                            '$supplier.removed',
+                            {$concatArrays:['$supplier.removed',[mongoose.Types.ObjectId(user._id)]]}
+                        ]
+                    }
+                }
+            },
+            {
+                $unset:'supplier.assigned'
+            }
+        ])
+
         if(result.nModified!=0&&result.ok!=0){
-            await reqUser.save()
-            return Promise.resolve(reqUser)
+            return Promise.resolve({status:true,message:'Cancelled order successfully'})
         }
         else{
             return Promise.reject({status:false,message:'Unable to modify',statusCode:403})
         }
     }
     catch(e){
-        console.log(e)
         return Promise.reject(e)
     }
 }
@@ -1062,9 +1108,9 @@ userSchema.methods.addAddress = async function (address) {
 
     try{
         if(user.address.length>=10){
-            return Promise.reject({status:false,message:'Address limit reached',statusCode:403})
+            user.address.shift()
         }
-        const newAddress = pick(address,['name','street','city','state','country','pin'])
+        const newAddress = pick(address,['name','building','street','city','state','country','pin'])
         user.address.push(newAddress)
         await user.save()
         return Promise.resolve(user.address[user.address.length-1])
@@ -1226,7 +1272,8 @@ userSchema.methods.sendProfile = async function (body){
         user.profileChangeToken.value = token
         user.profileChangeToken.createdAt = Date.now()
         await user.save()
-        return Promise.resolve(user) //VULNERABLE - pick - send profile token seperately
+        const response = pick(user,['_id,','name','email.email','mobile','address','companyDetails','userType','supplier','profileChangeToken.value'])
+        return Promise.resolve(response)
     }
     catch(e){
         return Promise.reject(e)
@@ -1256,13 +1303,11 @@ userSchema.methods.changeMobileOtp = async function(body){
         user.profileChangeToken.mobile.token = ('' + Math.random()).slice(2,8)
         await user.save()
 
-        const message = await client.messages.create({
+        await client.messages.create({
             body: `The code to change your mobile number is ${user.profileChangeToken.mobile.token}`,
             from: messageMobile,
             to: user.profileChangeToken.mobile.number
         })
-
-        console.log(message)
     }
     catch(e){
         return Promise.reject(e)

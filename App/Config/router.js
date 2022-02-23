@@ -8,6 +8,7 @@ const types = require('../Controllers/typeController')
 const categories = require('../Controllers/categoryController')
 const works = require('../Controllers/workController')
 const orders = require('../Controllers/orderController')
+const bids = require('../Controllers/bidController')
 
 /*-------------------- Middlewares --------------------*/
 
@@ -16,6 +17,10 @@ const authUser = require('../Middlewares/authUser') //Doesn't allow admins as we
 
 /* For profile edit verification */
 const profileEdit = require('../Middlewares/profileEdit')
+
+/* To check if the supplier is verified and not banned,suspended etc */
+
+const supplierCheck = require('../Middlewares/supplierCheck')
 
 /*-------------------- Routes --------------------*/
 
@@ -32,8 +37,8 @@ router.get('/user/forgotCheck',users.forgotCheck)
 router.post('/user/confirmForgot/:token',users.confirmChangePassword)
 router.post('/user/addAddress',authUser,users.addAddress)
 router.post('/user/removeAddress/:id',authUser,users.removeAddress)
-router.get('/supplier/:id/workOrders',authUser,orders.workOrders)
-router.get('/supplier/orders/:orderId/cancel',authUser,users.supplierCancel)/* Add suspension if cancelled during active order */
+router.get('/supplier/:id/workOrders',authUser,supplierCheck,orders.workOrders)
+router.get('/supplier/orders/:orderId/cancel',authUser,supplierCheck,users.supplierCancel)
 router.get('/categories/all',categories.all)
 router.get('/types/all',types.all)
 router.get('/works/:id',works.detail)
@@ -47,6 +52,10 @@ router.post('/user/editProfile/changeMobileConfirm',authUser,profileEdit,users.c
 router.post('/user/editProfile/changeCompanyDetails',authUser,profileEdit,users.changeCompanyDetails)
 router.post('/user/sendOtp/:token',users.confirmOtp)
 router.post('/works/search',works.searchAll)
+router.post('/supplier/bids/create/:orderId',authUser,supplierCheck,bids.deleteOldBids,bids.create)
+router.post('/supplier/bids',authUser,supplierCheck,bids.list)
+router.post('/supplier/bids/remove/:bidId',authUser,supplierCheck,bids.remove)
+router.post('/supplier/bid/orders',authUser,supplierCheck,orders.getBidOrders)
 
 /* PENDING */
 /*router.post('/user/:id/work',authUser,options.findOption,users.addWork)*/

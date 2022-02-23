@@ -52,16 +52,24 @@ const categorySchema = new Schema({
     }]
 })
 
-categorySchema.statics.findAll = async function(){
+categorySchema.statics.findAll = async function(body){
     const Category = this
 
     try{
         const categories = await Category.aggregate([
             {
+                $project:{
+                    modified:0
+                }
+            },
+            {
                 $facet:{
                     categories:[
                         {
-                            $limit:10
+                            $limit:body.skip||10
+                        },
+                        {
+                            $limit:body.limit<20?body.limit:10
                         }
                     ],
                     count:[
