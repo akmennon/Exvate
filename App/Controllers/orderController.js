@@ -1,14 +1,15 @@
 const Order = require('../Models/order')
 const errorHandler = require('../Resolvers/errorHandler')
-const User = require('../Models/user')
+const {matchedData} = require('express-validator')
+const validationErrors = require('../Resolvers/validationErrors')
 
 /* creates an order */
 module.exports.create = async (req,res,next) =>{
-    const body = req.body
     const user = req.user
-    const id = req.params.id
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body','params'], includeOptionals: true })
     
-    Order.createOrder(body.orderData,id,user)
+    Order.createOrder(data.orderData,data.id,user)
         .then((result)=>{
             res.json(result)
         })
@@ -19,9 +20,10 @@ module.exports.create = async (req,res,next) =>{
 
 /* finds the details of the order if present in user */
 module.exports.details = (req,res,next) =>{
-    const id = req.params.id
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    Order.orderDetails(id,req.user)
+    Order.orderDetails(data.id,req.user)
         .then((order)=>{
             res.json(order)
         })
@@ -31,8 +33,10 @@ module.exports.details = (req,res,next) =>{
 }
 
 module.exports.userAll = (req,res,next) =>{
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    Order.userAll(req.user,req.body.page)
+    Order.userAll(req.user,data.page)
         .then((response)=>{
             res.setHeader('total',response.count)
             res.json(response.orders)
@@ -56,10 +60,10 @@ module.exports.dashBoard = (req,res,next) =>{
 }
 
 module.exports.workOrders = (req,res,next) =>{
-    const id = req.params.id
-    const page = req.header('page')
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params','headers'], includeOptionals: true })
 
-    Order.workOrders(id,page)
+    Order.workOrders(data.id,data.page)
         .then((response)=>{
             res.setHeader('total',response.count)
             res.json(response.orders)

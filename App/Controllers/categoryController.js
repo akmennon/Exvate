@@ -1,10 +1,13 @@
 const Category = require('../Models/category')
 const errorHandler = require('../Resolvers/errorHandler')
+const {matchedData} = require('express-validator')
+const validationErrors = require('../Resolvers/validationErrors')
 
 /* Shows all categories */
 
 module.exports.all = (req,res,next) =>{
-    const body = req.body
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
     Category.findAll(body)
         .then((categoriesAll)=>{

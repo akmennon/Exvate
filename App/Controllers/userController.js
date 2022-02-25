@@ -2,15 +2,16 @@ const User = require('../Models/user')
 const pick = require('lodash/pick')
 const errorHandler = require('../Resolvers/errorHandler')
 const Order = require('mongoose').model('Order')
-
-/* Work left : Pick */
+const {matchedData} = require('express-validator')
+const validationErrors = require('../Resolvers/validationErrors')
 
 /* User signup function */
 
 module.exports.create = (req,res,next) =>{
-    const body = req.body
-    const bodyPick = pick(body,['name','password','address','email'])
-    const user = new User(bodyPick)
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
+
+    const user = new User(body)
 
     /* confirmation email to verify user's email address */
     user.save()
@@ -21,7 +22,6 @@ module.exports.create = (req,res,next) =>{
             res.json(status)
         })
         .catch(function(err){
-            console.log(err)
             if(err.keyPattern['email.email']==1){
                 const error = new Error('User already exists')
                 error.statusCode = 401
@@ -36,7 +36,9 @@ module.exports.create = (req,res,next) =>{
 /* User Login function */ 
 
 module.exports.login = (req,res,next) =>{
-    const body = req.body
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
+
     let userData
     User.findByCredentials(body.email,body.password)
         .then(function(user){
@@ -60,8 +62,9 @@ module.exports.account = (req,res) =>{
 }
 
 module.exports.profile = (req,res,next) =>{
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
     const user = req.user
-    const body = req.body
 
     user.sendProfile(body)
         .then((response)=>{
@@ -91,9 +94,9 @@ module.exports.logout = (req,res,next) =>{
 /* User logout all */
 
 module.exports.logoutAll = (req,res,next) =>{
+    const user = req.user
 
-    /* removes the login token */
-    User.updateOne(req.user._id,{$set:{tokens:[]}},{runValidators:true}) 
+    User.updateOne({_id:req.user._id.toString()},{$set:{tokens:[]}},{runValidators:true}) 
         .then(function(){
             res.json({status:true,message:'Successfully logged out of all systems'})
         })
@@ -105,7 +108,8 @@ module.exports.logoutAll = (req,res,next) =>{
 /* Forgot password reset function */
 
 module.exports.forgotPassword = (req,res,next) =>{
-    const body = req.body
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
     User.findByEmail(body.email)
         .then(function(user){
@@ -122,7 +126,8 @@ module.exports.forgotPassword = (req,res,next) =>{
 /* function to resend the email verfication email */
 
 module.exports.resendRegisterMail = (req,res,next) =>{
-    const body = req.body
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
     User.resendRegisterEmail(body.email)
         .then(function(response){
@@ -136,9 +141,10 @@ module.exports.resendRegisterMail = (req,res,next) =>{
 /* When the confirms otp */
 
 module.exports.confirmOtp = (req,res,next) =>{
-    const token = req.params.token
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.sendOtp(token,req.body)
+    User.sendOtp(data.token,data)
         .then(function(response){
             res.json(response)
         })
@@ -149,10 +155,11 @@ module.exports.confirmOtp = (req,res,next) =>{
 
 /* When the user follows the link in the confirmation email */
 
-module.exports.confirmSignupEmail = (req,res,next) =>{
-    const token = req.params.token
+module.exports.confirmSignupEmail = (req,res,next) =>{ //Country,Region,pin validation pending
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.confirmEmail(token,req.body)
+    User.confirmEmail(data.token,data)
         .then(function(response){
             res.json(response)
         })
@@ -164,10 +171,10 @@ module.exports.confirmSignupEmail = (req,res,next) =>{
 /* Lets the user update the password when the verification link is followed */
 
 module.exports.confirmChangePassword = (req,res,next) =>{
-    const token = req.params.token
-    const body = req.body
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.confirmPassword(token,body.password)
+    User.confirmPassword(data.token,data.password)
         .then(function(user){
             let response = pick(user,['userType','_id','name'])
             response.email = user.email.email
@@ -181,9 +188,8 @@ module.exports.confirmChangePassword = (req,res,next) =>{
 /* Adds, deletes or updates a work for the supplier*/
 module.exports.addWork = (req,res,next) =>{
     const body = req.body
-    const userId = req.params.id
 
-    User.updateWork(req.user,body,userId)
+    User.updateWork(req.user,body)
         .then((user)=>{
             res.json(user)
         })
@@ -194,9 +200,8 @@ module.exports.addWork = (req,res,next) =>{
 
 /* Finds all work details or orders according to the input */
 module.exports.workAll = (req,res) =>{
-    const body = req.body
 
-    User.workAll(req.user._id,req.body)
+    User.workAll(req.user._id.toString())
         .then((works)=>{
             res.json(works)
         })
@@ -207,9 +212,10 @@ module.exports.workAll = (req,res) =>{
 
 /* validates the user who is trying to change password */
 module.exports.forgotCheck = (req,res,next) =>{
-    const token = req.header('forgotToken')
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['header'], includeOptionals: true })
 
-    User.forgotCheck(token)
+    User.forgotCheck(data.forgotToken)
         .then((value)=>{
             res.json(value)
         })
@@ -219,9 +225,10 @@ module.exports.forgotCheck = (req,res,next) =>{
 }
 
 module.exports.supplierCancel = (req,res) =>{
-    const orderId = req.params.orderId
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    User.supplierCancel(orderId,req.user,Order)
+    User.supplierCancel(data.orderId,req.user,Order)
         .then((result)=>{
             res.json(result)
         })
@@ -232,9 +239,10 @@ module.exports.supplierCancel = (req,res) =>{
 
 module.exports.addAddress = (req,res,next) =>{
     const user = req.user
-    const address = req.body
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.addAddress(address)
+    user.addAddress(data)
         .then((response)=>{
             res.json(response)
         })
@@ -245,9 +253,10 @@ module.exports.addAddress = (req,res,next) =>{
 
 module.exports.removeAddress = (req,res,next) =>{
     const user = req.user
-    const addressId = req.params.id
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    user.removeAddress(addressId)
+    user.removeAddress(data.id)
         .then((response)=>{
             res.json(response)
         })
@@ -270,9 +279,10 @@ module.exports.companyDetails = (req,res,next) =>{
 
 module.exports.changeCompanyDetails = (req,res,next) =>{
     const user = req.user
-    const details = req.body
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeCompanyDetails(details)
+    user.changeCompanyDetails(data)
         .then((response)=>{
             res.json(response)
         })
@@ -283,10 +293,10 @@ module.exports.changeCompanyDetails = (req,res,next) =>{
 
 module.exports.changePassword = (req,res,next) =>{
     const user = req.user
-    const passwordDetails = req.body
-    const token = req.header('x-auth')
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body','header'], includeOptionals: true })
 
-    user.changePassword(passwordDetails,token)
+    user.changePassword(passwordDetails,data['x-auth'])
         .then((response)=>{
             res.json(response)
         })
@@ -297,9 +307,10 @@ module.exports.changePassword = (req,res,next) =>{
 
 module.exports.changeName = (req,res,next) =>{
     const user = req.user
-    const body = req.body
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeName(body)
+    user.changeName(data)
         .then((response)=>{
             res.json(response)
         })
@@ -310,9 +321,10 @@ module.exports.changeName = (req,res,next) =>{
 
 module.exports.changeCompanyDetails = (req,res,next) =>{
     const user = req.user
-    const body = req.body
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeCompanyDetails(body)
+    user.changeCompanyDetails(data)
         .then((response)=>{
             res.json(response)
         })
@@ -323,8 +335,10 @@ module.exports.changeCompanyDetails = (req,res,next) =>{
 
 module.exports.changeMobile = (req,res,next) =>{
     const user = req.user
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeMobileOtp(req.body)
+    user.changeMobileOtp(data)
         .then((response)=>{
             res.json(response)
         })
@@ -335,8 +349,10 @@ module.exports.changeMobile = (req,res,next) =>{
 
 module.exports.confirmMobileChange = (req,res,next) =>{
     const user = req.user
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.confirmMobileChange(req.body.otp)
+    user.confirmMobileChange(data.otp)
         .then((response)=>{
             res.json(response)
         })

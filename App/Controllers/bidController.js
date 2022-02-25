@@ -1,13 +1,15 @@
 const Bid = require('../Models/bid')
 const Order = require('../Models/order')
 const errorHandler = require('../Resolvers/errorHandler')
+const {matchedData} = require('express-validator')
+const validationErrors = require('../Resolvers/validationErrors')
 
 module.exports.create = (req,res,next) =>{
-    const orderId = req.params.orderId
     const user = req.user
-    const price = req.body.price
+    validationErrors(req,next)
+    const data = matchedData(req, { locations: ['body','params'], includeOptionals: true })
 
-    Bid.createBid(orderId,price,user,Order)
+    Bid.createBid(data.orderId,data.price,user,Order)
         .then((response)=>{
             res.json(response)
         })
@@ -18,7 +20,8 @@ module.exports.create = (req,res,next) =>{
 
 module.exports.list = (req,res,next) =>{
     const user = req.user
-    const body = req.body
+    validationErrors(req,next)
+    const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
     Bid.userList(user,body)
         .then((response)=>{
@@ -31,7 +34,6 @@ module.exports.list = (req,res,next) =>{
 
 module.exports.deleteOldBids = (req,res,next) =>{
     const user = req.user
-    const body = req.body
 
     next()
     Bid.deleteOldBids(user)
@@ -45,9 +47,10 @@ module.exports.deleteOldBids = (req,res,next) =>{
 
 module.exports.remove = (req,res,next) =>{
     const user = req.user
-    const bidId = req.params.bidId
+    validationErrors(req,next)
+    const params = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    Bid.removeBid(user,bidId)
+    Bid.removeBid(user,params.bidId)
         .then((response)=>{
             res.json(response)
         })

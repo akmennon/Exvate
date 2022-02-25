@@ -429,7 +429,7 @@ userSchema.methods.registerMail = async function(){
                 createdAt:createdAt
             }
     
-            const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
+            const token = jwt.sign(tokenData,keys.jwtSecret)
 
             user.set('email.confirmed.token', token)
             user.set('email.confirmed.lastSend', new Date())
@@ -445,7 +445,7 @@ userSchema.methods.registerMail = async function(){
         }
         else{
 
-            if( (new Date(user.email.confirmed.lastSend).getTime() + 60000) > Date.now() ){
+            if( user.email.confirmed.lastSend&&(new Date(user.email.confirmed.lastSend).getTime() + 60000) > Date.now() ){
                 return Promise.reject({status:false,message:"Timeout still active for resend",statusCode:401})
             }
 
@@ -457,14 +457,14 @@ userSchema.methods.registerMail = async function(){
                 /*html: "<b>Hello world?</b>"*/ // html body
             }
 
-            if( (new Date(user.email.confirmed.lastSend).getTime() + 1800000) < Date.now() ){
+            if( user.email.confirmed.lastSend&&(new Date(user.email.confirmed.lastSend).getTime() + 1800000) < Date.now() ){
                 const createdAt = new Date()
 
                 let tokenData = {
                     createdAt:createdAt
                 }
         
-                const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use randombytes
+                const token = jwt.sign(tokenData,keys.jwtSecret)
 
                 user.set('email.confirmed.token', token)
 
@@ -493,7 +493,7 @@ userSchema.statics.findByCredentials = async function(email,password){
     const User = this
 
     try{
-        const user = await User.findOne({'email.email':email},{'userType':1,'_id':1,'name':1,'supplier':1,'email.email':1,'address':1,'password':1,'tokens':1,'perms':1})
+        const user = await User.findOne({'email.email':email},{'userType':1,'_id':1,'name':1,'supplier':1,'email':1,'address':1,'password':1,'tokens':1,'perms':1})
 
         if(!user){
             return Promise.reject({message:'Invalid email or password',statusCode:401})
@@ -551,7 +551,7 @@ userSchema.statics.findByEmail = function(email){
     return User.findOne({'email.email':email},{forgotToken:1,email:1})
                 .then(function(user){
                     if(!user){
-                        return Promise.reject('Email does not exist')
+                        return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
                     }
                     return Promise.resolve(user)
                 })
@@ -630,7 +630,7 @@ userSchema.methods.generateForgotToken = async function(){
 
         const tokenData = {createdAt}
 
-        if(user.forgotToken.token&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
+        if(user.forgotToken&&user.forgotToken.token&&user.forgotToken.expiresAt&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
             let mailData = {
                 from: '"Exvate" <ajaydragonballz@gmail.com>',
                 to: user.email.email, // list of receivers
@@ -664,7 +664,7 @@ userSchema.methods.generateForgotToken = async function(){
     
     }
     catch(e){
-        return Promise.reject('error')
+        return Promise.reject(e)
     }
 }
 
@@ -683,7 +683,7 @@ userSchema.methods.generateToken = async function(){
             user.tokens.shift()
         }
 
-        const token = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
+        const token = jwt.sign(tokenData,keys.jwtSecret)
 
         user.tokens.push({token})
         await user.save()
@@ -702,9 +702,10 @@ userSchema.statics.sendOtp = async function (token,body) {
     let user;
 
     try{
+
         user = await User.findOne({'email.confirmed.token':token},{mobileVerified:1,mobile:1})
 
-        if(!user||!body.mobile){
+        if(!user){
             return Promise.reject({status:false,message:'User not found',statusCode:404})
         }
 
@@ -723,7 +724,7 @@ userSchema.statics.sendOtp = async function (token,body) {
         user.mobileVerified.token = ('' + Math.random()).slice(2,8)
         await user.save()
 
-        const message = await client.messages.create({
+        await client.messages.create({
             body: `The code to register your Exvate account is ${user.mobileVerified.token}`,
             from: messageMobile,
             to: user.mobile
@@ -772,12 +773,6 @@ userSchema.statics.confirmEmail = async function(token,body){
             
             const companyDetails = pick(body,['country','state','companyName','city','street','userType','phone','pin'])
 
-            for(const x in companyDetails){
-                if(!companyDetails[x]){
-                    return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-                }
-            }
-
             user.companyDetails = {
                 name:companyDetails.companyName,
                 officeAddress:{
@@ -793,12 +788,6 @@ userSchema.statics.confirmEmail = async function(token,body){
         else if(body.userType=='supplier'||body.userType=='both'){
 
             const companyDetails = pick(body,['country','state','companyName','city','street','userType','phone','website','pin','position'])
-
-            for(const x in companyDetails){
-                if(!companyDetails[x]){
-                    return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-                }
-            }
 
             user.companyDetails = {
                 name:companyDetails.companyName,
@@ -863,8 +852,8 @@ userSchema.statics.confirmPassword = async function(token,password){
     }
 }
 
-/* Adds,deletes or updates work for the host*/
-userSchema.statics.updateWork = async function(reqUser,body,id){
+/* Adds,deletes or updates work for the supplier*/
+userSchema.statics.updateWork = async function(reqUser,body){
     const User = this
 
     const reqParams = pick(body,['workId','options'])
@@ -928,7 +917,7 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
                     }
                     return param
                 })
-                option.userWork = id
+                option.userWork = reqUser._id.toString()
 
                 if(errorCheck){
                     return Promise.reject({status:false,message:'Not proper params',statusCode:400}) //does not work
@@ -988,7 +977,7 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
                     }
                     return param
                 })
-                option.userWork = id
+                option.userWork = reqUser._id.toString()
 
                 if(errorCheck){
                     return Promise.reject({status:false,message:'Not proper params',statusCode:400}) //does not work
@@ -1013,7 +1002,7 @@ userSchema.statics.updateWork = async function(reqUser,body,id){
 }
 
 /* Finds all the work according to the required filter */
-userSchema.statics.workAll = async function (id,body){
+userSchema.statics.workAll = async function (id){
     const User = this
 
     try{
@@ -1067,6 +1056,7 @@ userSchema.statics.forgotCheck = async function(token){
 userSchema.statics.supplierCancel = async function(orderId,user,Order){
 
     try{
+
         const result = await Order.updateOne(
         {
             'supplier.assigned':{$ne:user._id},
@@ -1107,10 +1097,11 @@ userSchema.methods.addAddress = async function (address) {
     const user = this
 
     try{
+
         if(user.address.length>=10){
             user.address.shift()
         }
-        const newAddress = pick(address,['name','building','street','city','state','country','pin'])
+        
         user.address.push(newAddress)
         await user.save()
         return Promise.resolve(user.address[user.address.length-1])
@@ -1150,21 +1141,10 @@ userSchema.methods.getCompanyDetails = async function () {
     }
 }
 
-userSchema.methods.changePassword = async function (password,token){
+userSchema.methods.changePassword = async function (passwordDetails,token){
     const user = this
 
     try{
-        const passwordDetails = pick(password,['oldPassword','newPassword','confirmPassword'])
-
-        for(const x in passwordDetails){
-            if(!passwordDetails[x]){
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-            }
-        }
-
-        if(passwordDetails.newPassword!=passwordDetails.confirmPassword){
-            return Promise.reject({status:false,message:"Password doesn't match",statusCode:403})
-        }
 
         const result = await bcryptjs.compare(passwordDetails.oldPassword,user.password)
 
@@ -1172,7 +1152,7 @@ userSchema.methods.changePassword = async function (password,token){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
         }
 
-        user.set('password',passwordDetails.newPassword)    //LAST - remove other tokens than the one that is used for this request
+        user.set('password',passwordDetails.newPassword)
         user.tokens = user.tokens.filter((tokenData)=>{
             return tokenData.token.toString() == token
         })
@@ -1188,9 +1168,6 @@ userSchema.methods.changeName = async function (body){
     const user = this
 
     try{
-        if(!body.name){
-            return Promise.reject({status:false,message:'Invalid input',statusCode:403})
-        }
         user.name = body.name
         await user.save()
         return Promise.resolve({status:true,message:'Name changed successfully'})
@@ -1204,12 +1181,16 @@ userSchema.methods.logOut = async function (token){
     const user = this
 
     try{
+        if(!token){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
+        }
+
         user.tokens = user.tokens.filter((ele)=>{
             return ele.token != token
         })
     
         await user.save()
-        return Promise.resolve({status:true,message:'Successfully removed'})
+        return Promise.resolve({status:true,message:'Successfully logged out'})
 
     }
     catch(e){
@@ -1223,22 +1204,6 @@ userSchema.methods.changeCompanyDetails = async function (body){
     try{
         const companyDetails = pick(body,['name','position','website'])
         companyDetails.officeAddress = pick(body.officeAddress,['street','city','state','country','pin'])
-
-        if(size(companyDetails)!=4||size(companyDetails.officeAddress)!=5){
-            return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-        }
-
-        for(const x in companyDetails){
-            if(!companyDetails[x]){
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-            }
-        }
-
-        for(const x in companyDetails.officeAddress){
-            if(!companyDetails.officeAddress[x]){
-                return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-            }
-        }
 
         user.companyDetails = companyDetails
         user.mobile = body.phone
@@ -1254,9 +1219,6 @@ userSchema.methods.sendProfile = async function (body){
     const user = this
 
     try{
-        if(!body.password){
-            return Promise.reject({status:false,message:'Invalid Input',statusCode:403})
-        }
 
         const result = await bcryptjs.compare(body.password,user.password)
 
@@ -1264,15 +1226,16 @@ userSchema.methods.sendProfile = async function (body){
             return Promise.reject({status:false,message:'Unauthorized',statusCode:401})
         }
 
-        if(((new Date(user.profileChangeToken.createdAt).getTime()+1800000)-Date.now())>600000){
-            return Promise.resolve(user)
+        const response = pick(user,['_id,','name','email.email','mobile','address','companyDetails','userType','supplier','profileChangeToken.value','profileChangeToken.createdAt'])
+
+        if(user.profileChangeToken.createdAt&&((new Date(user.profileChangeToken.createdAt).getTime()+1800000)-Date.now())>600000){
+            return Promise.resolve(response)
         }
 
         const token = jwt.sign({createdAt:new Date()},keys.jwtSecret)
         user.profileChangeToken.value = token
         user.profileChangeToken.createdAt = Date.now()
         await user.save()
-        const response = pick(user,['_id,','name','email.email','mobile','address','companyDetails','userType','supplier','profileChangeToken.value'])
         return Promise.resolve(response)
     }
     catch(e){
@@ -1285,10 +1248,6 @@ userSchema.methods.changeMobileOtp = async function(body){
 
     try{
         const mobile = body.mobile
-
-        if(!mobile){
-            return Promise.reject({status:false,message:'User not found',statusCode:404})
-        }
 
         if(mobile==user.mobile){
             return Promise.reject({status:false,message:'Same mobile number',statusCode:401})
@@ -1318,7 +1277,7 @@ userSchema.methods.confirmMobileChange = async function(otp){
     const user = this
 
     try{
-        if(!otp||otp!=user.profileChangeToken.mobile.token){
+        if(otp!=user.profileChangeToken.mobile.token){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:401})
         }
 

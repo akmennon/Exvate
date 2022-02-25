@@ -71,6 +71,10 @@ bidSchema.statics.createBid = async function(orderId,price,user,Order){
 
     try{
 
+        if(!orderId||!price){
+            return Promise.reject({status:false,message:'Invalid input',statusCode:403})
+        }
+
         const existingBids = await Bid.aggregate([
             {
                 $match:{
@@ -195,6 +199,11 @@ bidSchema.statics.removeBid = async function(user,bidId){
     const Bid = this
 
     try {
+
+        if(bidId){
+            return Promise.reject({status:false,message:'Invalid attempt',statusCode:401})
+        }
+
         const result = await Bid.updateOne({user:{userId:user._id},_id:bidId},{removed:true})
 
         if(result.nModified){

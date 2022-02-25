@@ -645,7 +645,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
         resultValue.workId = work._id
         const option = work.options
 
-        if(orderValues.orderType&&orderValues.orderType=='sample'){
+        if(orderValues.orderType=='sample'){
 
             if(work.result.sampleAvailable==false){
                 return Promise.reject({status:false,message:'Sampling not available',statusCode:403})
@@ -776,7 +776,6 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
     }
     catch(e){
-        console.log(e)
         return Promise.reject(e)
     }
 }
@@ -788,6 +787,10 @@ orderSchema.statics.orderDetails = async function(id,user){
     /* Checks if the order is present in the user */
     
     try{
+        if(!id){
+            return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
+        }
+
         const mainOrder = await Order.findOne({_id:id},{'email.confirmed':0,supplier:0,biddingStatus:0,affiliate:0,shipmentDetails:0,completionVerified:0,cancelVerified:0,'paymentStatus.supplierPayment':0,'paymentStatus.supplierAmount':0,'paymentStatus.supplierAmountPaid':0,'paymentStatus.transaction':0,'pl':0,'verified.verifiedBy':0}).lean()
         if(mainOrder.userId._id==user._id){
             return Promise.resolve(mainOrder)
@@ -867,7 +870,6 @@ orderSchema.statics.userAll = async function(user,pageCount=1){
         return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){
-        console.log(e)
         return Promise.reject(e)
     }
 }
@@ -962,7 +964,6 @@ orderSchema.statics.getBidOrders = async function(user,body){
     const Order = this
 
     try{
-
         const work = user.work.workDetails.find((workEle)=>{
             return workEle.workId == body.workId
         })
