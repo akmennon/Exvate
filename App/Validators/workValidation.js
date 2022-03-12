@@ -1,7 +1,7 @@
 const {body,param} = require('express-validator')
 
 module.exports.detail = [
-    param('id','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
+    param('id','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isMongoId()
 ]
 
 module.exports.searchAll = [

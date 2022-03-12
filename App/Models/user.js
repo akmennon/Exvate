@@ -562,33 +562,39 @@ userSchema.statics.findByEmail = function(email){
 
 /* Finds the user for whom the login token belongs to */
 
-userSchema.statics.findByToken = function(token,path){
+userSchema.statics.findByToken = async function(token,path,userId){
     const User = this
 
-    return User.findOne({'tokens.token':token})
-            .then(function(user){
-                if(user){
-                    if(user.perms.user.suspended&&user.perms.user.suspended.value){
-                        console.log(new Date(user.perms.user.suspended.duration))
-                        return Promise.reject({status:false,message:`Under suspension`,statusCode:401})
-                    }
-                    else if(user.perms.user.banned&&user.perms.user.banned.value){
-                        return Promise.reject({status:false,message:`Banned`,statusCode:401})
-                    }
-                    else{
-                        return Promise.resolve(user)
-                    }
-                }
-                else{
-                    if(path=='/user/logout'){
-                        return Promise.resolve({status:true,message:`Successfully logged out`})
-                    }
-                    return Promise.reject({status:false,message:`Unauthorized`,statusCode:401})
-                }
-            })
-            .catch(function(err){
-                return Promise.reject(err)
-            })
+    try{
+        let user;
+        if(path=='/user/account'){
+            user = await User.findOne({'tokens.token':token}).cache({hashKey:token,pathValue:path})
+        }
+        else{
+            user = await User.findOne({'tokens.token':token}).cache({hashKey:userId,pathValue:'authUser'})
+        }
+        if(user){
+            if(user.perms.user.suspended&&user.perms.user.suspended.value){
+                console.log(new Date(user.perms.user.suspended.duration))
+                return Promise.reject({status:false,message:`Under suspension`,statusCode:401})
+            }
+            else if(user.perms.user.banned&&user.perms.user.banned.value){
+                return Promise.reject({status:false,message:`Banned`,statusCode:401})
+            }
+            else{
+                return Promise.resolve(user)
+            }
+        }
+        else{
+            if(path=='/user/logout'){
+                return Promise.resolve({status:true,message:`Successfully logged out`})
+            }
+            return Promise.reject({status:false,message:`Unauthorized`,statusCode:401})
+        }
+    }
+    catch(err){
+        return Promise.reject(err)
+    }
 }
 
 userSchema.methods.supplierCheck = async function (){

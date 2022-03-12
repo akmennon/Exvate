@@ -1,0 +1,8 @@
+path='authUser' id=0 - authuser middleware
+
+Users
+path = '/user/account' id=0 - User accounts
+
+Orders
+
+path = '/user/orders' id=1 - All user orders

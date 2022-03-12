@@ -8,7 +8,8 @@ const devKeys = () =>{
         twilioAuthToken:process.env.TWILIO_AUTH_TOKEN,
         awsSid:process.env.AWS_ACCESS_KEY_ID,
         awsAccessKey:process.env.AWS_SECRET_ACCESS_KEY,
-        awsRegion:process.env.AWS_REGION
+        awsRegion:process.env.AWS_REGION,
+        redisURL:process.env.REDIS_URI
     }
 }
 

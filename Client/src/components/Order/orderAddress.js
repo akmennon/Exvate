@@ -11,7 +11,7 @@ const useStyles = makeStyles({
     }
 })
 
-const handleClick = (order,work,props,selectedAddress) => {//Orders with the given params
+const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with the given params
     const token = localStorage.getItem('x-auth')
     let data = {
         orderData:{...order,address:selectedAddress},
@@ -41,6 +41,7 @@ export default function OrderAddress (props){
     const order = useSelector((state)=>state.order.newOrder)
     const work = useSelector((state)=>state.work)
     const user = useSelector((state)=>state.user)
+    const userId = useSelector((state)=>state.user._id)
     const classes = useStyles()
     
     if(user.address&&user.address.length>0){
@@ -72,7 +73,7 @@ export default function OrderAddress (props){
                             setError(true)
                         }
                         else{
-                            handleClick(order,work,props,selectedAddress)
+                            handleClick(order,work,props,selectedAddress,userId)
                         }
                     }}>Confirm</Button>
                 </div>

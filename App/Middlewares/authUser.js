@@ -3,15 +3,15 @@ const errorHandler = require('../Resolvers/errorHandler')
 
 /* To authenticate by token for the user */
 
-const authUser = (req,res,next) =>{
+const authUser = async (req,res) =>{
     const token = req.header('x-auth')
-
-    if(!token){
-        res.status(401).end('Token not available')
-    }
-    else{
-        User.findByToken(token,req.path)
-        .then(function(response){
+    const userId = req.header('userId')
+    try{
+        if(req.path!='/user/account'&&!userId){
+            return Promise.reject({status:false,message:'Invalid request',statusCode:403})
+        }
+        const response = await User.findByToken(token,req.path,userId)
+        if(response){
             if(response.status){    //Used to logout if the token is already removed
                 res.json(response)
             }
@@ -21,12 +21,14 @@ const authUser = (req,res,next) =>{
                 }
                 req.user=response
                 req.token=token
-                next()
             }
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
+        }
+        else{
+            return Promise.resolve(false)
+        }
+    }
+    catch(err){
+        errorHandler(err,next)
     }
 }
 

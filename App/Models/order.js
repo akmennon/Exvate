@@ -804,7 +804,7 @@ orderSchema.statics.orderDetails = async function(id,user){
     }
 }
 
-orderSchema.statics.userAll = async function(user,pageCount=1){
+orderSchema.statics.userAll = async function(user,pageCount=1,path,userId){
     const Order = this
 
     try{
@@ -866,7 +866,7 @@ orderSchema.statics.userAll = async function(user,pageCount=1){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:userId,pathValue:path,pathValueId:1})
         return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){

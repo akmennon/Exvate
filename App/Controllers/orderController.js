@@ -36,7 +36,7 @@ module.exports.userAll = (req,res,next) =>{
     validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    Order.userAll(req.user,data.page)
+    Order.userAll(req.user,data.page,req.path,req.token)
         .then((response)=>{
             res.setHeader('total',response.count)
             res.json(response.orders)

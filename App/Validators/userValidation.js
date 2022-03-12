@@ -36,14 +36,14 @@ module.exports.resendRegisterMail = [
 ]
 
 module.exports.confirmOtp = [
-    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).isString().trim(),
+    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).trim().isJWT(),
     body('mobile','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isMobilePhone('any',{strictMode:true}).withMessage('Please provide a valid mobile number')
 ]
 
 module.exports.confirmSignupEmail = [
-    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).isString().trim(),
+    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).trim().isJWT(),
     body('phone','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isMobilePhone('any',{strictMode:true}).withMessage('Please provide a valid mobile number'),
-    body('otp','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:6}),
+    body('otp','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:6,max:6}),
     body('userType','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isIn(['buyer','supplier','both']),
     body('country','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),//country validation
     body('state','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),//region validation
@@ -56,17 +56,17 @@ module.exports.confirmSignupEmail = [
 ]
 
 module.exports.confirmChangePassword = [
-    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).isString().trim(),
+    param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).trim().isJWT(),
     body('password','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid password').isString().trim().custom(passwordStrength),
     body('confirmPassword','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().custom((value,{req})=>req.password==req.confirmPassword).withMessage("Password doesn't match")
 ]
 
 module.exports.forgotCheck = [
-    header('forgotToken','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).isString().trim()
+    header('forgotToken','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isJWT()
 ]
 
 module.exports.supplierCancel = [
-    param('orderId','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).isString().trim()
+    param('orderId','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isMongoId()
 ]
 
 module.exports.addAddress = [
@@ -79,7 +79,7 @@ module.exports.addAddress = [
 ]
 
 module.exports.removeAddress = [
-    param('id','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).isString().trim()
+    param('id','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isMongoId()
 ]
 
 module.exports.changeCompanyDetails = [
