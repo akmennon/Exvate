@@ -46,9 +46,11 @@ const Addresses = (props) =>{
 
   const handleClick = (addressId) =>{
     const token = localStorage.getItem('x-auth')
+    const user = localStorage.getItem('user')
     axios.post(`/user/removeAddress/${addressId}`,{},{
         headers:{
-            'x-auth':token
+            'x-auth':token,
+            'userId':user
         }
     })
     .then((response)=>{

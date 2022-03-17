@@ -13,6 +13,7 @@ const useStyles = makeStyles({
 
 const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with the given params
     const token = localStorage.getItem('x-auth')
+    const user = localStorage.getItem('user')
     let data = {
         orderData:{...order,address:selectedAddress},
         resultId:work.result._id
@@ -22,7 +23,8 @@ const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with 
     axios.post(`/order/${props.match.params.id}`,data,
     {
         headers:{
-            'x-auth':token
+            'x-auth':token,
+            'userId':user
         }
     })
     .then((response)=>{

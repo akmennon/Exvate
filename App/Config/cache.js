@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const exec = mongoose.Query.prototype.exec
 const execAgg = mongoose.Aggregate.prototype.exec
 
-const execCache = async (client) =>{
+module.exports.execCache = async (client) =>{
     mongoose.Query.prototype.cache = async function (option={}){
         try{
             if(!option.hasOwnProperty('hashKey')){
@@ -19,6 +19,7 @@ const execCache = async (client) =>{
             this.cacheParam = true
             this.hashKey = option.hashKey
             this.key = JSON.stringify(Object.assign({},option.pathValue,option.pathValueId))
+            this.pathValue = option.pathValue
             return this
         }
         catch(e){
@@ -37,9 +38,13 @@ const execCache = async (client) =>{
             const key = this.key
     
             let cachedValue = JSON.parse(await client.hGet(hashKey,key))
+
             if(!cachedValue){
                 const result = await exec.apply(this,arguments)
-                await client.multi().hSet(hashKey,key,JSON.stringify(result)).expire(hashKey,60*30).exec()
+                if(this.pathValue=='authUser'&&(!result||(Array.isArray(result)&&result.length==0))){
+                    return Promise.resolve(result)
+                }
+                await client.multi().hSet(hashKey,key,JSON.stringify(result)).expire(hashKey,60*10).exec()
                 return Promise.resolve(result)
             }
     
@@ -160,6 +165,42 @@ const execCache = async (client) =>{
             return Promise.reject(e)
         }
     }
-}
 
-module.exports = execCache
+    module.exports.delCache = async (option={}) =>{
+        try{
+            if(!option.hasOwnProperty('hashKey')){
+                console.log('cache delete missing hashKey')
+                return this
+            }
+
+            if(!option.hasOwnProperty('pathValue')){
+                throw Error()
+            }
+            else if(!option.hasOwnProperty('pathValueId')){
+                option.pathValueId = 0                              //Id of the Aggregate in a path - since a path can have multiple queries
+            }
+    
+            const key = Object.assign({},option.pathValue,option.pathValueId)
+            await client.hDel(option.hashKey,key)
+            return this
+        }
+        catch(e){
+            return Promise.reject(e)
+        }
+    }
+
+    module.exports.delCacheAll = async (option={}) =>{
+        try{
+            if(!option.hasOwnProperty('hashKey')){
+                console.log('cache delete missing hashKey')
+                return this
+            }
+
+            await client.del(option.hashKey)
+            return this
+        }
+        catch(e){
+            return Promise.reject(e)
+        }
+    }
+}

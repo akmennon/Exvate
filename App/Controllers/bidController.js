@@ -23,7 +23,7 @@ module.exports.list = (req,res,next) =>{
     validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    Bid.userList(user,body)
+    Bid.userList(user,body,req.path)
         .then((response)=>{
             res.json(response)
         })

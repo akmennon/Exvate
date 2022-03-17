@@ -66,10 +66,10 @@ categorySchema.statics.findAll = async function(body){
                 $facet:{
                     categories:[
                         {
-                            $limit:body.skip||10
+                            $skip:body.skip||0
                         },
                         {
-                            $limit:body.limit<20?body.limit:10
+                            $limit:10
                         }
                     ],
                     count:[
@@ -79,7 +79,7 @@ categorySchema.statics.findAll = async function(body){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:req.path,pathValue:body.skip?JSON.stringify(body.skip):'0'})
 
         return Promise.resolve({categories:categories[0].categories,count:categories[0].count[0]?categories[0].count[0].count:0})
     }

@@ -1,8 +1,19 @@
 path='authUser' id=0 - authuser middleware
 
 Users
-path = '/user/account' id=0 - User accounts
+User details = hashKey:user._id+'authUser'
 
 Orders
+Bid orders cache = hashKey:work._id+'/supplier/bid/orders'
+User orders cache = hashKey:user._id+'/user/orders'
+User order details cache = hashKey:user._id, pathValue:orderId
 
-path = '/user/orders' id=1 - All user orders
+Bids
+All bids cache = hashKey:user._id+'/supplier/bids'
+
+Category
+All categories cache = hashKey:'/categories/all'
+
+Type
+All types = hashKey:'/types/all'
+

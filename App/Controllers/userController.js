@@ -1,9 +1,10 @@
 const User = require('../Models/user')
 const pick = require('lodash/pick')
 const errorHandler = require('../Resolvers/errorHandler')
-const Order = require('mongoose').model('Order')
+const Order = require('../Models/order')
 const {matchedData} = require('express-validator')
 const validationErrors = require('../Resolvers/validationErrors')
+const delCache = require('../Config/cache').delCache
 
 /* User signup function */
 
@@ -40,7 +41,7 @@ module.exports.login = (req,res,next) =>{
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
     let userData
-    User.findByCredentials(body.email,body.password)
+    User.findByCredentials(body.email,body.password,req.path)
         .then(function(user){
             userData=user
             return user.generateToken()     // generates a token for logging in
@@ -66,7 +67,7 @@ module.exports.profile = (req,res,next) =>{
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
     const user = req.user
 
-    user.sendProfile(body)
+    user.sendProfile(body,req.path)
         .then((response)=>{
             res.json(response)
         })
@@ -98,6 +99,7 @@ module.exports.logoutAll = (req,res,next) =>{
 
     User.updateOne({_id:req.user._id.toString()},{$set:{tokens:[]}},{runValidators:true}) 
         .then(function(){
+            delCache({hashKey:req.user._id.toString(),pathValue:'authUser'})
             res.json({status:true,message:'Successfully logged out of all systems'})
         })
         .catch(function(err){
@@ -111,7 +113,7 @@ module.exports.forgotPassword = (req,res,next) =>{
     validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    User.findByEmail(body.email)
+    User.findByEmail(body.email,req.path)
         .then(function(user){
             return user.generateForgotToken() //function to generate token specifically to change the password
         })
@@ -200,8 +202,9 @@ module.exports.addWork = (req,res,next) =>{
 
 /* Finds all work details or orders according to the input */
 module.exports.workAll = (req,res) =>{
+    const user = req.user
 
-    User.workAll(req.user._id.toString())
+    user.workAll(req.user._id.toString())
         .then((works)=>{
             res.json(works)
         })

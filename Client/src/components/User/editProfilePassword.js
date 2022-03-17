@@ -15,10 +15,12 @@ export default function ProfilePassword (props){
     const handleSubmit = () =>{
         setLoading(true)
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         axios.post('/user/profile',{password},
         {
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
             .then((response)=>{

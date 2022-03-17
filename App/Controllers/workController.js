@@ -9,7 +9,7 @@ module.exports.detail = (req,res,next) =>{
     validationErrors(req,next)
     const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    Work.findById(data.id)
+    Work.findById(data.id).cache({hashKey:data.id,pathValue:req.path})
         .then(function(work){
             res.json(work)
         })

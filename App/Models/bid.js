@@ -1,4 +1,6 @@
 const mongoose = require('mongoose')
+const delCache = require('../Config/cache').delCache
+const delCacheAll = require('../Config/cache').delCacheAll
 
 const Schema = mongoose.Schema
 
@@ -124,6 +126,7 @@ bidSchema.statics.createBid = async function(orderId,price,user,Order){
         })
 
         await bid.save()
+        delCacheAll({hashKey:user._id+'/supplier/bids'})
 
         return Promise.resolve({status:true,message:'Bid has been successfully created for the order'})
     }
@@ -132,7 +135,7 @@ bidSchema.statics.createBid = async function(orderId,price,user,Order){
     }
 }
 
-bidSchema.statics.userList = async function(user,body){
+bidSchema.statics.userList = async function(user,body,path){
     const Bid = this
 
     try{
@@ -176,7 +179,7 @@ bidSchema.statics.userList = async function(user,body){
                             $skip:body.skip||0
                         },
                         {
-                            $limit:body.limit&&body.limit<20?body.limit:10
+                            $limit:/* body.limit&&body.limit<20?body.limit:10 */ 15
                         }
                     ],
                     count:[
@@ -186,7 +189,7 @@ bidSchema.statics.userList = async function(user,body){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:user._id+path,pathValueId:body.skip?JSON.stringify(body.skip):'0'})
 
         return Promise.resolve(bids)
     }
@@ -205,6 +208,7 @@ bidSchema.statics.removeBid = async function(user,bidId){
         }
 
         const result = await Bid.updateOne({user:{userId:user._id},_id:bidId},{removed:true})
+        delCacheAll({hashKey:user._id+'/supplier/bids'})
 
         if(result.nModified){
             return Promise.resolve({status:true,message:'Successfully removed bid'})
@@ -223,6 +227,7 @@ bidSchema.statics.deleteOldBids = async function(user){
 
     try{
         const response = await Bid.deleteMany({'user.userId':user._id.toString(),status:'Rejected'})
+        delCacheAll({hashKey:user._id+'/supplier/bids'})
 
         return Promise.resolve(`${response.deletedCount} deleted`)
     }

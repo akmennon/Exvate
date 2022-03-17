@@ -45,7 +45,7 @@ typeSchema.statics.findAll = async function(body){
                             $skip:body.skip||0
                         },
                         {
-                            $limit:body.limit<20?body.limit:10
+                            $limit:/*body.limit<20?body.limit:*/10
                         }
                     ],
                     count:[
@@ -55,7 +55,7 @@ typeSchema.statics.findAll = async function(body){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:path,pathValue:JSON.stringify(body.skip)||'0'})
 
         return Promise.resolve({types:types[0].types,count:types[0].count[0]?types[0].count[0].count:0})
     }

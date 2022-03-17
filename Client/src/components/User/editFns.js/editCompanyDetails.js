@@ -50,9 +50,11 @@ export default function EditCompanyDetails (props){
     const handleSubmit = () =>{
         console.log(companyDetails)
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         axios.post('/user/editProfile/changeCompanyDetails',{payload:companyDetails,profileToken:profile.profileChangeToken.value},{
             headers:{
-                'x-auth': token
+                'x-auth': token,
+                'userId': user
             }
         })
         .then((response)=>{

@@ -22,10 +22,11 @@ export default function EditPassword (props){
 
     const handleSubmit = () =>{
         const token = localStorage.getItem('x-auth')
-        console.log(passwordDetails)
+        const user = localStorage.getItem('user')
         axios.post('/user/editProfile/changePassword',{payload:passwordDetails,profileToken:profile.profileChangeToken.value},{
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
         .then((response)=>{

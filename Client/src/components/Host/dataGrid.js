@@ -33,10 +33,12 @@ function DataTable(props) {
     useEffect(()=>{
         if(props.user._id){
             const token = localStorage.getItem('x-auth')
+            const user = localStorage.getItem('user')
             axios.get(`/supplier/${props.user._id}/workOrders`,{
                 headers:{
                     'x-auth':token,
-                    'page':page
+                    'page':page,
+                    'userId':user
                 }
             })
             .then((response)=>{
@@ -56,13 +58,15 @@ function DataTable(props) {
 
     const handleClick = (event,{id}) =>{
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         const ee = event
         switch(ee.target.textContent){
             case 'Complete':
                 axios.get(`/host/orders/${id}/complete`,
                 {
                     headers:{
-                        'x-auth':token
+                        'x-auth':token,
+                        'userId':user
                     }
                 })
                 .then((response)=>{
@@ -76,7 +80,8 @@ function DataTable(props) {
                 axios.get(`/host/orders/${id}/cancel`,
                 {
                     headers:{
-                        'x-auth':token
+                        'x-auth':token,
+                        'userId':user
                     }
                 })
                 .then((response)=>{

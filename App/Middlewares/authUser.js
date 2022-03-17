@@ -6,10 +6,8 @@ const errorHandler = require('../Resolvers/errorHandler')
 const authUser = async (req,res) =>{
     const token = req.header('x-auth')
     const userId = req.header('userId')
+
     try{
-        if(req.path!='/user/account'&&!userId){
-            return Promise.reject({status:false,message:'Invalid request',statusCode:403})
-        }
         const response = await User.findByToken(token,req.path,userId)
         if(response){
             if(response.status){    //Used to logout if the token is already removed

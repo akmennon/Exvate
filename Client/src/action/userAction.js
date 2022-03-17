@@ -21,11 +21,13 @@ export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
         axios.post('/user/login',loginData)
             .then((response)=>{
                 localStorage.setItem('x-auth',response.headers['x-auth'])
+                localStorage.setItem('user',response.data.payload._id)
                 console.log(response.data)
                 dispatch(setUser(response.data.payload))
                 redirect()
             })
             .catch((err)=>{
+                localStorage.removeItem('user')
                 if(err.response&&err.response.data.payload&&err.response.data.payload.signup===false){
                     setAuth(p=>({...p,password:'',resendMail:true}))
                 }
@@ -38,33 +40,39 @@ export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
 
 export const startTokenSetUser = (token,redirect) =>{   //token login action
     return ((dispatch)=>{
+        const user = localStorage.getItem('user')
         axios.get('/user/account',{
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
             .then((response)=>{
                 console.log(response.data)
+                localStorage.setItem('user',response.data._id)
                 dispatch(setUser(response.data))
                 redirect()
             })
             .catch((err)=>{
                 dispatch(removeUser())
+                localStorage.removeItem('user')
                 console.log(err)
             })
     })
 }
 
 export const startRemoveUser = (token,redirect) =>{ //logout action
+    const user = localStorage.getItem('user')
     return((dispatch)=>{
-        console.log(token)
         axios.get('/user/logout',{
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
         .then((response)=>{
             localStorage.removeItem('x-auth')
+            localStorage.removeItem('user')
             dispatch(removeUser())
             redirect()
         })
@@ -77,9 +85,11 @@ export const startRemoveUser = (token,redirect) =>{ //logout action
 export const startAddAddress = (address,redirect) =>{
     return((dispatch)=>{
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         axios.post('/user/addAddress/',address,{
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
         .then((response)=>{

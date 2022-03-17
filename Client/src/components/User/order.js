@@ -18,13 +18,15 @@ function Orders (props) {
     useEffect(()=>{
         setStatus('loading')
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         if(token===undefined||token==='undefined'){
             props.history.push('/user/login')
         }
         axios.post('/user/orders',{page:pageCount},
         {
             headers:{
-                'x-auth':token
+                'x-auth':token,
+                'userId':user
             }
         })
             .then((response)=>{

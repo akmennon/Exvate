@@ -51,11 +51,13 @@ export default function EditCompanyDetails (props){
     const confirmOTP = (e) =>{
         setOtp('')
         const token = localStorage.getItem('x-auth')
+        const user = localStorage.getItem('user')
         if(!intervalId){
             setResendCountdown(59)
             axios.post('/user/editProfile/changeMobile',{payload:{mobile},profileToken:profile.profileChangeToken.value},{
                 headers:{
-                    'x-auth':token
+                    'x-auth':token,
+                    'userId':user
                 }
             })
             .then((response)=>{
@@ -84,9 +86,11 @@ export default function EditCompanyDetails (props){
     const handleSubmit = () =>{
         if(otp&&otp.length===6){
             const token = localStorage.getItem('x-auth')
+            const user = localStorage.getItem('user')
             axios.post('/user/editProfile/changeMobileConfirm',{payload:{otp},profileToken:profile.profileChangeToken.value},{
                 headers:{
-                    'x-auth':token
+                    'x-auth':token,
+                    'userId':user
                 }
             })
             .then((response)=>{

@@ -7,7 +7,7 @@ const cors = require('cors')
 const port = 3015
 const helmet = require('helmet')
 const rateLimiter = require('./App/Config/rateLimiter')
-const cache = require('./App/Config/cache')
+const cache = require('./App/Config/cache').execCache
 
 /*App.use(helmet())*/
 

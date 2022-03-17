@@ -3,6 +3,7 @@ const Result = require('./work/resultSubdoc')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
 const Validator = require('validator')
+const delCacheAll = require('../Config/cache').delCacheAll
 
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
@@ -635,7 +636,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
     const Order = this
 
     try{
-        const work = await Work.findById(id).lean()
+        const work = await Work.findById(id).lean().cache({pathValue:id})
 
         if(work.status != 'Available'){
             return Promise.reject({status:false,message:'Service unavailable',statusCode:403})
@@ -706,6 +707,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             await order.save()
             user.sampleOrders.push(id)
             await user.save()
+            delCache({hashKey:user._id,pathValue:'authUser'})
         }
         else{
             
@@ -771,6 +773,8 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
 
             /* Order is modelled with result and saved */
             await order.save()
+            delCacheAll({hashKey:work._id+'/supplier/bid/orders'})
+            delCacheAll({hashKey:user._id+'/user/orders'})
         }
 
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})
@@ -781,7 +785,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
 }
 
 /* Provides the entire details of an order */
-orderSchema.statics.orderDetails = async function(id,user){
+orderSchema.statics.orderDetails = async function(id,user,path){
     const Order = this
 
     /* Checks if the order is present in the user */
@@ -791,7 +795,7 @@ orderSchema.statics.orderDetails = async function(id,user){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
         }
 
-        const mainOrder = await Order.findOne({_id:id},{'email.confirmed':0,supplier:0,biddingStatus:0,affiliate:0,shipmentDetails:0,completionVerified:0,cancelVerified:0,'paymentStatus.supplierPayment':0,'paymentStatus.supplierAmount':0,'paymentStatus.supplierAmountPaid':0,'paymentStatus.transaction':0,'pl':0,'verified.verifiedBy':0}).lean()
+        const mainOrder = await Order.findOne({_id:id},{'email.confirmed':0,supplier:0,biddingStatus:0,affiliate:0,shipmentDetails:0,completionVerified:0,cancelVerified:0,'paymentStatus.supplierPayment':0,'paymentStatus.supplierAmount':0,'paymentStatus.supplierAmountPaid':0,'paymentStatus.transaction':0,'pl':0,'verified.verifiedBy':0}).lean().cache({hashKey:user._id,pathValue:id})
         if(mainOrder.userId._id==user._id){
             return Promise.resolve(mainOrder)
         }
@@ -812,7 +816,7 @@ orderSchema.statics.userAll = async function(user,pageCount=1,path,userId){
         [
             {
                 $match:{
-                    'userId._id': new mongoose.Types.ObjectId(user.id)
+                    'userId._id': new mongoose.Types.ObjectId(user._id)
                 }
             },
             {
@@ -866,7 +870,7 @@ orderSchema.statics.userAll = async function(user,pageCount=1,path,userId){
                     ]
                 }
             }
-        ]).cache({hashKey:userId,pathValue:path,pathValueId:1})
+        ]).cache({hashKey:user._id+path,pathValue:JSON.stringify(pageCount)})
         return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){
@@ -889,7 +893,7 @@ orderSchema.statics.dashBoard = async function(user){
     }
 }
 
-orderSchema.statics.workOrders = async function (id,page){
+orderSchema.statics.workOrders = async function (id,page,path){
     const Order = this
 
     try{
@@ -952,7 +956,7 @@ orderSchema.statics.workOrders = async function (id,page){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:id+path,pathValue:page?JSON.stringify(page):'0'})
         return Promise.resolve({orders:orders[0].orders,count:orders[0].count[0]?orders[0].count[0].count:0})
     }
     catch(e){
@@ -960,7 +964,7 @@ orderSchema.statics.workOrders = async function (id,page){
     }
 }
 
-orderSchema.statics.getBidOrders = async function(user,body){
+orderSchema.statics.getBidOrders = async function(user,body,path){
     const Order = this
 
     try{
@@ -1002,7 +1006,7 @@ orderSchema.statics.getBidOrders = async function(user,body){
                             $skip:body.skip||0
                         },
                         {
-                            $limit:body.limit<=15?body.limit:15
+                            $limit:/*body.limit<=15?body.limit:*/15
                         }
                     ],
                     count:[
@@ -1012,7 +1016,7 @@ orderSchema.statics.getBidOrders = async function(user,body){
                     ]
                 }
             }
-        ])
+        ]).cache({hashKey:body.workId+path,pathValue:body.skip?JSON.stringify(body.skip):'0'})
 
         return Promise.resolve(orders)
     }

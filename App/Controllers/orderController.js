@@ -23,7 +23,7 @@ module.exports.details = (req,res,next) =>{
     validationErrors(req,next)
     const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    Order.orderDetails(data.id,req.user)
+    Order.orderDetails(data.id,req.user,req.path)
         .then((order)=>{
             res.json(order)
         })
@@ -63,7 +63,7 @@ module.exports.workOrders = (req,res,next) =>{
     validationErrors(req,next)
     const data = matchedData(req, { locations: ['params','headers'], includeOptionals: true })
 
-    Order.workOrders(data.id,data.page)
+    Order.workOrders(data.id,data.page,req.path)
         .then((response)=>{
             res.setHeader('total',response.count)
             res.json(response.orders)
@@ -76,7 +76,7 @@ module.exports.workOrders = (req,res,next) =>{
 module.exports.getBidOrders = (req,res,next) =>{
     const user = req.user
 
-    Order.getBidOrders(user,req.body)
+    Order.getBidOrders(user,req.body,req.path)
         .then((response)=>{
             res.json(response)
         })
