@@ -20,7 +20,7 @@ module.exports.create = [
 
 module.exports.login = [
     body('password','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid password').isString().trim().custom(passwordStrength),
-    body('email.email','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid email address').isString().trim().isLength({min:6}).normalizeEmail()
+    body('email','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid email address').isString().trim().isLength({min:6}).normalizeEmail()
 ]
 
 module.exports.profile = [

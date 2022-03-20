@@ -3,7 +3,8 @@ const Result = require('./work/resultSubdoc')
 const pick = require('lodash/pick')
 const sendMail = require('../Resolvers/sendMail')
 const Validator = require('validator')
-const delCacheAll = require('../Config/cache').delCacheAll
+const delCacheAll = require('../Config/delCache').delCacheAll
+const delCache = require('../Config/delCache').delCache
 
 /* Resolver which calculates the price and time */
 const calcResult = require('../Resolvers/calcResult')
@@ -632,7 +633,7 @@ const orderSchema = new Schema({
 })
 
 /* creates one or multiple orders */
-orderSchema.statics.createOrder = async function(orderValues,id,user){
+orderSchema.statics.createOrder = async function(orderValues,id,user,redisClient){
     const Order = this
 
     try{
@@ -707,7 +708,7 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
             await order.save()
             user.sampleOrders.push(id)
             await user.save()
-            delCache({hashKey:user._id,pathValue:'authUser'})
+            delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         }
         else{
             
@@ -773,8 +774,8 @@ orderSchema.statics.createOrder = async function(orderValues,id,user){
 
             /* Order is modelled with result and saved */
             await order.save()
-            delCacheAll({hashKey:work._id+'/supplier/bid/orders'})
-            delCacheAll({hashKey:user._id+'/user/orders'})
+            delCacheAll({hashKey:work._id+'/supplier/bid/orders'},redisClient)
+            delCacheAll({hashKey:user._id+'/user/orders'},redisClient)
         }
 
         return Promise.resolve({status:true,message:'Order Created Successfully',statusCode:201})

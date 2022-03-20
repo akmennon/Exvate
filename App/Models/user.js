@@ -8,7 +8,7 @@ const Option = require('./work/optionSubdoc')
 const keys = require('../Config/keys')
 const client = require('twilio')(keys.twilioSid,keys.twilioAuthToken);
 const messageMobile = keys.messageMobile
-const delCache = require('../Config/cache').delCache
+const delCache = require('../Config/delCache').delCache
 
 const Schema = mongoose.Schema
 
@@ -413,7 +413,7 @@ userSchema.pre('save',function(next){
 
 /* Assigns a token for email confirmation and sends an email with the link */
 
-userSchema.methods.registerMail = async function(){
+userSchema.methods.registerMail = async function(redisClient){
     const user = this
 
     try{
@@ -481,7 +481,7 @@ userSchema.methods.registerMail = async function(){
     
         await user.save()
         await sendMail(mailData)
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'Successfully sent mail'})
     }
     catch(err){
@@ -489,7 +489,7 @@ userSchema.methods.registerMail = async function(){
     }
 }
 
-userSchema.statics.findByCredentials = async function(email,password){
+userSchema.statics.findByCredentials = async function(email,password,redisClient){
     const User = this
 
     try{
@@ -509,7 +509,7 @@ userSchema.statics.findByCredentials = async function(email,password){
             return Promise.reject({status:false,message:'Incomplete Signup',statusCode:401,payload:{signup:false}})
         }
 
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        await delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         
         if(user.perms.user.suspended&&user.perms.user.suspended.value){
             if( new Date(user.perms.user.suspended.duration).getTime > Date.now() ){
@@ -564,13 +564,13 @@ userSchema.statics.findByEmail = function(email,path){
 
 /* Finds the user for whom the login token belongs to */
 
-userSchema.statics.findByToken = async function(token,path,userId){
+userSchema.statics.findByToken = async function(token,path,userId,req){
     const User = this
 
     try{
         let user;
 
-        if(!userId&&!Validator.isMongoId(userId)){
+        if(!userId||!userId=='null'||!Validator.isMongoId(userId)){
             return Promise.reject({status:false,message:`Invalid Attempt`,statusCode:403})
         }
         user = await User.findOne({'tokens.token':token,_id:userId}).cache({hashKey:userId,pathValue:'authUser'})
@@ -630,7 +630,7 @@ userSchema.methods.supplierCheck = async function (){
 
 /* Creates token to change the Password and sends the email with link */
 
-userSchema.methods.generateForgotToken = async function(){
+userSchema.methods.generateForgotToken = async function(redisClient){
     const user = this
     
     try{
@@ -668,7 +668,7 @@ userSchema.methods.generateForgotToken = async function(){
 
         await user.save()
         await sendMail(mailData)
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'The link to change password has been resent to your email address'})
     }
     catch(e){
@@ -704,7 +704,7 @@ userSchema.methods.generateToken = async function(){
 
 /* Send the otp for mobile verification for account registration */
 
-userSchema.statics.sendOtp = async function (token,body) {
+userSchema.statics.sendOtp = async function (token,body,redisClient) {
     const User = this
 
     let user;
@@ -737,7 +737,7 @@ userSchema.statics.sendOtp = async function (token,body) {
             from: messageMobile,
             to: user.mobile
         })
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
 
         return Promise.resolve({status:true,message:'Successfully send otp'})
     }
@@ -750,7 +750,7 @@ userSchema.statics.sendOtp = async function (token,body) {
 
 /* confirms the email when the link from the verification email is followed */
 
-userSchema.statics.confirmEmail = async function(token,body){
+userSchema.statics.confirmEmail = async function(token,body,redisClient){
     const User = this
 
     try{
@@ -830,7 +830,7 @@ userSchema.statics.confirmEmail = async function(token,body){
 
         user.tokens.push({token:emailToken})
 
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         await user.save()
         return Promise.resolve({status:true,message:'Signup completed successfully',payload:{token:emailToken}})
     }
@@ -841,7 +841,7 @@ userSchema.statics.confirmEmail = async function(token,body){
 
 /* To confirm the change in password from the email and also update the new password */
 
-userSchema.statics.confirmPassword = async function(token,password){
+userSchema.statics.confirmPassword = async function(token,password,redisClient){
     const User = this
 
     try{
@@ -855,7 +855,7 @@ userSchema.statics.confirmPassword = async function(token,password){
         jwt.verify(token,keys.jwtSecret)
         await user.set('password',password)
         await user.save()
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve(user)
     }
     catch(e){
@@ -864,7 +864,7 @@ userSchema.statics.confirmPassword = async function(token,password){
 }
 
 /* Adds,deletes or updates work for the supplier*/
-userSchema.statics.updateWork = async function(reqUser,body){
+userSchema.statics.updateWork = async function(reqUser,body,redisClient){
     const User = this
 
     const reqParams = pick(body,['workId','options'])
@@ -885,7 +885,7 @@ userSchema.statics.updateWork = async function(reqUser,body){
             if(body.select == 'delete'){
                 await Option.deleteOne({'_id':user.work.workDetails[workIndex].options})
                 user.work.workDetails.splice(workIndex,1)
-                delCache({hashKey:user._id,pathValue:'authUser'})
+                delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
                 await user.save()
                 return Promise.resolve({status:true,message:'Work deleted'})
             }
@@ -943,7 +943,7 @@ userSchema.statics.updateWork = async function(reqUser,body){
                         break;
                     }
                 }
-                delCache({hashKey:user._id,pathValue:'authUser'})
+                delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
                 await user.save()
                 return Promise.resolve({status:true,message:'Work Updated'})
             }
@@ -1003,7 +1003,7 @@ userSchema.statics.updateWork = async function(reqUser,body){
 
                 await option.save()
                 user.work.workDetails.push({workId:reqParams.workId,options:option})
-                delCache({hashKey:user._id,pathValue:'authUser'})
+                delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
                 await user.save()
                 return Promise.resolve({status:true,message:'Work Added'})
             }
@@ -1106,7 +1106,7 @@ userSchema.statics.supplierCancel = async function(orderId,user,Order){
     }
 }
 
-userSchema.methods.addAddress = async function (newAddress) {
+userSchema.methods.addAddress = async function (newAddress,redisClient) {
     const user = this
 
     try{
@@ -1116,7 +1116,7 @@ userSchema.methods.addAddress = async function (newAddress) {
         }
         
         user.address.push(newAddress)
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         await user.save()
         return Promise.resolve(user.address[user.address.length-1])
     }
@@ -1125,7 +1125,7 @@ userSchema.methods.addAddress = async function (newAddress) {
     }
 }
 
-userSchema.methods.removeAddress = async function (addressId) {
+userSchema.methods.removeAddress = async function (addressId,redisClient) {
     const user = this
 
     try{
@@ -1134,7 +1134,7 @@ userSchema.methods.removeAddress = async function (addressId) {
         }
         user.address = user.address.filter((ele)=>ele._id!=addressId)
         await user.save()
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'Address successfully removed'})
     }
     catch(e){
@@ -1156,7 +1156,7 @@ userSchema.methods.getCompanyDetails = async function () {
     }
 }
 
-userSchema.methods.changePassword = async function (passwordDetails,token){
+userSchema.methods.changePassword = async function (passwordDetails,token,redisClient){
     const user = this
 
     try{
@@ -1172,7 +1172,7 @@ userSchema.methods.changePassword = async function (passwordDetails,token){
             return tokenData.token.toString() == token
         })
         await user.save()
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'Password changed successfully'})
     }
     catch(e){
@@ -1180,21 +1180,21 @@ userSchema.methods.changePassword = async function (passwordDetails,token){
     }
 }
 
-userSchema.methods.changeName = async function (body){
+userSchema.methods.changeName = async function (body,redisClient){
     const user = this
 
     try{
         user.name = body.name
         await user.save()
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'Name changed successfully'})
     }
     catch(e){
-        return Promise.resolve(e)
+        return Promise.reject(e)
     }
 }
 
-userSchema.methods.logOut = async function (token){
+userSchema.methods.logOut = async function (token,redisClient,User){
     const user = this
 
     try{
@@ -1202,21 +1202,20 @@ userSchema.methods.logOut = async function (token){
             return Promise.reject({status:false,message:'Invalid Attempt',statusCode:403})
         }
 
-        user.tokens = user.tokens.filter((ele)=>{
+        const tokens = user.tokens.filter((ele)=>{
             return ele.token != token
         })
     
-        delCache({hashKey:user._id,pathValue:'authUser'})
-        await user.save()
+        await delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
+        await User.updateOne({_id:user._id},{$set:{tokens:tokens}})
         return Promise.resolve({status:true,message:'Successfully logged out'})
-
     }
     catch(e){
-        return Promise.resolve(e)
+        return Promise.reject(e)
     }
 }
 
-userSchema.methods.changeCompanyDetails = async function (body){
+userSchema.methods.changeCompanyDetails = async function (body,redisClient){
     const user = this
 
     try{
@@ -1226,7 +1225,7 @@ userSchema.methods.changeCompanyDetails = async function (body){
         user.companyDetails = companyDetails
         user.mobile = body.phone
         await user.save()
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve({status:true,message:'Successfully changed company details'})
     }
     catch(e){
@@ -1234,7 +1233,7 @@ userSchema.methods.changeCompanyDetails = async function (body){
     }
 }
 
-userSchema.methods.sendProfile = async function (body){
+userSchema.methods.sendProfile = async function (body,redisClient){
     const user = this
 
     try{
@@ -1255,7 +1254,7 @@ userSchema.methods.sendProfile = async function (body){
         user.profileChangeToken.value = token
         user.profileChangeToken.createdAt = Date.now()
         await user.save()
-        delCache({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve(response)
     }
     catch(e){
@@ -1263,7 +1262,7 @@ userSchema.methods.sendProfile = async function (body){
     }
 }
 
-userSchema.methods.changeMobileOtp = async function(body){
+userSchema.methods.changeMobileOtp = async function(body,redisClient){
     const user = this
 
     try{
@@ -1280,7 +1279,7 @@ userSchema.methods.changeMobileOtp = async function(body){
         user.profileChangeToken.mobile.number = mobile
         user.profileChangeToken.mobile.lastSend = Date.now()
         user.profileChangeToken.mobile.token = ('' + Math.random()).slice(2,8)
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         await user.save()
 
         await client.messages.create({
@@ -1294,7 +1293,7 @@ userSchema.methods.changeMobileOtp = async function(body){
     }
 }
 
-userSchema.methods.confirmMobileChange = async function(otp){
+userSchema.methods.confirmMobileChange = async function(otp,redisClient){
     const user = this
 
     try{
@@ -1308,7 +1307,7 @@ userSchema.methods.confirmMobileChange = async function(otp){
 
         user.mobile = user.profileChangeToken.mobile.number
         user.profileChangeToken.mobile = undefined
-        delCahe({hashKey:user._id,pathValue:'authUser'})
+        delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         await user.save()
         return Promise.resolve({status:true,message:'Mobile changed successfully'})
     }

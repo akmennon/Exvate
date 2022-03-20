@@ -17,3 +17,5 @@ All categories cache = hashKey:'/categories/all'
 Type
 All types = hashKey:'/types/all'
 
+Work
+All work = hashKey:data.id, pathValue:'workDetail'

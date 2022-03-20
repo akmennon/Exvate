@@ -1,6 +1,5 @@
 const mongoose = require('mongoose')
-const delCache = require('../Config/cache').delCache
-const delCacheAll = require('../Config/cache').delCacheAll
+const delCacheAll = require('../Config/delCache').delCacheAll
 
 const Schema = mongoose.Schema
 
@@ -68,7 +67,7 @@ const bidSchema = new Schema({
     }
 })
 
-bidSchema.statics.createBid = async function(orderId,price,user,Order){
+bidSchema.statics.createBid = async function(orderId,price,user,Order,redisClient){
     const Bid = this
 
     try{
@@ -126,7 +125,7 @@ bidSchema.statics.createBid = async function(orderId,price,user,Order){
         })
 
         await bid.save()
-        delCacheAll({hashKey:user._id+'/supplier/bids'})
+        delCacheAll({hashKey:user._id+'/supplier/bids'},redisClient)
 
         return Promise.resolve({status:true,message:'Bid has been successfully created for the order'})
     }
@@ -198,7 +197,7 @@ bidSchema.statics.userList = async function(user,body,path){
     }
 }
 
-bidSchema.statics.removeBid = async function(user,bidId){
+bidSchema.statics.removeBid = async function(user,bidId,redisClient){
     const Bid = this
 
     try {
@@ -208,7 +207,7 @@ bidSchema.statics.removeBid = async function(user,bidId){
         }
 
         const result = await Bid.updateOne({user:{userId:user._id},_id:bidId},{removed:true})
-        delCacheAll({hashKey:user._id+'/supplier/bids'})
+        delCacheAll({hashKey:user._id+'/supplier/bids'},redisClient)
 
         if(result.nModified){
             return Promise.resolve({status:true,message:'Successfully removed bid'})
@@ -222,12 +221,12 @@ bidSchema.statics.removeBid = async function(user,bidId){
     }
 }
 
-bidSchema.statics.deleteOldBids = async function(user){
+bidSchema.statics.deleteOldBids = async function(user,redisClient){
     const Bid = this
 
     try{
         const response = await Bid.deleteMany({'user.userId':user._id.toString(),status:'Rejected'})
-        delCacheAll({hashKey:user._id+'/supplier/bids'})
+        delCacheAll({hashKey:user._id+'/supplier/bids'},redisClient)
 
         return Promise.resolve(`${response.deletedCount} deleted`)
     }

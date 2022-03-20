@@ -7,7 +7,7 @@ const cacheCheck = async (next,client,userIp,path,limiterTokenValue,limiterIpVal
             if(userToken){
                 limiterTokenValue = limiterTokenValue.filter((date)=>{
                     const newDate = new Date(date)
-                    if(newDate.getTime()<Date.now()-60000*window){
+                    if(newDate.getTime()<Date.now()-(60000*window)){
                         return false
                     }
                     else{
@@ -19,7 +19,7 @@ const cacheCheck = async (next,client,userIp,path,limiterTokenValue,limiterIpVal
             }
             limiterIpValue = limiterIpValue.filter((date)=>{
                 const newDate = new Date(date)
-                if(newDate.getTime()<Date.now()-60000*window){
+                if(newDate.getTime()<Date.now()-(60000*window)){
                     return false
                 }
                 else{
@@ -57,6 +57,7 @@ const rateLimiter = async (req,res,next) =>{
         const client = req.app.locals.redisClient
         const userIp = req.ip
         let userToken = req.header('x-auth')
+        let userId = req.header('userId')
         const path = req.path
         let total = await client.multi().hGet(userIp,'total').hGet(userToken,'total').hGet(userToken,path).hGet(userIp,path).hGet(userIp,'RL').hGet(userToken,'RL').exec()
         console.log(total)
@@ -71,7 +72,7 @@ const rateLimiter = async (req,res,next) =>{
             throw({status:false,message:'Rate limited',statusCode:403})
         }
 
-        if(userToken){
+        if(userToken&&userId){
             totalToken = !totalToken||totalToken==0?1:totalToken+1
             totalIp = !totalIp||totalToken==0?1:totalIp+1
 
@@ -119,7 +120,7 @@ const rateLimiter = async (req,res,next) =>{
             }
         }
 
-        pathValue = req.path.includes('/user/signup')?1:req.path.includes('/user/login')?2:req.path.includes('/user/account')?3:req.path.includes('/user/logout')?4:req.path.includes('/user/forgotPassword')?5:req.path.includes('/user/resendRegisterMail')?6:req.path.includes('/user/confirmSign')?7:req.path.includes('/user/forgotCheck')?8:req.path.includes('/user/addAddress')?9:req.path.includes('/user/removeAddress')?10:req.path.includes('/workOrders')?11:req.path.includes('/supplier/orders/')?12:req.path.includes('/user/companyDetails')?13:req.path.includes('/user/editprofile/changePassword')?14:req.path.includes('/user/editProfile/changeName')?15:req.path.includes('/user/editProfile/changeMobile')?16:req.path.includes('/user/editProfile/changeMobileConfirm')?17:req.path.includes('/user/editProfile/changeCompanyDetails')?18:req.path.includes('/user/sendOtp')?19:req.path.includes('/supplier/bids/create')?20:req.path.includes('/supplier/bids/remove')?21:req.path.includes('/supplier/bid/orders')?22:req.path.includes('/supplier/bids')?23:req.path.includes('/categories/all')?24:req.path.includes('/types/all')?25:req.path.includes('/works/:id')?26:req.path.includes('/order/:id')?27:req.path.includes('/works/search')?28:req.path.includes('/user/work/details')?29:req.path.includes('/user/orders')?30:0
+        pathValue = req.path.includes('/user/signup')?1:req.path.includes('/user/login')?2:req.path.includes('/user/account')?3:req.path.includes('/user/logout')?4:req.path.includes('/user/forgotPassword')?5:req.path.includes('/user/resendRegisterMail')?6:req.path.includes('/user/confirmSign')?7:req.path.includes('/user/forgotCheck')?8:req.path.includes('/user/addAddress')?9:req.path.includes('/user/removeAddress')?10:req.path.includes('/workOrders')?11:req.path.includes('/supplier/orders/')?12:req.path.includes('/user/companyDetails')?13:req.path.includes('/user/editprofile/changePassword')?14:req.path.includes('/user/editProfile/changeName')?15:req.path.includes('/user/editProfile/changeMobile')?16:req.path.includes('/user/editProfile/changeMobileConfirm')?17:req.path.includes('/user/editProfile/changeCompanyDetails')?18:req.path.includes('/user/sendOtp')?19:req.path.includes('/supplier/bids/create')?20:req.path.includes('/supplier/bids/remove')?21:req.path.includes('/supplier/bid/orders')?22:req.path.includes('/supplier/bids')?23:req.path.includes('/categories/all')?24:req.path.includes('/types/all')?25:req.path.includes('/works/search')?28:req.path.includes('/order/')?27:req.path.includes('/works/')?26:req.path.includes('/user/work/details')?29:req.path.includes('/user/orders')?30:0
 
         switch(pathValue){
             case 1:

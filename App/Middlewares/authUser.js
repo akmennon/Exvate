@@ -3,7 +3,7 @@ const errorHandler = require('../Resolvers/errorHandler')
 
 /* To authenticate by token for the user */
 
-const authUser = async (req,res) =>{
+const authUser = async (req,res,next) =>{
     const token = req.header('x-auth')
     const userId = req.header('userId')
 
@@ -19,10 +19,12 @@ const authUser = async (req,res) =>{
                 }
                 req.user=response
                 req.token=token
+                return Promise.resolve()
             }
         }
         else{
-            return Promise.resolve(false)
+            const error = new Error()
+            return Promise.reject(error)
         }
     }
     catch(err){

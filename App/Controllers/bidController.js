@@ -6,37 +6,47 @@ const validationErrors = require('../Resolvers/validationErrors')
 
 module.exports.create = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body','params'], includeOptionals: true })
 
-    Bid.createBid(data.orderId,data.price,user,Order)
+    if(result.status){
+        Bid.createBid(data.orderId,data.price,user,Order,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.list = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    Bid.userList(user,body,req.path)
+    if(result.status){
+        Bid.userList(user,body,req.path)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.deleteOldBids = (req,res,next) =>{
     const user = req.user
 
     next()
-    Bid.deleteOldBids(user)
+    Bid.deleteOldBids(user,req.app.locals.redisClient)
         .then((response)=>{
             console.log(response)
         })
@@ -47,14 +57,19 @@ module.exports.deleteOldBids = (req,res,next) =>{
 
 module.exports.remove = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const params = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    Bid.removeBid(user,params.bidId)
+    if(result.status){
+        Bid.removeBid(user,params.bidId,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }

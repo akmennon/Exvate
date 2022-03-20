@@ -17,6 +17,7 @@ export const removeUser = () =>{
 }
 
 export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
+    console.log(loginData)
     return ((dispatch)=>{
         axios.post('/user/login',loginData)
             .then((response)=>{
@@ -27,7 +28,6 @@ export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
                 redirect()
             })
             .catch((err)=>{
-                localStorage.removeItem('user')
                 if(err.response&&err.response.data.payload&&err.response.data.payload.signup===false){
                     setAuth(p=>({...p,password:'',resendMail:true}))
                 }
@@ -55,7 +55,6 @@ export const startTokenSetUser = (token,redirect) =>{   //token login action
             })
             .catch((err)=>{
                 dispatch(removeUser())
-                localStorage.removeItem('user')
                 console.log(err)
             })
     })

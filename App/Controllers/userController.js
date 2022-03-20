@@ -9,50 +9,61 @@ const delCache = require('../Config/cache').delCache
 /* User signup function */
 
 module.exports.create = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
+    const redisClient = req.app.locals.redisClient
 
-    const user = new User(body)
+    if(result.status){
+        const user = new User(body)
 
-    /* confirmation email to verify user's email address */
-    user.save()
-        .then(function(){
-            return user.registerMail()
-        })
-        .then(function(status){
-            res.json(status)
-        })
-        .catch(function(err){
-            if(err.keyPattern['email.email']==1){
-                const error = new Error('User already exists')
-                error.statusCode = 401
-                errorHandler(error,next)
-            }
-            else{
-                errorHandler(err,next)
-            }
-        })
+        /* confirmation email to verify user's email address */
+        user.save()
+            .then(function(){
+                return user.registerMail(redisClient)
+            })
+            .then(function(status){
+                res.json(status)
+            })
+            .catch(function(err){
+                if(err.keyPattern['email.email']==1){
+                    const error = new Error('User already exists')
+                    error.statusCode = 401
+                    errorHandler(error,next)
+                }
+                else{
+                    errorHandler(err,next)
+                }
+            })
+    }
+    else{
+        errorHandler(status,next)
+    }
 }
 
 /* User Login function */ 
 
 module.exports.login = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next) //PENDING - undo commenting out input validation
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    let userData
-    User.findByCredentials(body.email,body.password,req.path)
-        .then(function(user){
-            userData=user
-            return user.generateToken()     // generates a token for logging in
-        })
-        .then(function(token){
-            res.setHeader('x-auth',token) // sends token as a header
-            res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email','address'])})
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
+    if(result.status){
+        let userData
+        User.findByCredentials(body.email,req.body.password,req.app.locals.redisClient)
+            .then(function(user){
+                userData=user
+                return user.generateToken()     // generates a token for logging in
+            })
+            .then(function(token){
+                res.setHeader('x-auth',token) // sends token as a header
+                res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email','address'])})
+            })
+            .catch(function(err){
+                errorHandler(err,next)
+            })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* Show user account details (values gotten from middleware) */
@@ -63,17 +74,22 @@ module.exports.account = (req,res) =>{
 }
 
 module.exports.profile = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
     const user = req.user
 
-    user.sendProfile(body,req.path)
+    if(result.status){
+        user.sendProfile(body,req.path,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* User logout */
@@ -83,7 +99,7 @@ module.exports.logout = (req,res,next) =>{
     const token = req.header('x-auth')
 
     /* removes the login token */
-    user.logOut(token)
+    user.logOut(token,req.app.locals.redisClient,User)
         .then(function(){
             res.json({status:true,message:'Successfully logged out'})
         })
@@ -110,12 +126,13 @@ module.exports.logoutAll = (req,res,next) =>{
 /* Forgot password reset function */
 
 module.exports.forgotPassword = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    User.findByEmail(body.email,req.path)
+    if(result.status){
+        User.findByEmail(body.email,req.path)
         .then(function(user){
-            return user.generateForgotToken() //function to generate token specifically to change the password
+            return user.generateForgotToken(req.app.locals.redisClient) //function to generate token specifically to change the password
         })
         .then(function(result){
             res.json(result)
@@ -123,60 +140,80 @@ module.exports.forgotPassword = (req,res,next) =>{
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* function to resend the email verfication email */
 
 module.exports.resendRegisterMail = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const body = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    User.resendRegisterEmail(body.email)
+    if(result.status){
+        User.resendRegisterEmail(body.email)
         .then(function(response){
             res.json({status:true,message:'The registration email has been sent to the address'})
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* When the confirms otp */
 
 module.exports.confirmOtp = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.sendOtp(data.token,data)
+    if(result.status){
+        User.sendOtp(data.token,data,req.app.locals.redisClient)
         .then(function(response){
             res.json(response)
         })
         .catch(function(err){
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* When the user follows the link in the confirmation email */
 
 module.exports.confirmSignupEmail = (req,res,next) =>{ //Country,Region,pin validation pending
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.confirmEmail(data.token,data)
-        .then(function(response){
-            res.json(response)
-        })
-        .catch(function(err){
-            errorHandler(err,next)
-        })
+    if(result.status){
+        User.confirmEmail(data.token,data,req.app.locals.redisClient)
+            .then(function(response){
+                res.json(response)
+            })
+            .catch(function(err){
+                errorHandler(err,next)
+            })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* Lets the user update the password when the verification link is followed */
 
 module.exports.confirmChangePassword = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['params','body'], includeOptionals: true })
 
-    User.confirmPassword(data.token,data.password)
+    if(result.status){
+        User.confirmPassword(data.token,data.password,req.app.locals.redisClient)
         .then(function(user){
             let response = pick(user,['userType','_id','name'])
             response.email = user.email.email
@@ -185,13 +222,17 @@ module.exports.confirmChangePassword = (req,res,next) =>{
         .catch(function(err){
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 /* Adds, deletes or updates a work for the supplier*/
 module.exports.addWork = (req,res,next) =>{
     const body = req.body
 
-    User.updateWork(req.user,body)
+    User.updateWork(req.user,body,req.app.locals.redisClient)
         .then((user)=>{
             res.json(user)
         })
@@ -215,57 +256,77 @@ module.exports.workAll = (req,res) =>{
 
 /* validates the user who is trying to change password */
 module.exports.forgotCheck = (req,res,next) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['header'], includeOptionals: true })
 
-    User.forgotCheck(data.forgotToken)
+    if(result.status){
+        User.forgotCheck(data.forgotToken)
         .then((value)=>{
             res.json(value)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.supplierCancel = (req,res) =>{
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    User.supplierCancel(data.orderId,req.user,Order)
+    if(result.status){
+        User.supplierCancel(data.orderId,req.user,Order)
         .then((result)=>{
             res.json(result)
         })
         .catch((e)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.addAddress = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.addAddress(data)
+    if(result.status){
+        user.addAddress(data,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.removeAddress = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['params'], includeOptionals: true })
 
-    user.removeAddress(data.id)
+    if(result.status){
+        user.removeAddress(data.id,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.companyDetails = (req,res,next) =>{
@@ -282,84 +343,114 @@ module.exports.companyDetails = (req,res,next) =>{
 
 module.exports.changeCompanyDetails = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeCompanyDetails(data)
+    if(result.status){
+        user.changeCompanyDetails(data,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.changePassword = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body','header'], includeOptionals: true })
 
-    user.changePassword(passwordDetails,data['x-auth'])
+    if(result.status){
+        user.changePassword(passwordDetails,data['x-auth'],req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.changeName = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeName(data)
+    if(result.status){
+        user.changeName(data,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.changeCompanyDetails = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeCompanyDetails(data)
+    if(result.status){
+        user.changeCompanyDetails(data)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.changeMobile = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.changeMobileOtp(data)
+    if(result.status){
+        user.changeMobileOtp(data,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
 
 module.exports.confirmMobileChange = (req,res,next) =>{
     const user = req.user
-    validationErrors(req,next)
+    const result = validationErrors(req,next)
     const data = matchedData(req, { locations: ['body'], includeOptionals: true })
 
-    user.confirmMobileChange(data.otp)
+    if(result.status){
+        user.confirmMobileChange(data.otp,req.app.locals.redisClient)
         .then((response)=>{
             res.json(response)
         })
         .catch((err)=>{
             errorHandler(err,next)
         })
+    }
+    else{
+        errorHandler(result,next)
+    }
 }
