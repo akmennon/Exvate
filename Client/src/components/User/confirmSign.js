@@ -23,7 +23,8 @@ import {startTokenSetUser} from '../../action/userAction'
 /* Component that confirms the email of the user */
 
 function ConfirmSign (props) {
-    const [state,setState] = useState({call:false,loading:false})
+    const [state,setState] = useState({loading:false})
+    const [error,setError] = useState(false)
     const [form,setForm] = useState({country:'',state:'',companyName:'',city:'',street:'',userType:'buyer',phone:undefined,website:'',pin:'',position:'',otp:''})
     const [disabled,setWebsiteDisabled] = useState(false)
     const [open,setOpen] = useState(false)
@@ -67,6 +68,7 @@ function ConfirmSign (props) {
     }
 
     const handleSubmit = () =>{
+        setState({loading:true})
         if(form.otp&&form.otp.length===6){
             axios.post(`/user/confirmSign/${props.match.params.token}`,form)
             .then((response)=>{
@@ -74,17 +76,20 @@ function ConfirmSign (props) {
                 if(response.data.status&&response.data.payload.token){
                     if(response.data.payload.token){
                         localStorage.setItem('x-auth',response.data.payload.token)
+                        localStorage.setItem('user',response.data.payload.user)
                     }
                     setOpen(false)
-                    setState({call:true,loading:false})
+                    dispatch(startTokenSetUser(response.data.payload.token,()=>{props.history.replace('/')}))
                 }
                 else{
+                    setError(true)
                     setState({loading:false})
                 }
             })
             .catch((err)=>{
                 console.log(err)
-                setState({...state,loading:false})
+                setError(true)
+                setState({loading:false})
             })
         }
         else{
@@ -106,136 +111,133 @@ const style = {
   };
 
     if(!state.loading){
-        if(!state.call){
-            return(
-                <div style={{display:'flex',flexDirection:'column',width:500,rowGap:20,margin:20}}>
-                    <Modal
-                        aria-labelledby="transition-modal-title"
-                        aria-describedby="transition-modal-description"
-                        open={open}
-                        onClose={()=>{setOpen(false)}}
-                        closeAfterTransition
-                        BackdropComponent={Backdrop}
-                        BackdropProps={{
-                        timeout: 500,
-                        }}
-                    >
-                        <Fade in={open}>
-                            <Box sx={style}>
-                                <Typography variant="h6" component="h2">
-                                    Mobile OTP Verification
-                                </Typography>
-                                <Typography id="transition-modal-description" sx={{ mt: 2 }}>
-                                    Please enter the six digit code sent to your mobile number
-                                </Typography>
-                                <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
-                                    <Typography>Code</Typography>
-                                    <TextField
-                                        value={form.otp}
-                                        onChange={(e)=>{e.persist();setForm({...form,otp:e.target.value})}}
-                                        variant='outlined'
-                                        color='primary'
-                                        label='OTP'
-                                    />
-                                    <Button disabled={resendCountdown===0||resendCountdown===60?false:true} onClick={()=>{setResendCountdown(59);confirmOTP()}}>Resend{resendCountdown>0&&resendCountdown!==60?` ${resendCountdown}`:null} </Button>
-                                </div>
-                                <div style={{display:'flex',justifyContent:'flex-end',margin:10}}>
-                                    <Button color='primary' variant='contained' onClick={handleSubmit}>Confirm</Button>
-                                </div>
-                            </Box>
-                        </Fade>
-                    </Modal>
-                    <TextField 
-                        variant='outlined'
-                        color='primary'
-                        label='Company Name'
-                        value={form.companyName}
-                        onChange={(e)=>{e.persist();setForm({...form,companyName:e.target.value})}}
-                    />
-                    <FormControl component="fieldset">
-                        <FormLabel component="legend">Choose Trade role</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-label="Select Trade Role"
-                            name="controlled-radio-buttons-group"
-                            value={form.userType}
-                            onChange={(e)=>{setForm({...form,userType:e.target.value})}}
-                        >
-                            <FormControlLabel value="buyer" control={<Radio />} label="Buyer" />
-                            <FormControlLabel value="supplier" control={<Radio />} label="Supplier" />
-                            <FormControlLabel value="both" control={<Radio />} label="Both" />
-                        </RadioGroup>
-                    </FormControl>
-                    <TextField 
-                        variant='outlined'
-                        color='primary'
-                        label='Street'
-                        value={form.street}
-                        onChange={(e)=>{e.persist();setForm({...form,street:e.target.value})}}
-                    />
-                    <CountryDropdown 
-                        value={form.country}
-                        onChange={(e)=>{setForm({...form,country:e})}}
-                    />
-                    <RegionDropdown 
-                        value={form.state}
-                        country={form.country}
-                        onChange={(e)=>{setForm({...form,state:e})}}
-                    />
-                    <TextField 
-                        variant='outlined'
-                        color='primary'
-                        label='City'
-                        value={form.city}
-                        onChange={(e)=>{e.persist();setForm({...form,city:e.target.value})}}
-                    />
-                    <TextField 
-                        variant='outlined'
-                        color='primary'
-                        label='Postal or Zip'
-                        value={form.pin}
-                        onChange={(e)=>{e.persist();setForm({...form,pin:e.target.value})}}
-                    />
-                    <PhoneInput
-                        international
-                        defaultCountry="US"
-                        countryCallingCodeEditable={false}
-                        value={form.phone}
-                        onChange={(e)=>{setForm({...form,phone:e,otp:''})}}
-                    />
-                    {
-                        form.userType==='supplier'||form.userType==='both'?(
-                            <Fragment>
-                                <TextField 
+        return(
+            <div style={{display:'flex',flexDirection:'column',width:500,rowGap:20,margin:20}}>
+                <Modal
+                    aria-labelledby="transition-modal-title"
+                    aria-describedby="transition-modal-description"
+                    open={open}
+                    onClose={()=>{setOpen(false)}}
+                    closeAfterTransition
+                    BackdropComponent={Backdrop}
+                    BackdropProps={{
+                    timeout: 500,
+                    }}
+                >
+                    <Fade in={open}>
+                        <Box sx={style}>
+                            <Typography variant="h6" component="h2">
+                                Mobile OTP Verification
+                            </Typography>
+                            <Typography id="transition-modal-description" sx={{ mt: 2 }}>
+                                Please enter the six digit code sent to your mobile number
+                            </Typography>
+                            <div style={{display:'flex',flexDirection:'row',alignItems:'center',justifyContent:'space-evenly'}}>
+                                <Typography>Code</Typography>
+                                <TextField
+                                    value={form.otp}
+                                    onChange={(e)=>{e.persist();setForm({...form,otp:e.target.value})}}
                                     variant='outlined'
                                     color='primary'
-                                    label='Position'
-                                    value={form.position}
-                                    onChange={(e)=>{e.persist();setForm({...form,position:e.target.value})}}
+                                    label='OTP'
                                 />
-                                <div>
-                                    <TextField
-                                        style={{marginRight:20}}
-                                        variant='outlined'
-                                        disabled={disabled}
-                                        color='primary'
-                                        label='Website'
-                                        value={form.website}
-                                        onChange={(e)=>{e.persist();setForm({...form,website:e.target.value})}}
-                                    />
-                                    <FormControlLabel control={<Switch onClick={()=>{setForm({...form,website:disabled?'':'None'});setWebsiteDisabled(disabled?false:true)}}/>} label="I don't have a wesbite" />
-                                </div>
-                            </Fragment>
-                        ):<span/>
-                    }
-                    <Button color='primary' variant='contained' onClick={confirmOTP} style={{width:200}}>Confirm</Button>
-                </div>
-            )
-        }
-        else{
-            dispatch(startTokenSetUser(localStorage.getItem('x-auth'),()=>{props.history.replace('/')}))
-            return <CircularProgress/>
-        }
+                                <Button disabled={resendCountdown===0||resendCountdown===60?false:true} onClick={()=>{setResendCountdown(59);confirmOTP()}}>Resend{resendCountdown>0&&resendCountdown!==60?` ${resendCountdown}`:null} </Button>
+                            </div>
+                            <div style={{display:'flex',justifyContent:'flex-end',margin:10}}>
+                                <Button color='primary' variant='contained' onClick={handleSubmit}>Confirm</Button>
+                            </div>
+                        </Box>
+                    </Fade>
+                </Modal>
+                <TextField 
+                    variant='outlined'
+                    color='primary'
+                    label='Company Name'
+                    value={form.companyName}
+                    onChange={(e)=>{e.persist();setForm({...form,companyName:e.target.value})}}
+                />
+                <FormControl component="fieldset">
+                    <FormLabel component="legend">Choose Trade role</FormLabel>
+                    <RadioGroup
+                        row
+                        aria-label="Select Trade Role"
+                        name="controlled-radio-buttons-group"
+                        value={form.userType}
+                        onChange={(e)=>{setForm({...form,userType:e.target.value})}}
+                    >
+                        <FormControlLabel value="buyer" control={<Radio />} label="Buyer" />
+                        <FormControlLabel value="supplier" control={<Radio />} label="Supplier" />
+                        <FormControlLabel value="both" control={<Radio />} label="Both" />
+                    </RadioGroup>
+                </FormControl>
+                <TextField 
+                    variant='outlined'
+                    color='primary'
+                    label='Street'
+                    value={form.street}
+                    onChange={(e)=>{e.persist();setForm({...form,street:e.target.value})}}
+                />
+                <CountryDropdown 
+                    value={form.country}
+                    onChange={(e)=>{setForm({...form,country:e})}}
+                />
+                <RegionDropdown 
+                    value={form.state}
+                    country={form.country}
+                    onChange={(e)=>{setForm({...form,state:e})}}
+                />
+                <TextField 
+                    variant='outlined'
+                    color='primary'
+                    label='City'
+                    value={form.city}
+                    onChange={(e)=>{e.persist();setForm({...form,city:e.target.value})}}
+                />
+                <TextField 
+                    variant='outlined'
+                    color='primary'
+                    label='Postal or Zip'
+                    value={form.pin}
+                    onChange={(e)=>{e.persist();setForm({...form,pin:e.target.value})}}
+                />
+                <PhoneInput
+                    international
+                    defaultCountry="US"
+                    countryCallingCodeEditable={false}
+                    value={form.phone}
+                    onChange={(e)=>{setForm({...form,phone:e,otp:''})}}
+                />
+                {
+                    form.userType==='supplier'||form.userType==='both'?(
+                        <Fragment>
+                            <TextField 
+                                variant='outlined'
+                                color='primary'
+                                label='Position'
+                                value={form.position}
+                                onChange={(e)=>{e.persist();setForm({...form,position:e.target.value})}}
+                            />
+                            <div>
+                                <TextField
+                                    style={{marginRight:20}}
+                                    variant='outlined'
+                                    disabled={disabled}
+                                    color='primary'
+                                    label='Website'
+                                    value={form.website}
+                                    onChange={(e)=>{e.persist();setForm({...form,website:e.target.value})}}
+                                />
+                                <FormControlLabel control={<Switch onClick={()=>{setForm({...form,website:disabled?'':'None'});setWebsiteDisabled(disabled?false:true)}}/>} label="I don't have a wesbite" />
+                            </div>
+                        </Fragment>
+                    ):<span/>
+                }
+                <Button color='primary' variant='contained' onClick={()=>{setError(false);confirmOTP()}} style={{width:200}}>Confirm</Button>
+                {
+                    error?<p>Error registering</p>:<span/>
+                }
+            </div>
+        )
     }
     else{
         return(

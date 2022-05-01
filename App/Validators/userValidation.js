@@ -2,7 +2,7 @@ const {body,param,header} = require('express-validator')
 const isStrongPassword = require('validator/lib/isStrongPassword')
 
 const passwordStrength = (value,{req}) =>{
-    const score = isStrongPassword(value,{ minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, returnScore: false, pointsPerUnique: 1, pointsPerRepeat: 0.5, pointsForContainingLower: 10, pointsForContainingUpper: 10, pointsForContainingNumber: 10, pointsForContainingSymbol: 10 })
+    const score = isStrongPassword(value,{ minLength: 8, minLowercase: 1, minUppercase: 1, minNumbers: 1, returnScore: true, pointsPerUnique: 1, pointsPerRepeat: 0.5, pointsForContainingLower: 1, pointsForContainingUpper: 1, pointsForContainingNumber: 1, pointsForContainingSymbol: 1 })
     if(score<4){
         return false
     }
@@ -13,8 +13,8 @@ const passwordStrength = (value,{req}) =>{
 
 module.exports.create = [
     body('name','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid name').isString().trim().isLength({min:2}),
-    body('password','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid password').isString().trim().custom(passwordStrength).withMessage('The password must contain at least a minimum of 8 characters, a lowercase, an uppercase and a number'),
-    body('confirmPassword','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().custom((value,{req})=>req.password==req.confirmPassword).withMessage("Password doesn't match"),
+    body('password','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid password').isString().trim().custom((value,{req})=>passwordStrength(value,req)).withMessage('The password must contain at least a minimum of 8 characters, a lowercase, an uppercase and a number'),
+    body('confirmPassword','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().custom((value,{req})=>req.body.password==req.body.confirmPassword).withMessage("Password doesn't match"),
     body('email.email','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid email address').isString().trim().isLength({min:6}).normalizeEmail()
 ]
 
@@ -51,14 +51,14 @@ module.exports.confirmSignupEmail = [
     body('city','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
     body('street','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
     body('pin','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}).withMessage('Invalid postal code'),//validate postal code
-    body('website','Invalid input').optional().custom((value,{req})=>req.userType=='supplier'||req.userType=='both').bail().exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}).isURL(),
-    body('position','Invalid input').optional().custom((value,{req})=>req.userType=='supplier'||req.userType=='both').bail().exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2})
+    body('website','Invalid input').optional().if((value,{req})=>{return (req.body.userType=='supplier'||req.body.userType=='both')&&value!='None'?true:false}).exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}).isURL(),
+    body('position','Invalid input').optional().if((value,{req})=>req.body.userType=='supplier'||req.body.userType=='both'?true:false).exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2})
 ]
 
 module.exports.confirmChangePassword = [
     param('token','Unauthorized').exists({checkFalsy:true,checkNull:true}).trim().isJWT(),
     body('password','Invalid input').exists({checkFalsy:true,checkNull:true}).withMessage('Please provide a valid password').isString().trim().custom(passwordStrength),
-    body('confirmPassword','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().custom((value,{req})=>req.password==req.confirmPassword).withMessage("Password doesn't match")
+    body('confirmPassword','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().custom((value,{req})=>req.body.password==req.body.confirmPassword).withMessage("Password doesn't match")
 ]
 
 module.exports.forgotCheck = [
@@ -84,8 +84,8 @@ module.exports.removeAddress = [
 
 module.exports.changeCompanyDetails = [
     body('name','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
-    body('website','Invalid input').optional().custom((value,{req})=>req.userType=='supplier'||req.userType=='both').bail().exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}).isURL(),
-    body('position','Invalid input').optional().custom((value,{req})=>req.userType=='supplier'||req.userType=='both').bail().exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
+    body('website','Invalid input').optional().if((value,{req})=>(req.body.userType=='supplier'||req.body.userType=='both')&&value!='None'?true:false).exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}).isURL(),
+    body('position','Invalid input').optional().if((value,{req})=>req.body.userType=='supplier'||req.body.userType=='both'?true:false).exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
     body('phone','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isMobilePhone('any',{strictMode:true}).withMessage('Please provide a valid mobile number'),
     body('officeAddress.street','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),
     body('officeAddress.city','Invalid input').exists({checkFalsy:true,checkNull:true}).isString().trim().isLength({min:2}),

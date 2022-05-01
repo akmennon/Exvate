@@ -36,7 +36,7 @@ module.exports.create = (req,res,next) =>{
             })
     }
     else{
-        errorHandler(status,next)
+        errorHandler(result,next)
     }
 }
 

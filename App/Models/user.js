@@ -47,7 +47,7 @@ const userSchema = new Schema({
     },
     mobile:{
         type:String,
-        unique:true
+        // unique:true
     },
     mobileVerified:{
         value:{
@@ -159,7 +159,7 @@ const userSchema = new Schema({
         position:{
             type:String,
             maxlength:50,
-            minlength:4
+            minlength:2
         },
         phone:{
             type:String,
@@ -832,7 +832,7 @@ userSchema.statics.confirmEmail = async function(token,body,redisClient){
 
         delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         await user.save()
-        return Promise.resolve({status:true,message:'Signup completed successfully',payload:{token:emailToken}})
+        return Promise.resolve({status:true,message:'Signup completed successfully',payload:{token:emailToken,user:user._id}})
     }
     catch(err){
         return Promise.reject(err)
