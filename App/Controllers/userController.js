@@ -79,7 +79,7 @@ module.exports.profile = (req,res,next) =>{
     const user = req.user
 
     if(result.status){
-        user.sendProfile(body,req.path,req.app.locals.redisClient)
+        user.sendProfile(body,req.path,req.app.locals.redisClient,User)
         .then((response)=>{
             res.json(response)
         })
@@ -257,16 +257,22 @@ module.exports.workAll = (req,res) =>{
 /* validates the user who is trying to change password */
 module.exports.forgotCheck = (req,res,next) =>{
     const result = validationErrors(req,next)
-    const data = matchedData(req, { locations: ['header'], includeOptionals: true })
+    const data = matchedData(req, { locations: ['headers'], includeOptionals: true })
 
     if(result.status){
-        User.forgotCheck(data.forgotToken)
-        .then((value)=>{
-            res.json(value)
-        })
-        .catch((err)=>{
-            errorHandler(err,next)
-        })
+        if(!data.forgottoken){
+            const error = new Error("error")
+            errorHandler(error,next)
+        }
+        else{
+            User.forgotCheck(data.forgottoken)
+            .then((value)=>{
+                res.json(value)
+            })
+            .catch((err)=>{
+                errorHandler(err,next)
+            })
+        }
     }
     else{
         errorHandler(result,next)

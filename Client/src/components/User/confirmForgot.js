@@ -24,7 +24,8 @@ class ConfirmForgot extends React.Component{
         //sends the password to the server to update
         if(this.state.password===this.state.confirmPassword){
             axios.post(`/user/confirmForgot/${this.props.match.params.token}`,{
-                password:this.state.password
+                password:this.state.password,
+                confirmPassword:this.state.confirmPassword
             })
             .then((response)=>{
                 if(response.data.hasOwnProperty('errors')){
@@ -54,29 +55,34 @@ class ConfirmForgot extends React.Component{
 
         //checks if the token provided is valid and redirects if its not
         const forgotToken = this.props.match.params.token
-        axios.get('/user/forgotCheck',{
-            headers:{
-                forgotToken
-            },
-            timeout:10000
-        })
-        .then((response)=>{
-            console.log(response)
-            if(response.data.value){
-                this.setState((p)=>{
-                    return {...p,data:response.data.value,verified:true}
-                })
-            }
-            else{
-                this.props.history.replace('/user/login')
-            }
-        })
-        .catch((err)=>{
-            this.setState((p)=>{
-                return {...p,data:false,verified:true}
+        if(forgotToken){
+            axios.get('/user/forgotCheck',{
+                headers:{
+                    forgotToken
+                },
+                timeout:10000
             })
-            console.log(err)
-        })
+            .then((response)=>{
+                console.log(response)
+                if(response.data.value){
+                    this.setState((p)=>{
+                        return {...p,data:response.data.value,verified:true}
+                    })
+                }
+                else{
+                    this.props.history.replace('/user/login')
+                }
+            })
+            .catch((err)=>{
+                this.setState((p)=>{
+                    return {...p,data:false,verified:true}
+                })
+                console.log(err)
+            })
+        }
+        else{
+            this.setState(p=>{return {...p,verified:false}})
+        }
     }
 
     render(){

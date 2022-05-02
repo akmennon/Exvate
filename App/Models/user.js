@@ -82,8 +82,7 @@ const userSchema = new Schema({
             type:String
         },
         expiresAt:{
-            type:Date,
-            default:Date.now
+            type:Date
         }
     },
     address:[{
@@ -531,7 +530,7 @@ userSchema.statics.findByCredentials = async function(email,password,redisClient
             }  
         }
         
-        const result = bcryptjs.compare(password,user.password)
+        const result = await bcryptjs.compare(password,user.password)
 
         if(result){
             return Promise.resolve(user)
@@ -570,7 +569,7 @@ userSchema.statics.findByToken = async function(token,path,userId,req){
     try{
         let user;
 
-        if(!userId||!userId=='null'||!Validator.isMongoId(userId)){
+        if(!userId||userId=='null'||!Validator.isMongoId(userId)){
             return Promise.reject({status:false,message:`Invalid Attempt`,statusCode:403})
         }
         user = await User.findOne({'tokens.token':token,_id:userId}).cache({hashKey:userId,pathValue:'authUser'})
@@ -1033,7 +1032,7 @@ userSchema.statics.forgotCheck = async function(token){
 
     try{
         const user = await User.findOne({'forgotToken.token':token},"_id forgotToken").lean()
-        if(user&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
+        if(user&&user.forgotToken.expiresAt.getTime()>Date.now()){
             return Promise.resolve({value:true})
         }
         else{
@@ -1233,7 +1232,7 @@ userSchema.methods.changeCompanyDetails = async function (body,redisClient){
     }
 }
 
-userSchema.methods.sendProfile = async function (body,redisClient){
+userSchema.methods.sendProfile = async function (body,path,redisClient,User){
     const user = this
 
     try{
@@ -1251,9 +1250,7 @@ userSchema.methods.sendProfile = async function (body,redisClient){
         }
 
         const token = jwt.sign({createdAt:new Date()},keys.jwtSecret)
-        user.profileChangeToken.value = token
-        user.profileChangeToken.createdAt = Date.now()
-        await user.save()
+        await User.updateOne({_id:user._id},{$set:{"profileChangeToken.value":token,"profileChangeToken.createdAt":Date.now()}})
         delCache({hashKey:user._id,pathValue:'authUser'},redisClient)
         return Promise.resolve(response)
     }

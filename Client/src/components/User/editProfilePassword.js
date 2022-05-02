@@ -38,6 +38,7 @@ export default function ProfilePassword (props){
         if(profile&&profile.email&&(new Date(profile.profileChangeToken.createdAt).getTime()+1800000) > Date.now()){
             props.history.push('/user/editProfile')
         }
+        console.log(profile)
     },[props,profile])
 
     if(profile&&profile.email&&(new Date(profile.profileChangeToken.createdAt).getTime()+1800000) > Date.now()){

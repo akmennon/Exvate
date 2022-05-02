@@ -62,7 +62,7 @@ module.exports.confirmChangePassword = [
 ]
 
 module.exports.forgotCheck = [
-    header('forgotToken','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isJWT()
+    header('forgottoken','Invalid Attempt').exists({checkFalsy:true,checkNull:true}).trim().isJWT()
 ]
 
 module.exports.supplierCancel = [
