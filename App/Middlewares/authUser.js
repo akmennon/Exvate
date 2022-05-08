@@ -8,17 +8,17 @@ const authUser = async (req,res,next) =>{
     const userId = req.header('userId')
 
     try{
-        const response = await User.findByToken(token,req.path,userId)
+        const response = await User.findByToken(token,req.path,userId,req,res)
         if(response){
             if(response.status){    //Used to logout if the token is already removed
                 res.json(response)
             }
             else{
-                if(!response.email.confirmed.value){
+                if(!response.user.email.confirmed.value){
                     errorHandler({status:false,message:'Incomplete Signup',statusCode:401,payload:{signup:true}})
                 }
-                req.user=response
-                req.token=token
+                req.user=response.user
+                req.token=response.token
                 return Promise.resolve()
             }
         }

@@ -17,11 +17,9 @@ export const removeUser = () =>{
 }
 
 export const startSetUser = (loginData,redirect,setAuth) =>{    //login action
-    console.log(loginData)
     return ((dispatch)=>{
         axios.post('/user/login',loginData)
             .then((response)=>{
-                localStorage.setItem('x-auth',response.headers['x-auth'])
                 localStorage.setItem('user',response.data.payload._id)
                 console.log(response.data)
                 dispatch(setUser(response.data.payload))

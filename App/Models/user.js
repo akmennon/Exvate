@@ -9,6 +9,7 @@ const keys = require('../Config/keys')
 const client = require('twilio')(keys.twilioSid,keys.twilioAuthToken);
 const messageMobile = keys.messageMobile
 const delCache = require('../Config/delCache').delCache
+const {v4:uuidv4} = require('uuid')
 
 const Schema = mongoose.Schema
 
@@ -424,7 +425,7 @@ userSchema.methods.registerMail = async function(redisClient){
             const createdAt = new Date()
 
             let tokenData = {
-                createdAt:createdAt
+                createdAt:uuidv4()
             }
     
             const token = jwt.sign(tokenData,keys.jwtSecret)
@@ -459,7 +460,7 @@ userSchema.methods.registerMail = async function(redisClient){
                 const createdAt = new Date()
 
                 let tokenData = {
-                    createdAt:createdAt
+                    createdAt:uuidv4()
                 }
         
                 const token = jwt.sign(tokenData,keys.jwtSecret)
@@ -563,7 +564,7 @@ userSchema.statics.findByEmail = function(email,path){
 
 /* Finds the user for whom the login token belongs to */
 
-userSchema.statics.findByToken = async function(token,path,userId,req){
+userSchema.statics.findByToken = async function(token,path,userId,req,res){
     const User = this
 
     try{
@@ -582,8 +583,20 @@ userSchema.statics.findByToken = async function(token,path,userId,req){
             else if(user.perms.user.banned&&user.perms.user.banned.value){
                 return Promise.reject({status:false,message:`Banned`,statusCode:401})
             }
+            else if((user.tokens.find((tokenEle)=>tokenEle.token==token).createdAt.getTime()+900000)<Date.now()&&req.path!='/user/logout'){
+                const tokenData = {
+                    createdAt:uuidv4()
+                }
+                const newToken = jwt.sign(tokenData, keys.jwtSecret,{expiresIn:'1h'})
+                delCache({hashKey:userId,pathValue:'authUser'},req.app.locals.redisClient)
+                user.tokens = user.tokens.filter((tokenEle)=>tokenEle.token!=token)
+                user.tokens.push({token:newToken})
+                await user.save()
+                res.setHeader('x-auth',newToken)
+                return Promise.resolve({user,token:newToken})
+            }
             else{
-                return Promise.resolve(user)
+                return Promise.resolve({user,token})
             }
         }
         else{
@@ -635,7 +648,7 @@ userSchema.methods.generateForgotToken = async function(redisClient){
     try{
         const createdAt = new Date()
 
-        const tokenData = {createdAt}
+        const tokenData = {createdAt:uuidv4()}
 
         if(user.forgotToken&&user.forgotToken.token&&user.forgotToken.expiresAt&&new Date(user.forgotToken.expiresAt).getTime()>Date.now()){
             let mailData = {
@@ -681,7 +694,7 @@ userSchema.methods.generateToken = async function(){
     const user = this
 
     const tokenData = {
-        createdAt:new Date()
+        createdAt:uuidv4()
     }
 
     try{
@@ -818,7 +831,7 @@ userSchema.statics.confirmEmail = async function(token,body,redisClient){
         user.email.confirmed.value = true
 
         const tokenData = {
-            createdAt:new Date()
+            createdAt:uuidv4()
         }
 
         const emailToken = jwt.sign(tokenData,keys.jwtSecret) //PENDING - VULNERABILITY - use CSRPG
