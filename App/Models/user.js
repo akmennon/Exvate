@@ -592,7 +592,9 @@ userSchema.statics.findByToken = async function(token,path,userId,req,res){
                 user.tokens = user.tokens.filter((tokenEle)=>tokenEle.token!=token)
                 user.tokens.push({token:newToken})
                 await user.save()
-                res.setHeader('x-auth',newToken)
+                const tokenArray = newToken.split('.')
+                res.setHeader('x-auth',tokenArray[0]+'.'+tokenArray[1])
+                res.cookie('auth',tokenArray[2],{expires:new Date(Date.now()+900000),httpOnly:true/*,domain:"localhost:3000",secure:true*/})
                 return Promise.resolve({user,token:newToken})
             }
             else{

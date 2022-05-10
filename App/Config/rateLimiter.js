@@ -56,7 +56,7 @@ const rateLimiter = async (req,res,next) =>{
     try{
         const client = req.app.locals.redisClient
         const userIp = req.ip
-        let userToken = req.header('x-auth')
+        let userToken = req.header('x-auth') + '.' + req.cookies['auth']
         let userId = req.header('userId')
         const path = req.path
         let total = await client.multi().hGet(userIp,'total').hGet(userToken,'total').hGet(userToken,path).hGet(userIp,path).hGet(userIp,'RL').hGet(userToken,'RL').exec()

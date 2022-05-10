@@ -54,7 +54,9 @@ module.exports.login = (req,res,next) =>{
                 return user.generateToken()     // generates a token for logging in
             })
             .then(function(token){
-                res.setHeader('x-auth',token) // sends token as a header
+                const jwtArray = token.split('.')
+                res.setHeader('x-auth',jwtArray[0]+'.'+jwtArray[1]) // sends token as a header
+                res.cookie('auth',jwtArray[2],{expires:new Date(Date.now()+900000), httpOnly: true/*,domain:"localhost:3000",secure:true*/})
                 res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email','address'])})
             })
             .catch(function(err){

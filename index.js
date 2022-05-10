@@ -8,17 +8,37 @@ const port = 3015
 const helmet = require('helmet')
 const rateLimiter = require('./App/Config/rateLimiter')
 const cache = require('./App/Config/cache').execCache
+const cookieParser = require('cookie-parser')
+const {xss} = require('express-xss-sanitizer')
+const toobusy = require('toobusy-js')
+const hpp = require('hpp');
 
 /*App.use(helmet())*/
 
-App.use(express.json())
+App.use(hpp());
+
+App.use(express.json({limit:"1kb"}))
 
 App.use(express.urlencoded({
-    extended: false     //Security reasons
+    extended: false,     //Security reasons
+    limit:"1kb",
+    parameterLimit:10
 }))
 
+App.use(xss())
+
+App.use(cookieParser())
+
 /* PENDING - cors management - exposed headers for frontend*/
-App.use(cors({exposedHeaders: ['x-auth','full','total']}))
+App.use(cors({exposedHeaders: ['x-auth','full','total',"set-cookie"],credentials:true,origin:"http://localhost:3000"}))
+
+App.use(function(req, res, next) {
+    if (toobusy()) {
+      res.send(503, "I'm busy right now, sorry.");
+    } else {
+      next();
+    }
+  });
 
 App.use(rateLimiter)
 

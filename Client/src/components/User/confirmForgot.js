@@ -56,7 +56,7 @@ class ConfirmForgot extends React.Component{
         //checks if the token provided is valid and redirects if its not
         const forgotToken = this.props.match.params.token
         if(forgotToken){
-            axios.get('/user/forgotCheck',{
+            axios.post('/user/forgotCheck',{},{
                 headers:{
                     forgotToken
                 },

@@ -62,7 +62,7 @@ function DataTable(props) {
         const ee = event
         switch(ee.target.textContent){
             case 'Complete':
-                axios.get(`/host/orders/${id}/complete`,
+                axios.get(`/supplier/orders/${id}/complete`,
                 {
                     headers:{
                         'x-auth':token,
@@ -77,7 +77,7 @@ function DataTable(props) {
                 })
             break;
             case 'Cancel':
-                axios.get(`/host/orders/${id}/cancel`,
+                axios.post(`/supplier/orders/${id}/cancel`,{},
                 {
                     headers:{
                         'x-auth':token,
@@ -102,8 +102,8 @@ function DataTable(props) {
         { field: 'status', headerName: 'Status', width: 130 },
         { field: 'price', headerName: 'Price', type: 'number', width: 130,
         valueGetter: (params) => {
-            if(params.row.paymentStatus.hostAmount){
-                return params.row.paymentStatus.hostAmount
+            if(params.row.paymentStatus.supplierAmount){
+                return params.row.paymentStatus.supplierAmount
             }
             else{
                 return 0

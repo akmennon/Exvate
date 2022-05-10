@@ -4,7 +4,7 @@ const errorHandler = require('../Resolvers/errorHandler')
 /* To authenticate by token for the user */
 
 const authUser = async (req,res,next) =>{
-    const token = req.header('x-auth')
+    const token = req.header('x-auth')+'.'+req.cookies['auth']
     const userId = req.header('userId')
 
     try{
