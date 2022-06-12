@@ -1,27 +1,21 @@
-import React from 'react'
+import React,{useState} from 'react'
 import Button from '@mui/material/Button'
+import { useNavigate } from 'react-router-dom'
 
 /* Displays the confirmation of the order */
 
-export default class OrderConfirm extends React.Component{
-    constructor(props){
-        super(props)
-        this.state = {
-            call:''
-        }
-        this.handleClick = this.handleClick.bind(this)
+export default function OrderConfirm(){
+    const [call,setCall] = useState('')
+    const navigate = useNavigate()
+
+    const handleClick = () =>{
+        navigate('/')
     }
 
-    handleClick(){
-        this.props.history.push('/')
-    }
-
-    render(){
-        return (
-            <div>
-                <h4>Your order has been confirmed. A representative will get in touch with you shortly.</h4>
-                <Button onClick={this.handleClick}>Continue shopping</Button>
-            </div>
-        )
-    }
+    return (
+        <div>
+            <h4>Your order has been confirmed. A representative will get in touch with you shortly.</h4>
+            <Button onClick={handleClick}>Continue shopping</Button>
+        </div>
+    )
 }

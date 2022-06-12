@@ -5,11 +5,13 @@ import CircularProgress from '@mui/material/CircularProgress'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import axios from '../../../config/axios'
+import { useNavigate } from 'react-router-dom'
 
 export default function EditPassword (props){
     const profile = useSelector((state)=>state.profile)
     const [state,setState] = useState('failed')
     const [passwordDetails,setPasswordDetails] = useState({})
+    const navigate = useNavigate()
 
     const handleChange = (e) =>{
         e.persist()
@@ -34,13 +36,13 @@ export default function EditPassword (props){
             setState('success')
         })
         .catch((err)=>{
-            props.history.replace('/user/editProfilePassword')
+            navigate('/user/editProfilePassword',{replace:true})
             setState('failed')
         })
     }
 
     if(!profile.email){
-        props.history.replace('/user/editProfilePassword')
+        navigate('/user/editProfilePassword',{replace:true})
         return <CircularProgress/>
     }
     else{
@@ -52,12 +54,12 @@ export default function EditPassword (props){
                 <Typography variant='h6'>Password successfully changed</Typography>
                 {
                     (
-                        (props)=>{
-                            setTimeout((props)=>{
-                                props.history.replace('/user/editProfile')
-                            },3000,props)
+                        (navigate)=>{
+                            setTimeout((navigate)=>{
+                                navigate('/user/editProfile',{replace:true})
+                            },3000,navigate)
                         }
-                    )(props)
+                    )(navigate)
                 }
             </div>
         }

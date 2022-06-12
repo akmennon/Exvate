@@ -1,35 +1,33 @@
 import React from 'react'
 import Button from '@mui/material/Button'
-import {connect} from 'react-redux'
+import {connect, useSelector} from 'react-redux'
+import { useNavigate, useParams } from 'react-router-dom'
 
 /* shows the preview of the order from the backend response */
 
-class OrderPreview extends React.Component{
-    constructor(props){
-        super(props)
-        this.handleClick = this.handleClick.bind(this)
+function OrderPreview(props){
+    const navigate = useNavigate()
+    const params = useParams()
+    const saved = useSelector(state=>({order:state.order,user:state.user,work:state.work}))
+
+    const handleClick = () =>{//Orders with the given params
+        navigate(`/orderAddress/${params.id}`)
     }
 
-    handleClick(){//Orders with the given params
-        this.props.history.push(`/orderAddress/${this.props.match.params.id}`)
+    console.log(saved.user)
+    if(saved.order===undefined){
+        navigate(`/work/${params.id}`,{replace:true})
     }
-
-    render(){
-        console.log(this.props.user)
-        if(this.props.order===undefined){
-            this.props.history.replace(`/work/${this.props.match.params.id}`)
-        }
-        else{
-            console.log(this.props.order)
-            return(
-                <div>
-                    {
-                        this.props.work?<h1>{this.props.work.title}</h1>:<span/>
-                    }
-                    <Button onClick={this.handleClick}>Confirm</Button>
-                </div>
-            )
-        }
+    else{
+        console.log(saved.order)
+        return(
+            <div>
+                {
+                    saved.work?<h1>{saved.work.title}</h1>:<span/>
+                }
+                <Button onClick={handleClick}>Confirm</Button>
+            </div>
+        )
     }
 }
 

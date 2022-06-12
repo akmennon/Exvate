@@ -1,31 +1,27 @@
-import React from 'react' 
+import React, { useEffect, useState } from 'react' 
 import axios from "../../config/axios"
-
-import {connect} from 'react-redux'
+import { useNavigate, useParams } from 'react-router-dom'
 
 /* To change the password when forgotten, redirected from email */
 
-class ConfirmForgot extends React.Component{
-    constructor(props){
-        super(props)
-        this.state ={
-            password:'',
-            confirmPassword:'',
-            verified:false,
-            data:true
-        }
-        this.handleClick = this.handleClick.bind(this)
-        this.handleSubmit = this.handleSubmit.bind(this)
-    }
+function ConfirmForgot(props){
+    const [state,setState] = useState({
+        password:'',
+        confirmPassword:'',
+        verified:false,
+        data:true
+    })
+    const params = useParams()
+    const navigate = useNavigate()
 
-    handleSubmit(e){
+    const handleSubmit =(e)=>{
         e.preventDefault()
 
         //sends the password to the server to update
-        if(this.state.password===this.state.confirmPassword){
-            axios.post(`/user/confirmForgot/${this.props.match.params.token}`,{
-                password:this.state.password,
-                confirmPassword:this.state.confirmPassword
+        if(state.password===state.confirmPassword){
+            axios.post(`/user/confirmForgot/${params.token}`,{
+                password:state.password,
+                confirmPassword:state.confirmPassword
             })
             .then((response)=>{
                 if(response.data.hasOwnProperty('errors')){
@@ -33,7 +29,7 @@ class ConfirmForgot extends React.Component{
                 }
                 else{
                     console.log(response.data)
-                    this.props.history.push('/user/login')
+                    navigate('/user/login')
                 }
             })
             .catch((err)=>{
@@ -45,16 +41,15 @@ class ConfirmForgot extends React.Component{
         }
     }
 
-    handleClick(e){
-        this.setState({
-            [e.target.name]:e.target.value
-        })
+    const handleClick =(e)=>{
+        setState(p=>({
+            ...p,[e.target.name]:e.target.value
+        }))
     }
 
-    componentDidMount(){
-
+    useEffect(()=>{
         //checks if the token provided is valid and redirects if its not
-        const forgotToken = this.props.match.params.token
+        const forgotToken = params.token
         if(forgotToken){
             axios.post('/user/forgotCheck',{},{
                 headers:{
@@ -65,63 +60,61 @@ class ConfirmForgot extends React.Component{
             .then((response)=>{
                 console.log(response)
                 if(response.data.value){
-                    this.setState((p)=>{
+                    setState((p)=>{
                         return {...p,data:response.data.value,verified:true}
                     })
                 }
                 else{
-                    this.props.history.replace('/user/login')
+                    navigate('/user/login',{replace:true})
                 }
             })
             .catch((err)=>{
-                this.setState((p)=>{
+                setState((p)=>{
                     return {...p,data:false,verified:true}
                 })
                 console.log(err)
             })
         }
         else{
-            this.setState(p=>{return {...p,verified:false}})
+            setState(p=>{return {...p,verified:false}})
         }
-    }
+    },[])
 
-    render(){
-        if(this.state.verified){
-            if(this.state.data){
-                return(
-                    <div>
-                        <form onSubmit={this.handleSubmit}>
-                        
-                            <label htmlFor='password'>Password</label>
-                            <input type='password' onChange={this.handleClick} id='password' name='password'/>
-        
-                            <label htmlFor='confirmPassword'>Confirm Password</label>
-                            <input type='password' onChange={this.handleClick} id='confirmPassword' name='confirmPassword'/>
-        
-                            <button type='submit'>Submit</button>
-                        </form>
-                    </div>
-                )
-            }
-            else{
-                return(
-                    <div>
-                        <h3>Error processing request. Redirecting.</h3>
-                        {
-                            setTimeout((props)=>{
-                                props.history.replace('/user/login')
-                            },3000,this.props)
-                        }
-                    </div>
-                )
-            }
+    if(state.verified){
+        if(state.data){
+            return(
+                <div>
+                    <form onSubmit={handleSubmit}>
+                    
+                        <label htmlFor='password'>Password</label>
+                        <input type='password' onChange={handleClick} id='password' name='password'/>
+    
+                        <label htmlFor='confirmPassword'>Confirm Password</label>
+                        <input type='password' onChange={handleClick} id='confirmPassword' name='confirmPassword'/>
+    
+                        <button type='submit'>Submit</button>
+                    </form>
+                </div>
+            )
         }
         else{
-            return (
-                <h2>Loading</h2>
+            return(
+                <div>
+                    <h3>Error processing request. Redirecting.</h3>
+                    {
+                        setTimeout((props)=>{
+                            navigate('/user/login',{replace:true})
+                        },3000,props)
+                    }
+                </div>
             )
         }
     }
+    else{
+        return (
+            <h2>Loading</h2>
+        )
+    }
 }
 
-export default connect()(ConfirmForgot)
+export default ConfirmForgot

@@ -17,4 +17,24 @@ function(error){
     return Promise.reject(error)
 })
 
+axios.interceptors.request.use(function(config){
+    if(config.headers){
+        console.log(config)
+        if((config.headers.hasOwnProperty('x-auth')&&(!config.headers['x-auth']||config.headers['x-auth']=="undefined"))||(config.headers.hasOwnProperty('userId')&&(!config.headers['userId']||config.headers['userId']=="undefined"))){
+            localStorage.clear()
+            window.location.assign('/user/login')
+            throw new Error("Invalid credentials")
+        }
+        else{
+            return config
+        }
+    }
+    else{
+        return config
+    }
+},
+function(error){
+    return Promise.reject(error)
+})
+
 export default axios

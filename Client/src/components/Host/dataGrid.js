@@ -3,7 +3,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import axios from '../../config/axios'
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import Button from '@mui/material/Button'
 import {makeStyles} from '@mui/styles'
 
@@ -28,13 +28,14 @@ function DataTable(props) {
     const [data,setData] = useState([])
     const [page,setPage] = useState(1)
     const [total,setTotal] = useState(0)
+    const user = useSelector(state=>state.user)
     const classes = useStyles()
 
     useEffect(()=>{
-        if(props.user._id){
+        if(user._id){
             const token = localStorage.getItem('x-auth')
             const user = localStorage.getItem('user')
-            axios.get(`/supplier/${props.user._id}/workOrders`,{
+            axios.get(`/supplier/${user._id}/workOrders`,{
                 headers:{
                     'x-auth':token,
                     'page':page,
@@ -168,10 +169,4 @@ function DataTable(props) {
     );
 }
 
-const mapStateToProps = (state) =>{
-    return {
-        user:state.user
-    }
-}
-
-export default connect(mapStateToProps)(DataTable)
+export default DataTable

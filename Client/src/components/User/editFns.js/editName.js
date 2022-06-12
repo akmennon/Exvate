@@ -5,11 +5,13 @@ import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import axios from '../../../config/axios'
 import { changeProfileValue } from '../../../action/profileAction'
+import { useNavigate } from 'react-router-dom'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
     const [name,setName] = useState('')
     const dispatch = useDispatch()
+    const navigate = useNavigate()
     console.log(profile)
 
     const handleChange = (ev) =>{
@@ -31,17 +33,17 @@ export default function EditCompanyDetails (props){
         .then((response)=>{
             if(response.data.status){
                 dispatch(changeProfileValue({name:name}))
-                props.history.push('/user/editProfile')
+                navigate('/user/editProfile')
             }
         })
         .catch((err)=>{
-            props.history.replace('/user/editProfilePassword')
+            navigate('/user/editProfilePassword',{replace:true})
             console.log(err)
         })
     }
 
     if(!profile.email){
-        props.history.replace('/user/editProfilePassword')
+        navigate('/user/editProfilePassword',{replace:true})
         return <CircularProgress/>
     }
     else{

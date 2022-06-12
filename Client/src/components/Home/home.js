@@ -1,36 +1,16 @@
 import React from 'react'
-import { connect } from 'react-redux'
-import {Link} from 'react-router-dom'
 import Typography from '@mui/material/Typography'
+import {useSelector} from 'react-redux'
 
-class Home extends React.Component{
-    constructor(props){
-        super(props)
-        this.state={
-            works:[]
-        }
-    }
-
-    render(){
-        return(
-            <div>
-                <Typography variant="h4">
-                    Welcome - {(this.props.user.name)?this.props.user.name:'Guest'}
-                </Typography>
-                {
-                    this.state.works.map((element)=>{
-                    return <Link key={element._id} to={`/work/${element._id}`}>{element.title}</Link>
-                    })
-                }
-            </div>
-        )
-    }
+function Home(props){
+    const user = useSelector(state=>state.user)
+    return(
+        <div>
+            <Typography variant="h4">
+                Welcome - {(user.name)?user.name:'Guest'}
+            </Typography>
+        </div>
+    )
 }
 
-const mapStateToProps = (state) =>{
-    return {
-        user:state.user
-    }
-}
-
-export default connect(mapStateToProps)(Home)
+export default Home

@@ -1,102 +1,99 @@
-import React from 'react'
+import React,{useState} from 'react'
 import axios from '../../config/axios'
 import errMsg from '../../config/errMsg'
 import CircularProgress from '@mui/material/CircularProgress'
+import { useNavigate } from 'react-router-dom'
 
 //Last - Adding loading and error to pages
 
-class Register extends React.Component{
-    constructor(props){
-        super(props)
-        this.state={
-            name:'',
-            password:'',
-            email:'',
-            message:'',
-            confirmPassword:'',
-            data:{},
-            status:'none',
-            loading:false
-        }
-    }
+function Register(){
+    const [state,setState] = useState({
+        name:'',
+        password:'',
+        email:'',
+        message:'',
+        confirmPassword:'',
+        data:{},
+        status:'none',
+        loading:false
+    })
+    const navigate = useNavigate()
 
     //PENDING - Validation required before submitting
 
-    handleSubmit = (e) =>{
+    const handleSubmit = (e) =>{
         e.preventDefault()
         const registerData = {
-            name:this.state.name,
-            password:this.state.password,
+            name:state.name,
+            password:state.password,
             email:{
-                email:this.state.email
+                email:state.email
             },
-            confirmPassword:this.state.confirmPassword
+            confirmPassword:state.confirmPassword
         }
-        this.setState({loading:true})
+        setState(p=>({...p,loading:true}))
         setTimeout(()=>{
-            this.setState({loading:false})
+            setState(p=>({...p,loading:false}))
         },8000)
 
         axios.post('/user/signup',registerData)
             .then((res)=>{
-                this.setState({data:res.data,status:true,loading:false})
+                setState(p=>({...p,data:res.data,status:true,loading:false}))
             })
             .catch((err)=>{
-                this.setState({name:'',password:'',email:'',confirmPassword:'',message:errMsg(err,'Error Registering'),status:false,loading:false})
+                setState(p=>({...p,name:'',password:'',email:'',confirmPassword:'',message:errMsg(err,'Error Registering'),status:false,loading:false}))
             })
     }
 
-    handleClick = (e) =>{
+    const handleClick = (e) =>{
         if(e.target.name==='resendEmail'){  //sends the registration email again
-            this.props.history.push('/user/resendEmail')
+            navigate('/user/resendEmail')
         }
         else{
-            this.setState({
-                [e.target.name]:e.target.value
-            })
+            setState(p=>({
+                ...p,[e.target.name]:e.target.value
+            }))
         }
     }
 
-    render(){
-        if(this.state.status===true){
-            return(
-                <div>
-                    An email has been send to your account. please check your email
-                </div>
-            )
-        }
-        else{
-            return(
-                <div>
-                    <form onSubmit={this.handleSubmit}>
-    
-                        <div style={{display:'flex',flexDirection:'column',width:200,margin:20,rowGap:15}}>
+    if(state.status===true){
+        return(
+            <div>
+                An email has been send to your account. please check your email
+            </div>
+        )
+    }
+    else{
+        return(
+            <div>
+                <form onSubmit={handleSubmit}>
 
-                        <h1>Register</h1>
-    
-                        <label htmlFor='name'>Name </label>
-                        <input type='text' id='name' name='name' placeholder='Name' onChange={this.handleClick} value={this.state.name}/>
+                    <div style={{display:'flex',flexDirection:'column',width:200,margin:20,rowGap:15}}>
 
-                        <label htmlFor='email'>Email </label>
-                        <input type='text' id='email' name='email' placeholder='Email' onChange={this.handleClick} value={this.state.email}/>
+                    <h1>Register</h1>
 
-                        <label htmlFor='password'>Password </label>
-                        <input type='password' id='password' name='password' placeholder='Password' onChange={this.handleClick} value={this.state.password}/>
+                    <label htmlFor='name'>Name </label>
+                    <input type='text' id='name' name='name' placeholder='Name' onChange={handleClick} value={state.name}/>
 
-                        <label htmlFor='confirmPassword'>Confirm Password </label>
-                        <input type='password' id='confirmPassword' name='confirmPassword' placeholder='Confirm Password' onChange={this.handleClick} value={this.state.confirmPassword}/>
+                    <label htmlFor='email'>Email </label>
+                    <input type='text' id='email' name='email' placeholder='Email' onChange={handleClick} value={state.email}/>
 
-                        <button type='submit' style={{display:'flex',flexDirection:'row'}}>Register {this.state.loading?<CircularProgress/>:<span/>}</button>
+                    <label htmlFor='password'>Password </label>
+                    <input type='password' id='password' name='password' placeholder='Password' onChange={handleClick} value={state.password}/>
 
-                        </div>
+                    <label htmlFor='confirmPassword'>Confirm Password </label>
+                    <input type='password' id='confirmPassword' name='confirmPassword' placeholder='Confirm Password' onChange={handleClick} value={state.confirmPassword}/>
 
-                    </form>
-                    {
-                        this.state.status===false?<p>{this.state.message}</p>:<span/>
-                    }
-                </div>
-            )
-        }
+                    <button type='submit' style={{display:'flex',flexDirection:'row'}}>Register {state.loading?<CircularProgress/>:<span/>}</button>
+
+                    </div>
+
+                </form>
+                {
+                    state.status===false?<p>{state.message}</p>:<span/>
+                }
+            </div>
+        )
     }
 }
 

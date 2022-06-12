@@ -4,6 +4,7 @@ import axios from '../../config/axios'
 import Button from '@mui/material/Button'
 import makeStyles from '@mui/styles/makeStyles'
 import CircularProgress from '@mui/material/CircularProgress'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const useStyles = makeStyles({
     list:{
@@ -11,7 +12,7 @@ const useStyles = makeStyles({
     }
 })
 
-const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with the given params
+const handleClick = (order,work,props,selectedAddress,userId,navigate,params) => {//Orders with the given params
     const token = localStorage.getItem('x-auth')
     const user = localStorage.getItem('user')
     let data = {
@@ -20,7 +21,7 @@ const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with 
     }
 
     console.log(data)
-    axios.post(`/order/${props.match.params.id}`,data,
+    axios.post(`/order/${params.id}`,data,
     {
         headers:{
             'x-auth':token,
@@ -29,7 +30,7 @@ const handleClick = (order,work,props,selectedAddress,userId) => {//Orders with 
     })
     .then((response)=>{
         console.log(response.data)
-        props.history.push('/orderConfirm')
+        navigate('/orderConfirm')
     })
     .catch((err)=>{
         console.log(err)
@@ -45,6 +46,8 @@ export default function OrderAddress (props){
     const user = useSelector((state)=>state.user)
     const userId = useSelector((state)=>state.user._id)
     const classes = useStyles()
+    const navigate = useNavigate()
+    const params = useParams()
     
     if(user.address&&user.address.length>0){
         return (
@@ -69,13 +72,13 @@ export default function OrderAddress (props){
                     error?<p>Please select a shipping address</p>:<p/>
                 }
                 <div style={{display:'flex',flexDirection:'row'}}>
-                    <Button variant='contained' color='primary' onClick={()=>{props.history.push('/user/addAddress')}}>Add address</Button>
+                    <Button variant='contained' color='primary' onClick={()=>{navigate('/user/addAddress')}}>Add address</Button>
                     <Button variant='contained' color='primary' onClick={()=>{
                         if(!selectedAddress){
                             setError(true)
                         }
                         else{
-                            handleClick(order,work,props,selectedAddress,userId)
+                            handleClick(order,work,props,selectedAddress,userId,navigate,params)
                         }
                     }}>Confirm</Button>
                 </div>
@@ -83,7 +86,7 @@ export default function OrderAddress (props){
         )
     }
     else{
-        props.history.replace('/user/addAddress')
+        navigate('/user/addAddress',{replace:true})
         return(
             <div>
                 <CircularProgress />

@@ -4,6 +4,7 @@ import {setFinishedOrder} from '../../action/orderAction'
 import CircularProgress from '@mui/material/CircularProgress';
 import Pagination from '@mui/material/Pagination';
 import { useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 /* display all the orders of a user */
 
@@ -13,6 +14,7 @@ function Orders (props) {
     const [total,setTotal] = useState(1)
     const [pageCount,setPageCount] = useState(1)
     const [status,setStatus] = useState('loading')
+    const navigate = useNavigate()
     const dispatch = useDispatch()
 
     useEffect(()=>{
@@ -20,7 +22,7 @@ function Orders (props) {
         const token = localStorage.getItem('x-auth')
         const user = localStorage.getItem('user')
         if(token===undefined||token==='undefined'){
-            props.history.push('/user/login')
+            navigate('/user/login')
         }
         axios.post('/user/orders',{page:pageCount},
         {
@@ -49,7 +51,7 @@ function Orders (props) {
 
     const handleClick = (orderIndex) =>{
         dispatch(setFinishedOrder(orders[orderIndex]))
-        props.history.push(`/user/orderPage/${orders[orderIndex]._id}`)
+        navigate(`/user/orderPage/${orders[orderIndex]._id}`)
     }
 
     if(status==='none'){

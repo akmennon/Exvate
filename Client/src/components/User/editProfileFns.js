@@ -5,9 +5,12 @@ import Mobile from './editFns.js/editMobile'
 import Password from './editFns.js/editPassword'
 import CompanyDetails from './editFns.js/editCompanyDetails'
 import CircularProgress from "@mui/material/CircularProgress";
+import { useNavigate } from "react-router-dom";
 
 
 export default function EditFunction (props){
+    const navigate = useNavigate()
+
     switch(props.match.params.type){
         case 'name':
             return (
@@ -40,7 +43,7 @@ export default function EditFunction (props){
                 </div>
             )
         default:
-            props.history.replace('/')
+            navigate('/',{replace:true})
             return <CircularProgress/>
     }
 }

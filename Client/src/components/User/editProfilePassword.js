@@ -5,12 +5,14 @@ import TextField from '@mui/material/TextField'
 import { useDispatch, useSelector } from 'react-redux'
 import axios from '../../config/axios'
 import { setProfile } from '../../action/profileAction'
+import { useNavigate } from 'react-router-dom'
 
 export default function ProfilePassword (props){
     const profile = useSelector((state)=>state.profile)
     const dispatch = useDispatch()
     const [password,setPassword] = useState('')
     const [loading,setLoading] = useState(false)
+    const navigate = useNavigate()
 
     const handleSubmit = () =>{
         setLoading(true)
@@ -36,7 +38,7 @@ export default function ProfilePassword (props){
 
     useEffect(()=>{
         if(profile&&profile.email&&(new Date(profile.profileChangeToken.createdAt).getTime()+1800000) > Date.now()){
-            props.history.push('/user/editProfile')
+            navigate('/user/editProfile')
         }
         console.log(profile)
     },[props,profile])

@@ -19,6 +19,7 @@ import Fade from '@mui/material/Fade';
 import Typography from '@mui/material/Typography';
 import {useDispatch} from 'react-redux'
 import {startTokenSetUser} from '../../action/userAction'
+import { useNavigate } from 'react-router-dom'
 
 /* Component that confirms the email of the user */
 
@@ -31,6 +32,7 @@ function ConfirmSign (props) {
     const [resendCountdown,setResendCountdown] = useState(60)
     const [intervalId,setIntervalId] = useState('')
     const dispatch = useDispatch()
+    const navigate = useNavigate()
 
     useEffect(()=>{
         console.log(intervalId)
@@ -79,7 +81,7 @@ function ConfirmSign (props) {
                         localStorage.setItem('user',response.data.payload.user)
                     }
                     setOpen(false)
-                    dispatch(startTokenSetUser(response.data.payload.token,()=>{props.history.replace('/')}))
+                    dispatch(startTokenSetUser(response.data.payload.token,()=>{navigate('/',{replace:true})}))
                 }
                 else{
                     setError(true)

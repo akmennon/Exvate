@@ -6,6 +6,7 @@ import Button from '@mui/material/Button'
 import axios from '../../../config/axios'
 import pick from 'lodash/pick'
 import { changeProfileValue } from '../../../action/profileAction'
+import { useNavigate } from 'react-router-dom'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
@@ -23,6 +24,7 @@ export default function EditCompanyDetails (props){
         }
     })
     const dispatch = useDispatch()
+    const navigate = useNavigate()
 
     useEffect(()=>{
 
@@ -64,7 +66,7 @@ export default function EditCompanyDetails (props){
         })
         .catch((err)=>{
             setStatus('error')
-            props.history.replace('/user/editProfilePassword')
+            navigate('/user/editProfilePassword',{replace:true})
             console.log(err.response)
         })
     }
@@ -72,7 +74,7 @@ export default function EditCompanyDetails (props){
     if(!profile||!profile.companyDetails){
         setTimeout(()=>{
             if(!profile||!profile.companyDetails){
-                props.history.replace('/user/editProfilePassword')
+                navigate('/user/editProfilePassword',{replace:true})
             }
         },5000)
         return <CircularProgress/>
@@ -80,7 +82,7 @@ export default function EditCompanyDetails (props){
     else{
         if(status==='success'){
             setTimeout(()=>{
-                props.history.replace('/user/editProfile')
+                navigate('/user/editProfile',{replace:true})
             },3000)
             return (
                 <p>Successfully changed company details. You'll be redirected</p>

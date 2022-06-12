@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import TierSlider from './tierSlider'
 import RangeSlider from './rangeSlider'
-import {connect} from 'react-redux'
+import {connect, useDispatch, useSelector} from 'react-redux'
 import {resultInitial} from './workFns'
 import {startsetOrder} from '../../action/orderAction'
 import calcResult from '../resolvers/calcResult'
+import { useNavigate } from 'react-router-dom'
 
 /* 
 
@@ -18,27 +19,28 @@ import calcResult from '../resolvers/calcResult'
 
 /* Component which decodes the options to creates components ( sliders, dropdowns etc ) */
 
-class WorkComponents extends React.Component{
-    constructor(props){
-        super(props)
-        this.state={
-            order:{},
-            totalPrice:'',
-            status:true,
-            errMessage:'',
-            time:''
-        }
-    }
+function WorkComponents (props) {
+
+    const [state,setState] = useState({
+        order:{},
+        totalPrice:'',
+        status:true,
+        errMessage:'',
+        time:''
+    })
+    const navigate = useNavigate()
+    const user = useSelector(state=>state.user)
+    const dispatch = useDispatch()
 
     /* Creates the entire result or order makes it to be sent to the server */
 
-    handleClick = (e) =>{  
+    const handleClick = (e) =>{  
 
         /* The created result is calculated for the price from the work result */
         if(e.target.name==='price'){
-            console.log(this.state.order)
+            console.log(state.order)
 
-            const result = Object.assign({},this.props.work.result)
+            const result = Object.assign({},props.work.result)
             
             if(result){
                 
@@ -46,8 +48,8 @@ class WorkComponents extends React.Component{
 
                 let output
 
-                result.values = this.state.order.result.values
-                result.time.values = this.state.order.result.time.values
+                result.values = state.order.result.values
+                result.time.values = state.order.result.time.values
         
                 if(resultValue&&resultValue.price){
                     output = calcResult(result,output)
@@ -61,7 +63,7 @@ class WorkComponents extends React.Component{
                 }
                 /* Calculates the total price from the modified result object and saves it to the output argument */
 
-                this.setState({totalPrice:resultValue.price,time:resultValue.time})
+                setState(p=>({...p,totalPrice:resultValue.price,time:resultValue.time}))
 
             }
             else{
@@ -70,28 +72,28 @@ class WorkComponents extends React.Component{
         }
 
         /* created order is sent for ordering  */
-        else if((e.target.name==='order'||e.target.name==='sample')&&this.props.user._id){
+        else if((e.target.name==='order'||e.target.name==='sample')&&user._id){
 
-            const order = e.target.name==='order'? this.state.order: {orderType:'sample',result:this.state.order.result}
+            const order = e.target.name==='order'? state.order: {orderType:'sample',result:state.order.result}
 
             const redirect = () =>{
-                this.props.parent.history.push(`/orderPreview/${this.props.work._id}`)
+                navigate(`/orderPreview/${props.work._id}`)
             }
 
-            this.props.dispatch(startsetOrder(order,redirect))
-            console.log(this.props.order)
+            dispatch(startsetOrder(order,redirect))
+            console.log(order)
         }
 
         /* redirect to login if no userId present in redux */
         else{
-            this.props.parent.history.push('/user/login')
+            navigate('/user/login')
         }
     }
 
     /* function which obtains the values from the components and creates an ordered result */
-    addValue = async (values,params) =>{
-        if(this.state.order===undefined){
-            this.setState((prevState)=>{
+    const addValue = async (values,params) =>{
+        if(state.order===undefined){
+            setState((prevState)=>{
                 prevState.order={result:{}}
                 return {
                     ...prevState
@@ -101,7 +103,7 @@ class WorkComponents extends React.Component{
         /* ran for each component initially and on changes */
 
         /* Initiated order and result are saved to state respect. */
-        this.setState((previousState)=>{
+        setState((previousState)=>{
             let prevState = previousState.order
             if(!prevState.result||!prevState.result.values){
 
@@ -128,17 +130,17 @@ class WorkComponents extends React.Component{
 
     /* Component which creates sliders etc from the passed params */
 
-    makeElements = (params,Paramindex,workId) =>{ 
+    const makeElements = (params,Paramindex,workId) =>{ 
         switch(params.optionType){
             case 'slider':
                 if(params.tierType===true){ //To check the type of sliders
                     return (
-                        <TierSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={this.addValue} key={params._id} />
+                        <TierSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={addValue} key={params._id} />
                     )
                 }
                 else{
                     return (
-                        <RangeSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={this.addValue} key={params._id} />
+                        <RangeSlider paramIndex={Paramindex} params={params} workId={workId} handleValues={addValue} key={params._id} />
                     )
                 }
             case 'checkbox':
@@ -154,35 +156,26 @@ class WorkComponents extends React.Component{
         }
     }
 
-    render(){
-        return(
-            <div>
-                <div >
-                    <h1>{this.props.work.workTitle}</h1>
-                    {   
-                        //Loop to render components such as sliders from each params
-                        this.props.work.options.params.map((param,paramIndex)=>{
-                            return this.makeElements(param,paramIndex,this.props.work._id)
-                        })
-                    }
-                </div>
-                <p>{this.state.totalPrice?`Total Price - ${this.state.totalPrice}`:<span/>}</p>
-                <p>{this.state.status?`${this.state.errMessage}`:<span/>}</p>
-                {
-                    this.props.work.result.sampleAvailable?<button onClick={this.handleClick} name='sample'>Request Sample</button>:<span/>
+    return(
+        <div>
+            <div >
+                <h1>{props.work.workTitle}</h1>
+                {   
+                    //Loop to render components such as sliders from each params
+                    props.work.options.params.map((param,paramIndex)=>{
+                        return makeElements(param,paramIndex,props.work._id)
+                    })
                 }
-                <button onClick={this.handleClick} name='price'>Check Price</button>
-                <button onClick={this.handleClick} name='order'>Order</button>
             </div>
-        )
-    }
+            <p>{state.totalPrice?`Total Price - ${state.totalPrice}`:<span/>}</p>
+            <p>{state.status?`${state.errMessage}`:<span/>}</p>
+            {
+                props.work.result.sampleAvailable?<button onClick={handleClick} name='sample'>Request Sample</button>:<span/>
+            }
+            <button onClick={handleClick} name='price'>Check Price</button>
+            <button onClick={handleClick} name='order'>Order</button>
+        </div>
+    )
 }
 
-const mapStateToProps = (state) =>{
-    return {
-        user:state.user,
-        order:state.order
-    }
-}
-
-export default connect(mapStateToProps)(WorkComponents)
+export default WorkComponents

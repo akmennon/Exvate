@@ -34,7 +34,7 @@ App.use(cors({exposedHeaders: ['x-auth','full','total',"set-cookie"],credentials
 
 App.use(function(req, res, next) {
     if (toobusy()) {
-      res.send(503, "I'm busy right now, sorry.");
+      res.status(503).send("The server is busy, please try again afer a while.");
     } else {
       next();
     }

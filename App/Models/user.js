@@ -583,7 +583,7 @@ userSchema.statics.findByToken = async function(token,path,userId,req,res){
             else if(user.perms.user.banned&&user.perms.user.banned.value){
                 return Promise.reject({status:false,message:`Banned`,statusCode:401})
             }
-            else if((user.tokens.find((tokenEle)=>tokenEle.token==token).createdAt.getTime()+900000)<Date.now()&&req.path!='/user/logout'){
+            else if((user.tokens.find((tokenEle)=>tokenEle.token==token).createdAt.getTime()+3600000)<Date.now()&&req.path!='/user/logout'){
                 const tokenData = {
                     createdAt:uuidv4()
                 }
@@ -594,7 +594,7 @@ userSchema.statics.findByToken = async function(token,path,userId,req,res){
                 await user.save()
                 const tokenArray = newToken.split('.')
                 res.setHeader('x-auth',tokenArray[0]+'.'+tokenArray[1])
-                res.cookie('auth',tokenArray[2],{expires:new Date(Date.now()+900000),httpOnly:true/*,domain:"localhost:3000",secure:true*/})
+                res.cookie('auth',tokenArray[2],{expires:new Date(Date.now()+864000000),httpOnly:true/*,domain:"localhost:3000",secure:true*/})
                 return Promise.resolve({user,token:newToken})
             }
             else{

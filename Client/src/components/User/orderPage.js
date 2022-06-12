@@ -3,7 +3,6 @@ import { useSelector } from 'react-redux'
 
 export default function OrderPage (props){
     let order = useSelector((state)=>state.order.finishedOrder)
-    console.log(order)
 
     return (
         <div>

@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography'
 import Backdrop from '@mui/material/Backdrop';
 import PhoneInput,{isPossiblePhoneNumber} from 'react-phone-number-input'
 import { changeProfileValue } from '../../../action/profileAction'
+import { useNavigate } from 'react-router-dom'
 
 export default function EditCompanyDetails (props){
     const profile = useSelector((state)=>state.profile)
@@ -21,6 +22,7 @@ export default function EditCompanyDetails (props){
     const [intervalId,setIntervalId] = useState('')
     const [loading,setLoading] = useState(false)
     const dispatch = useDispatch()
+    const navigate = useNavigate()
     
     useEffect(()=>{
         if(resendCountdown===0&&intervalId){
@@ -98,7 +100,7 @@ export default function EditCompanyDetails (props){
                     setLoading(true)
                     dispatch(changeProfileValue({mobile:mobile}))
                     setTimeout(()=>{
-                        props.history.push('/user/editProfile')
+                        navigate('/user/editProfile')
                     },3000)
                 }
             })
@@ -113,7 +115,7 @@ export default function EditCompanyDetails (props){
 
     if(!profile.email){
         setTimeout(()=>{
-            props.history.replace('/user/editProfilePassword')
+            navigate('/user/editProfilePassword',{replace:true})
         },2000)
         return <CircularProgress/>
     }

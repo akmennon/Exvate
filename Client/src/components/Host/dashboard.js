@@ -20,6 +20,7 @@ import MailIcon from '@mui/icons-material/Mail';
 import {connect} from 'react-redux'
 import DataTable from './dataGrid'
 import Button from '@mui/material/Button';
+import { useNavigate } from 'react-router-dom';
 
 const drawerWidth = 240;
 
@@ -94,6 +95,7 @@ function MiniDrawer(props) {
   const classes = useStyles();
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate()
 
   const handleDrawerOpen = () => {
     setOpen(true);
@@ -124,7 +126,7 @@ function MiniDrawer(props) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" onClick={()=>{props.history.push('/')}} className={classes.title}>
+          <Typography variant="h6" onClick={()=>{navigate('/')}} className={classes.title}>
             Exvate
           </Typography>
         </Toolbar>
@@ -165,10 +167,4 @@ function MiniDrawer(props) {
   );
 }
 
-const mapStateToProps = (state) =>{
-    return {
-        user:state.user
-    }
-}
-
-export default connect(mapStateToProps)(MiniDrawer)
+export default MiniDrawer

@@ -8,6 +8,7 @@ import Fade from '@mui/material/Fade';
 import axios from '../../config/axios'
 import { removeAddress } from '../../action/userAction';
 import CircularProgress from '@mui/material/CircularProgress';
+import { useNavigate } from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
   modal: {
@@ -35,6 +36,7 @@ const Addresses = (props) =>{
     const classes = useStyles()
     const [open, setOpen] = React.useState(false);
     const [selectedAddress,setSelectedAddress] = useState('')
+    const navigate = useNavigate()
 
   const handleOpen = () => {
     setOpen(true);
@@ -76,7 +78,7 @@ const Addresses = (props) =>{
             <div>
                 <div style={{display:'flex',flexDirection:'row',alignItems:'center',columnGap:15}}>
                     <h1>All Addresses</h1>
-                    <Button style={{height:35}} variant='contained' color='primary' onClick={()=>{props.history.push('/user/addAddress')}}> Add address</Button>
+                    <Button style={{height:35}} variant='contained' color='primary' onClick={()=>{navigate('/user/addAddress')}}> Add address</Button>
                 </div>
                 <Modal
                     aria-labelledby="transition-modal-title"

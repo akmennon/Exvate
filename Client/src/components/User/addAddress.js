@@ -3,6 +3,7 @@ import Textfield from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import { useDispatch, useSelector } from 'react-redux'
 import {startAddAddress} from '../../action/userAction'
+import { useNavigate } from 'react-router-dom'
 
 const handleChange = (ev,setInputState) =>{
     setInputState((p)=>{
@@ -13,12 +14,12 @@ const handleChange = (ev,setInputState) =>{
     })
 }
 
-const handleClick = (address,props,dispatch,order) =>{
+const handleClick = (address,props,dispatch,order,navigate) =>{
     const redirect = order&&order.result? () =>{
-        props.history.goBack()
+        navigate(-1)
     }:
     () =>{
-        props.history.replace(`/user/address`)
+        navigate(`/user/address`,{replace:true})
     }
     dispatch(startAddAddress(address,redirect))
 }
@@ -35,6 +36,7 @@ export default function AddAddress (props) {
     })
     const dispatch = useDispatch()
     const order = useSelector((state)=>state.order.newOrder)
+    const navigate = useNavigate()
 
     return(
         <div>
@@ -47,7 +49,7 @@ export default function AddAddress (props) {
                 <Textfield variant='outlined' label='State' name='state' value={inputState.state} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Textfield variant='outlined' label='Country' name='country' value={inputState.country} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
                 <Textfield variant='outlined' label='Pin' name='pin' value={inputState.pin} onChange={(e)=>{e.persist();handleChange(e,setInputState)}}/>
-                <Button style={{width:100}} color='primary' variant="contained" onClick={()=>{handleClick(inputState,props,dispatch,order)}}>Confirm</Button>
+                <Button style={{width:100}} color='primary' variant="contained" onClick={()=>{handleClick(inputState,props,dispatch,order,navigate)}}>Confirm</Button>
             </div>
         </div>
     )

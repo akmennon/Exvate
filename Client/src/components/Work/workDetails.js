@@ -4,12 +4,14 @@ import axios from '../../config/axios'
 import {setWork} from '../../action/workAction'
 import {useDispatch} from 'react-redux'
 import LoadingError from '../../config/loadingError'
+import { useLocation, useParams } from 'react-router-dom'
 
 /* The work parent page which contains the work components */
 
 function Work (props){ 
     const [workData,setWorkData] = useState([])
     const [loading,setLoading] = useState(true)
+    const params = useParams()
 
     const dispatch = useDispatch()
 
@@ -18,7 +20,7 @@ function Work (props){
     useEffect(()=>{
         setWorkData([])
         setLoading(true)
-        axios.get(`/works/${props.match.params.id}`)
+        axios.get(`/works/${params.id}`)
             .then((response)=>{
                 dispatch(setWork(response.data))
                 setWorkData(response.data)
@@ -28,7 +30,7 @@ function Work (props){
                 setLoading(false)
                 console.log(err)
             })
-    },[props.match.params.id])
+    },[params.id])
 
     if(!workData||workData.length===0){   //loading 
         return <LoadingError loading={loading} setLoading={setLoading} />

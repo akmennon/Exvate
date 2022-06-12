@@ -20,6 +20,7 @@ import Fade from '@mui/material/Fade';
 import {removeProfile} from '../../action/profileAction'
 import CircularProgress from '@mui/material/CircularProgress';
 import axios from '../axios'
+import { useNavigate } from 'react-router-dom';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -106,16 +107,16 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-const handleClick = (e,props) =>{
+const handleClick = (e,props,navigate) =>{
   switch(e){
     case 'logButton':
       if(!props.user._id){
-        props.route.history.push('/user/login')
+        navigate('/user/login')
       }
       else{
         const token = localStorage.getItem('x-auth')
         const redirect = () =>{
-          props.route.history.push('/')
+          navigate('/')
         }
         props.dispatch(removeProfile())
         props.dispatch(startRemoveUser(token,redirect))
@@ -123,7 +124,7 @@ const handleClick = (e,props) =>{
     break;
     case 'supplier':
       if(props.user.supplier){
-        props.route.history.push('/supplier/dashboard')
+        navigate('/supplier/dashboard')
       }
       else{
         console.log('not a supplier')
@@ -131,20 +132,20 @@ const handleClick = (e,props) =>{
     break;
     case 'cart':
       if(!props.user._id){
-        props.route.history.push('/user/login')
+        navigate('/user/login')
       }
       else{
-        props.route.history.push('/user/cart')
+        navigate('/user/cart')
       }
     break;
     case 'home':
-      props.route.history.push('/')
+      navigate('/')
       break;
     case 'address':
-      props.route.history.push('/user/address')
+      navigate('/user/address')
       break;
     case 'editProfile':
-      props.route.history.push('/user/editProfilePassword')
+      navigate('/user/editProfilePassword')
       break;
     default:
       console.log('fix navbar switch')
@@ -174,6 +175,7 @@ function ButtonAppBar(props) {
   const [loading,setLoading] = useState(false)
   const [options,setOptions] = useState([])
   const [timeouts,setTimeouts] = useState([])
+  const navigate = useNavigate()
 
   const open = Boolean(anchorEl);
 
@@ -222,7 +224,7 @@ function ButtonAppBar(props) {
           <IconButton edge="start" className={classes.menuButton} color="inherit" aria-label="menu">
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" onClick={()=>{setSearchValue('');handleClick('home',props)}} className={classes.title}>
+          <Typography variant="h6" onClick={()=>{setSearchValue('');handleClick('home',props,navigate)}} className={classes.title}>
             Exvate
           </Typography>
           <div className={classes.searchNButtons}>
@@ -259,7 +261,7 @@ function ButtonAppBar(props) {
                   onChange={(ev,val)=>{
                     setSearchValue('')
                     if(val&&val._id){
-                      props.route.history.push(`/work/${val._id}`)
+                      navigate(`/work/${val._id}`)
                     }
                   }}
                   freeSolo={true}
@@ -267,7 +269,7 @@ function ButtonAppBar(props) {
                       if(ev.key==='Enter'&&searchValue){
                         setSearchValue('')
                         setOpenSearch(false)
-                        props.route.history.push(`/search/${searchValue}`)
+                        navigate(`/search/${searchValue}`)
                       }
                     }
                   }
@@ -289,16 +291,16 @@ function ButtonAppBar(props) {
               </div>
             </div>
 
-            <IconButton onClick={()=>{handleClick("cart",props)}} color="inherit" aria-label="cart">
+            <IconButton onClick={()=>{handleClick("cart",props,navigate)}} color="inherit" aria-label="cart">
               <ShoppingCartIcon />
             </IconButton>
             {
               props.user.supplier?
-              <Button onClick={()=>{handleClick("supplier",props)}} className={classes.button} color="inherit" >Supplier</Button>:
+              <Button onClick={()=>{handleClick("supplier",props,navigate)}} className={classes.button} color="inherit" >Supplier</Button>:
               <div/>
             }
             {
-              !props.user._id?<Button onClick={()=>{handleClick("logButton",props)}} className={classes.button} color="inherit" >Login</Button>:
+              !props.user._id?<Button onClick={()=>{handleClick("logButton",props,navigate)}} className={classes.button} color="inherit" >Login</Button>:
               <div>
                 <Avatar onClick={handleClickMenu}>{props.user.name[0]}</Avatar>
                 <Menu
@@ -310,9 +312,9 @@ function ButtonAppBar(props) {
                   TransitionComponent={Fade}
                   className={classes.menu}
                 >
-                  <MenuItem onClick={()=>{handleClose();handleClick('address',props)}}>Addresses</MenuItem>
-                  <MenuItem onClick={()=>{handleClose();handleClick('editProfile',props)}}>Edit profile</MenuItem>
-                  <MenuItem onClick={()=>{handleClose();handleClick('logButton',props)}}>Logout</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('address',props,navigate)}}>Addresses</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('editProfile',props,navigate)}}>Edit profile</MenuItem>
+                  <MenuItem onClick={()=>{handleClose();handleClick('logButton',props,navigate)}}>Logout</MenuItem>
                 </Menu>
               </div>
             }
