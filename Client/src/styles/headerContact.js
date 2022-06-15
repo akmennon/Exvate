@@ -108,6 +108,40 @@ const headerContactStyles = (theme) =>{
                 height:63.5075
             }
         },
+        menu:{
+            marginTop:theme.spacing(5)
+        },
+        button:{
+          display:'block'
+        },
+        searchFull:{
+          flexGrow:0.8,
+          padding:theme.spacing(0,2)
+        },
+        searchIcon: {
+            padding: theme.spacing(0, 2),
+            height: '100%',
+            position: 'absolute',
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            color:'black'
+        },
+        search: {
+            position: 'relative',
+            borderRadius: theme.shape.borderRadius,
+            backgroundColor: alpha(theme.palette.common.white, 0.9),
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.common.white, 1),
+            },
+            
+            display:'none',
+            [theme.breakpoints.up('sm')]: {
+              width: '100%',
+              display:'block'
+            },
+        },
     }
 
     return styles

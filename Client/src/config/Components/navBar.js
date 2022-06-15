@@ -230,9 +230,6 @@ function ButtonAppBar(props) {
           <div className={classes.searchNButtons}>
             <div className={classes.searchFull}>
               <div className={classes.search}>
-                <div className={classes.searchIcon}>
-                  <SearchIcon />
-                </div>
                 <Autocomplete
                   open={openSearch}
                   onOpen={() => {
@@ -276,6 +273,7 @@ function ButtonAppBar(props) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
+                      label={<SearchIcon />}
                       InputProps={{
                         ...params.InputProps,
                         endAdornment: (

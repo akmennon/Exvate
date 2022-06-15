@@ -57,9 +57,7 @@ const rateLimiter = async (req,res,next) =>{
     try{
         const client = req.app.locals.redisClient
         const userIp = req.ip
-        let userToken = req.header('x-auth') + '.' + req.cookies['auth']
-        const userCookie = req.cookies['auth']
-        let userId = req.header('userId')
+        let userToken = req.header('x-auth')&&req.cookies['auth']?req.header('x-auth') + '.' + req.cookies['auth']:undefined
         const path = req.path
         let total = await client.multi().hGet(userIp,'total').hGet(userToken,'total').hGet(userToken,path).hGet(userIp,path).hGet(userIp,'RL').hGet(userToken,'RL').exec()
         let totalIp = total[0]?JSON.parse(total[0]):0
@@ -73,7 +71,7 @@ const rateLimiter = async (req,res,next) =>{
             throw({status:false,message:'Rate limited',statusCode:403})
         }
 
-        if(userToken&&userId&&userCookie){
+        if(userToken){
             totalToken = !totalToken||totalToken==0?1:totalToken+1
             totalIp = !totalIp||totalToken==0?1:totalIp+1
 
@@ -116,13 +114,8 @@ const rateLimiter = async (req,res,next) =>{
                 limiterIpValue.length!=0?limiterIpValue.push(new Date().toISOString()):limiterIpValue=[new Date().toISOString()]
                 limiterIpValue = JSON.stringify(limiterIpValue)
                 await client.multi().hSet(userIp,'total',JSON.stringify(totalIp)).hSet(userIp,path,limiterIpValue).expire(userIp,3600).exec()
-                if(userToken||userId){
-                    throw({status:false,message:'Invalid Attempt RE',statusCode:403})
-                }
-                else{
-                    next()
-                    return Promise.resolve()
-                }
+                next()
+                return Promise.resolve()
             }
 
         }

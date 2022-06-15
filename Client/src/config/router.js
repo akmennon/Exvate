@@ -1,9 +1,5 @@
-import React from 'react'
-import {BrowserRouter as Router, Route, Routes} from 'react-router-dom'
-import {useSelector} from 'react-redux'
-import {startRemoveUser} from '../action/userAction' //Logout action
-import MenuAppBar from './Components/navBar'    //Navbar component
-import Grid from '@mui/material/Grid'
+import React, { useEffect } from 'react'
+import {BrowserRouter as Router, Route, Routes, useLocation} from 'react-router-dom'
 
 import Home from '../components/Home/home'
 import Register from '../components/User/register'
@@ -28,29 +24,11 @@ import EditProfilePassword from '../components/User/editProfilePassword'
 import NavBar from '../components/Elements/Navbar'
 
 const RouterComponent = (props) =>{
-    const user = useSelector((state)=>state.user)
-
-    let handleClick = (e) =>{
-        switch(e.target.name){
-            case 'logout':
-                const token = localStorage.getItem('x-auth')
-                const redirect = () =>{
-                window.location.assign('/')
-                }
-                this.props.dispatch(startRemoveUser(token,redirect))
-            break;
-            case 'login':
-                window.location.assign('/user/login')
-            break;
-            default:
-                console.log('fix handlclick switch router.js')
-            break;
-        }
-    }
+    let displayOption = true
 
     return(
         <Router>
-                <NavBar/>
+                <NavBar displayOption={displayOption}/>
                 <Routes>
                     <Route path="/work/:id" element={<Work/>} exact={true}/>
                     <Route path="/orderPreview/:id" element={<OrderPreivew/>} exact={true}/>

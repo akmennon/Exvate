@@ -56,7 +56,7 @@ module.exports.login = (req,res,next) =>{
             .then(function(token){
                 const jwtArray = token.split('.')
                 res.setHeader('x-auth',jwtArray[0]+'.'+jwtArray[1]) // sends token as a header
-                res.cookie('auth',jwtArray[2],{expires:new Date(Date.now()+900000), httpOnly: true/*,domain:"localhost:3000",secure:true*/})
+                res.cookie('auth',jwtArray[2],{expires:new Date(Date.now()+864000000), httpOnly: true/*,domain:"localhost:3000",secure:true*/})
                 res.json({status:true,message:'Successfully logged In', payload: pick(userData,['userType','_id','name','supplier','email.email','address'])})
             })
             .catch(function(err){
@@ -101,13 +101,18 @@ module.exports.logout = (req,res,next) =>{
     const token = req.header('x-auth')
 
     /* removes the login token */
-    user.logOut(token,req.app.locals.redisClient,User)
+    if(user){
+        user.logOut(token,req.app.locals.redisClient,User)
         .then(function(){
             res.json({status:true,message:'Successfully logged out'})
         })
         .catch(function(err){
             errorHandler(err,next)
         })
+    }
+    else{
+        res.json()
+    }
 }
 
 /* User logout all */
