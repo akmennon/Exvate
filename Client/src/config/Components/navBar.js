@@ -153,12 +153,7 @@ const handleClick = (e,props,navigate) =>{
 }
 
 const getData = (searchValue,setOptions) =>{
-  const token = localStorage.getItem('x-auth')
-  axios.post('/works/search',{query:searchValue,autoSearch:true},{
-    headers:{
-      'x-auth':token
-    }
-  })
+  axios.post('/works/search',{query:searchValue,autoSearch:true})
   .then((response)=>{
     setOptions(response.data)
   })

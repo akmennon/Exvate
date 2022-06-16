@@ -58,6 +58,7 @@ const rateLimiter = async (req,res,next) =>{
         const client = req.app.locals.redisClient
         const userIp = req.ip
         let userToken = req.header('x-auth')&&req.cookies['auth']?req.header('x-auth') + '.' + req.cookies['auth']:undefined
+        const cookie = req.cookies['auth']
         const path = req.path
         let total = await client.multi().hGet(userIp,'total').hGet(userToken,'total').hGet(userToken,path).hGet(userIp,path).hGet(userIp,'RL').hGet(userToken,'RL').exec()
         let totalIp = total[0]?JSON.parse(total[0]):0
@@ -71,7 +72,7 @@ const rateLimiter = async (req,res,next) =>{
             throw({status:false,message:'Rate limited',statusCode:403})
         }
 
-        if(userToken){
+        if(userToken&&cookie){
             totalToken = !totalToken||totalToken==0?1:totalToken+1
             totalIp = !totalIp||totalToken==0?1:totalIp+1
 

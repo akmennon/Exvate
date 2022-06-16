@@ -1,3 +1,4 @@
+import {alpha} from '@mui/material/styles';
 
 const headerContactStyles = (theme) =>{
     const styles = {
