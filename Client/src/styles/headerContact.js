@@ -1,5 +1,13 @@
 import {alpha} from '@mui/material/styles';
 
+/*
+xs - 0
+sm - 375
+md - 768
+lg - 1366
+xl - 1920^
+*/
+
 const headerContactStyles = (theme) =>{
     const styles = {
         headerContact:{
@@ -66,10 +74,12 @@ const headerContactStyles = (theme) =>{
                 display:'none'
             },
             [theme.breakpoints.between('sm','lg')]:{
+                display:'flex',
                 width:20,
                 height:16
             },
             [theme.breakpoints.down('sm')]:{
+                display:'flex',
                 width:16,
                 height:11
             }
@@ -142,7 +152,7 @@ const headerContactStyles = (theme) =>{
               width: '100%',
               display:'block'
             },
-        },
+        }
     }
 
     return styles

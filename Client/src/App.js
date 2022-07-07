@@ -18,6 +18,15 @@ const theme = createTheme({
     background:{
       paper:'#F4F9FC'
     }
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 375,
+      md: 768,
+      lg: 1366,
+      xl: 1920,
+    }
   }
 })
 

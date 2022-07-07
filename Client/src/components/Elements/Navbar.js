@@ -7,7 +7,7 @@ import {useNavigate,useLocation} from 'react-router-dom'
 import IconButton from '@mui/material/IconButton'
 import MenuIcon from '@mui/icons-material/Menu'
 import icon from '../resources/images/exvateLogo.svg'
-import {useState,useEffect} from 'react'
+import {useState,useEffect, Fragment} from 'react'
 import { useDispatch, useSelector } from "react-redux"
 import Avatar from "@mui/material/Avatar"
 import Menu from "@mui/material/Menu"
@@ -22,6 +22,7 @@ import CircularProgress from "@mui/material/CircularProgress"
 import axios from "../../config/axios"
 import { removeProfile } from "../../action/profileAction"
 import { startRemoveUser } from "../../action/userAction"
+import Divider from "@mui/material/Divider"
 
 const getData = (searchValue,setOptions) =>{
     axios.post('/works/search',{query:searchValue,autoSearch:true})
@@ -74,14 +75,30 @@ const Navbar = (props) =>{
     };
 
     useEffect(()=>{
-        if(location.pathname==='/'){
-            setSelectedIndex('0')
-        }
-        else if(location.pathname.includes('/products')) {
-            setSelectedIndex('1')
-        }
-        else if(location.pathname==='/faq'){
-            setSelectedIndex('3')
+        switch(location.pathname){
+            case '/user/cart':
+                setSelectedIndex('0')
+            break;
+            case '/companydetails':
+                setSelectedIndex('1')
+            break;
+            case '/contact':
+                setSelectedIndex('2')
+            break;
+            case '/supplier/dashboard':
+                setSelectedIndex('3')
+            break;
+            case '/user/login':
+                setSelectedIndex('4')
+            break;
+            case '/user/address':
+                setSelectedIndex('5')
+            break;
+            case '/user/editProfile':
+                setSelectedIndex('6')
+            break;
+            default:
+                setSelectedIndex('9')
         }
     },[location])
 
@@ -128,94 +145,98 @@ const Navbar = (props) =>{
                 {
                     props.displayOptions?(
                         <React.Fragment>
-                            <IconButton sx={styles.headerNavBarMenu} onClick={()=>{setMenuDisplay(!menuDisplay)}}>
-                                <MenuIcon />
-                            </IconButton>
                             <div className={styles.searchFull}>
                                 <div className={styles.search}>
                                     <Autocomplete
-                                    open={openSearch}
-                                    onOpen={() => {
-                                        setOpenSearch(true);
-                                    }}
-                                    onClose={() => {
-                                        setOpenSearch(false);
-                                    }}
-                                    classes={{
-                                        root: styles.inputRoot,
-                                        input: styles.inputInput,
-                                    }}
-                                    filterOptions={(x) => x}
-                                    getOptionLabel={(option) => {
-                                        if (option.hasOwnProperty('title')) {
-                                        return option.title;
-                                        }
-                                        return option;
-                                    }}
-                                    options={options}
-                                    loading={loading}
-                                    value={searchValue}
-                                    onInputChange={(ev,val)=>{
-                                        setSearchValue(val)
-                                    }}
-                                    onChange={(ev,val)=>{
-                                        setSearchValue('')
-                                        if(val&&val._id){
-                                        navigate(`/work/${val._id}`)
-                                        }
-                                    }}
-                                    freeSolo={true}
-                                    onKeyUp={(ev)=>{
-                                        if(ev.key==='Enter'&&searchValue){
-                                            setSearchValue('')
-                                            setOpenSearch(false)
-                                            navigate(`/search/${searchValue}`)
-                                        }
-                                        }
-                                    }
-                                    renderInput={(params) => (
-                                        <TextField
-                                        {...params}
-                                        label={<div style={{display:'flex',alignItems:'center'}}><SearchIcon /><p>search</p></div>}
-                                        InputProps={{
-                                            ...params.InputProps,
-                                            endAdornment: (
-                                            <React.Fragment>
-                                                {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                                                {params.InputProps.endAdornment}
-                                            </React.Fragment>
-                                            ),
+                                        open={openSearch}
+                                        onOpen={() => {
+                                            setOpenSearch(true);
                                         }}
-                                        />
-                                    )}
+                                        onClose={() => {
+                                            setOpenSearch(false);
+                                        }}
+                                        classes={{
+                                            root: styles.inputRoot,
+                                            input: styles.inputInput,
+                                        }}
+                                        filterOptions={(x) => x}
+                                        getOptionLabel={(option) => {
+                                            if (option.hasOwnProperty('title')) {
+                                            return option.title;
+                                            }
+                                            return option;
+                                        }}
+                                        options={options}
+                                        loading={loading}
+                                        value={searchValue}
+                                        onInputChange={(ev,val)=>{
+                                            setSearchValue(val)
+                                        }}
+                                        onChange={(ev,val)=>{
+                                            setSearchValue('')
+                                            if(val&&val._id){
+                                            navigate(`/work/${val._id}`)
+                                            }
+                                        }}
+                                        freeSolo={true}
+                                        onKeyUp={(ev)=>{
+                                            if(ev.key==='Enter'&&searchValue){
+                                                setSearchValue('')
+                                                setOpenSearch(false)
+                                                navigate(`/search/${searchValue}`)
+                                            }
+                                            }
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                            {...params}
+                                            label={<div style={{display:'flex',alignItems:'center'}}><SearchIcon /><p>search</p></div>}
+                                            InputProps={{
+                                                ...params.InputProps,
+                                                endAdornment: (
+                                                <React.Fragment>
+                                                    {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                                    {params.InputProps.endAdornment}
+                                                </React.Fragment>
+                                                ),
+                                            }}
+                                            />
+                                        )}
                                     />
                                 </div>
                             </div>
+                            <IconButton sx={styles.headerNavBarMenu} onClick={()=>{setMenuDisplay(!menuDisplay)}}>
+                                <MenuIcon />
+                            </IconButton>
                             <Box sx={styles.headerNavBarNavigation}>
                                 <div style={styles.NavBarButton}>
-                                    <Typography id='0' sx={styles.headerNavBarText} onClick={(event)=>{navigate('/')}}>Home</Typography>
+                                    <Typography id='0' sx={styles.headerNavBarText} onClick={(event)=>{user&&user._id?navigate('/user/cart'):navigate('/user/login')}}>Orders</Typography>
                                     {
                                         selectedIndex==='0'?<div style={styles.ButtonIndicator} />:null
                                     }
                                 </div>
                                 <div style={styles.NavBarButton}>
-                                    <Typography id='1' sx={styles.headerNavBarText} onClick={(event)=>{navigate('/products')}}>My Orders</Typography>
+                                    <Typography id='1' sx={styles.headerNavBarText} onClick={(event)=>{navigate('/companydetails')}}>Company</Typography>
                                     {
                                         selectedIndex==='1'?<div style={styles.ButtonIndicator} />:null
                                     }
                                 </div>
                                 <div style={styles.NavBarButton}>
-                                    <Typography id='2' onClick={(event) => {navigate('/faq')}} sx={styles.headerNavBarText} >Contact</Typography>
+                                    <Typography id='2' onClick={(event) => {navigate('/contact')}} sx={styles.headerNavBarText} >Contact</Typography>
                                     {
                                         selectedIndex==='2'?<div style={styles.ButtonIndicator} />:null
                                     }
                                 </div>
-                                <div style={styles.NavBarButton}>
-                                    <Typography id='3' onClick={(event) => {navigate('/faq')}} sx={styles.headerNavBarText} >Supplier</Typography>
-                                    {
-                                        selectedIndex==='3'?<div style={styles.ButtonIndicator} />:null
-                                    }
-                                </div>
+                                {
+                                    user&&user.supplier?(
+                                        <div style={styles.NavBarButton}>
+                                            <Typography id='3' onClick={(event) => {navigate('/supplier/dashboard')}} sx={styles.headerNavBarText} >Supplier</Typography>
+                                            {
+                                                selectedIndex==='3'?<div style={styles.ButtonIndicator} />:null
+                                            }
+                                        </div>
+                                    ):<span/>
+                                }
                                 {
                                     !user._id?<Button onClick={()=>{navigate('/user/login')}} className={styles.button} color="inherit" >Login</Button>:
                                     <div>
@@ -240,6 +261,36 @@ const Navbar = (props) =>{
                     ):<span/>
                 }
             </Grid>
+            {
+                menuDisplay?(
+                    <Grid item container sx={{width:'100%',zIndex:2,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',backgroundColor:'white'}}>
+                        <Divider sx={{color:'rgba(0,0,0,1)',height:3,width:'100%',marginBottom:'3%'}}/>
+                        <Typography sx={{...styles.menuText,color:selectedIndex==='0'?theme.palette.secondary.main:'black'}} onClick={()=>{setMenuDisplay(false);user&&user._id?navigate('/user/cart'):navigate('/user/login')}}>Orders</Typography>
+                        <Typography sx={{...styles.menuText,color:selectedIndex==='1'?theme.palette.secondary.main:'black'}} onClick={()=>{setMenuDisplay(false);navigate('/companydetails')}}>COMPANY</Typography>
+                        <Typography sx={{...styles.menuText,color:selectedIndex==='2'?theme.palette.secondary.main:'black'}} onClick={() => {setMenuDisplay(false);navigate('/contact')}}>CONTACT</Typography>
+                        {
+                            !user._id?(
+                                <Fragment>
+                                    <Divider sx={{color:'rgba(0,0,0,1)',height:3,width:'100%',marginBottom:'3%'}}/>
+                                    <Typography sx={{...styles.menuText,color:selectedIndex==='4'?theme.palette.secondary.main:'black'}} onClick={() => {setMenuDisplay(false);navigate('/user/login')}}>LOGIN</Typography>
+                                </Fragment>
+                            ):(
+                                <Fragment>
+                                    <Divider sx={{color:'rgba(0,0,0,1)',height:3,width:'100%',marginBottom:'3%'}}/>
+                                    {
+                                        user.supplier?(
+                                            <Typography sx={{...styles.menuText,color:selectedIndex==='3'?theme.palette.secondary.main:'black'}} onClick={()=>{setMenuDisplay(false);navigate('/supplier/dashboard')}}>SUPPLIER</Typography>
+                                        ):<span/>
+                                    }
+                                    <Typography sx={{...styles.menuText,color:selectedIndex==='5'?theme.palette.secondary.main:'black'}} onClick={()=>{setMenuDisplay(false);navigate('/user/address')}}>ADDRESSES</Typography>
+                                    <Typography sx={{...styles.menuText,color:selectedIndex==='6'?theme.palette.secondary.main:'black'}} onClick={()=>{setMenuDisplay(false);navigate('/user/editProfilePassword')}}>EDIT PROFILE</Typography>
+                                    <Typography sx={{...styles.menuText,color:'black'}} onClick={() => {setMenuDisplay(false);logout(user,dispatch,navigate)}}>LOGOUT</Typography>
+                                </Fragment>
+                            )
+                        }
+                    </Grid>
+                ):<span/>
+            }
         </Grid>
     )
 }

@@ -21,6 +21,8 @@ import SearchWork from '../components/Work/searchWork'
 import EditFns from '../components/User/editProfileFns'
 import EditProfilePassword from '../components/User/editProfilePassword'
 import NavBar from '../components/Elements/Navbar'
+import CompanyDetails from '../components/Company/companyDetails'
+import CompanyContact from '../components/Company/contact'
 
 const NavBarComponent = (props) =>{
     const location = useLocation()
@@ -53,7 +55,6 @@ const NavBarComponent = (props) =>{
         }
     },[location.pathname])
 
-    console.log(showOptions)
     return <NavBar displayOptions={showOptions}/>
 }
 
@@ -71,6 +72,8 @@ const RouterComponent = (props) =>{
                     <Route path="/user/signup" element={<Register/>}/>
                     <Route path="/user/login" element={<Login/>}/>
                     <Route path="/user/forgot" element={<Forgot/>}/>
+                    <Route path="/companydetails" element={<CompanyDetails/>}/>
+                    <Route path="/contact" element={<CompanyContact/>}/>
                     <Route path="/user/confirmForgot/:token" element={<ConfirmForgot/>} />
                     <Route path="/user/confirmSign/:token" element={<ConfirmSign/>}/>
                     <Route path="/supplier/dashboard" element={<Dashboard/>}/>
